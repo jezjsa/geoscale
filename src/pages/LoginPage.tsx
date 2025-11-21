@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import type { SignInData } from '@/api/auth'
 
 export function LoginPage() {
-  const navigate = useNavigate()
   const { signIn, isSigningIn } = useAuth()
   const [formData, setFormData] = useState<SignInData>({
     email: '',

@@ -89,8 +89,15 @@ export async function getProjectCombinations(projectId: string) {
 
   if (error) throw error
   
+  // Normalize the data: Supabase returns location/keyword as arrays, but we need single objects
+  const normalized = data?.map((item: any) => ({
+    ...item,
+    location: Array.isArray(item.location) ? item.location[0] : item.location,
+    keyword: Array.isArray(item.keyword) ? item.keyword[0] : item.keyword,
+  })) || []
+  
   // Sort by location name (town) first, then by phrase alphabetically
-  return data?.sort((a, b) => {
+  return normalized.sort((a, b) => {
     const locationA = a.location?.name || ''
     const locationB = b.location?.name || ''
     
@@ -105,7 +112,7 @@ export async function getProjectCombinations(projectId: string) {
     if (phraseA > phraseB) return 1
     
     return 0
-  }) || []
+  })
 }
 
 export async function deleteLocationKeyword(id: string) {

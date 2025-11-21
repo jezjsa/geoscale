@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { getPlans } from '@/api/plans'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'

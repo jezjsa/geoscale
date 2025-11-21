@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { MapPin, Settings, User, UserCircle, LogOut } from 'lucide-react'
+import { MapPin, Settings, LogOut } from 'lucide-react'
 
 export function Navigation() {
   const { user, signOut, isSigningOut } = useAuth()
@@ -74,18 +74,6 @@ export function Navigation() {
                       {user.plan === 'individual' ? 'Company Settings' : 'Settings'}
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard/account" className="flex items-center gap-2">
-                      <UserCircle className="h-4 w-4" />
-                      Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard/profile" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
@@ -103,7 +91,7 @@ export function Navigation() {
                   <Link to="/login">Sign In</Link>
                 </Button>
                 <Button asChild>
-                  <Link to="/plans">Get Started</Link>
+                  <Link to="/plans" search={{ plan: undefined }}>Get Started</Link>
                 </Button>
               </div>
             )}

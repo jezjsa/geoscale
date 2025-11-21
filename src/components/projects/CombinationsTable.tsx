@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Play, Eye, ArrowUpToLine } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ArrowUpToLine } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
@@ -294,17 +294,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
     setSelectedIds(new Set())
   }
 
-  const handleGenerateNext = () => {
-    // Find the first pending combination
-    const nextPending = filteredCombinations.find(combo => combo.status === 'pending')
-    
-    if (!nextPending) {
-      toast.error('No pending combinations to generate')
-      return
-    }
-
-    generateMutation.mutate([nextPending.id])
-  }
+  // handleGenerateNext removed - using individual row regenerate icons instead
 
   const handleViewContent = (id: string) => {
     console.log('Navigating to view content:', { projectId, locationKeywordId: id })
@@ -351,7 +341,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
       console.log('✅ MUTATION: API call completed:', response)
       return response
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data, _variables) => {
       console.log('✅ MUTATION: onSuccess triggered', data)
       // Don't show success toast here - Edge Function will update status to 'generated' when complete
       // Real-time subscription will pick up the change and update the UI
@@ -383,6 +373,36 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
     
     console.log('✅ SINGLE GENERATE: Triggering mutation...')
     singleGenerateMutation.mutate({ locationKeywordId: id, status })
+  }
+
+  const handlePushToWordPress = async (id: string) => {
+    setPushingIds(prev => new Set([...prev, id]))
+    toast.info('Publishing to WordPress...')
+    
+    try {
+      const result = await publishGeneratedPageToWordPress(id, projectId)
+      
+      if (result.success) {
+        toast.success('Successfully published to WordPress!', {
+          description: result.page_url ? `View page: ${result.page_url}` : undefined,
+        })
+        queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+      } else {
+        toast.error('Failed to publish to WordPress', {
+          description: result.error,
+        })
+      }
+    } catch (error) {
+      toast.error('Error publishing to WordPress', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    } finally {
+      setPushingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+    }
   }
 
   const checkRankingsMutation = useMutation({

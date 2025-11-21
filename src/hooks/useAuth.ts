@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { signIn, signOut, getCurrentUser, type SignInData } from '@/api/auth'
-import type { User } from '@/types/database'
 
 export function useAuth() {
   const router = useRouter()

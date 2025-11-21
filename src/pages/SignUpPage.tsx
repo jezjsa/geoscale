@@ -26,7 +26,7 @@ export function SignUpPage() {
   
   const signUpMutation = useMutation({
     mutationFn: (data: SignUpData) => signUp(data),
-    onSuccess: async (data) => {
+    onSuccess: async (_data) => {
       // Wait for the trigger to complete and session to be established
       await new Promise(resolve => setTimeout(resolve, 1500))
       
