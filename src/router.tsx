@@ -92,7 +92,7 @@ const projectDetailRoute = createRoute({
   component: ProjectDetailPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      view: (search.view as 'combinations' | 'testimonials') || 'combinations',
+      view: (search.view as 'combinations' | 'testimonials' | 'settings') || 'combinations',
     }
   },
   beforeLoad: async () => {

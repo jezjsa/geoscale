@@ -9,6 +9,7 @@ export interface CreateProjectData {
   contactUrl: string
   serviceDescription: string
   wpUrl: string
+  blogUrl: string
   userId: string
 }
 
@@ -29,6 +30,7 @@ export async function createProject(data: CreateProjectData) {
         contact_url: data.contactUrl,
         service_description: data.serviceDescription,
         wp_url: data.wpUrl,
+        blog_url: data.blogUrl,
         wp_api_key: wpApiKey,
       })
       .select()

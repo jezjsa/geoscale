@@ -31,6 +31,7 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
     contactUrl: 'https://',
     serviceDescription: '',
     wpUrl: 'https://',
+    blogUrl: 'https://',
   })
 
   const queryClient = useQueryClient()
@@ -61,6 +62,7 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
         contactUrl: data.contactUrl,
         serviceDescription: data.serviceDescription,
         wpUrl: data.wpUrl,
+        blogUrl: data.blogUrl,
         userId: userId,
       })
     },
@@ -78,7 +80,8 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
         phoneNumber: '', 
         contactUrl: 'https://', 
         serviceDescription: '', 
-        wpUrl: 'https://' 
+        wpUrl: 'https://',
+        blogUrl: 'https://' 
       })
     },
     onError: (error: Error) => {
@@ -100,7 +103,7 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
           Create a Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>Create New Client Project</DialogTitle>
           <DialogDescription>
@@ -108,86 +111,108 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="companyName" className="text-sm text-muted-foreground font-normal">Company Name</Label>
-              <Input
-                id="companyName"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: capitalizeWords(e.target.value) })}
-                placeholder="ABC Plumbing Ltd"
-                required
-              />
+          <div className="grid grid-cols-2 gap-12 py-4">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <div className="grid gap-2">
+                <Label htmlFor="companyName" className="text-sm text-muted-foreground font-normal">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={formData.companyName}
+                  onChange={(e) => setFormData({ ...formData, companyName: capitalizeWords(e.target.value) })}
+                  placeholder="ABC Plumbing Ltd"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contactName" className="text-sm text-muted-foreground font-normal">Contact Name</Label>
+                <Input
+                  id="contactName"
+                  value={formData.contactName}
+                  onChange={(e) => setFormData({ ...formData, contactName: capitalizeWords(e.target.value) })}
+                  placeholder="John Smith"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contactEmail" className="text-sm text-muted-foreground font-normal">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                  placeholder="client@example.com"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="phoneNumber" className="text-sm text-muted-foreground font-normal">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  placeholder="+44 1234 567890"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="serviceDescription" className="text-sm text-muted-foreground font-normal">Service Description</Label>
+                <Textarea
+                  id="serviceDescription"
+                  value={formData.serviceDescription}
+                  onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
+                  placeholder="Describe the services this business provides..."
+                  rows={3}
+                  required
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="contactName" className="text-sm text-muted-foreground font-normal">Contact Name</Label>
-              <Input
-                id="contactName"
-                value={formData.contactName}
-                onChange={(e) => setFormData({ ...formData, contactName: capitalizeWords(e.target.value) })}
-                placeholder="John Smith"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="contactEmail" className="text-sm text-muted-foreground font-normal">Contact Email</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                value={formData.contactEmail}
-                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                placeholder="client@example.com"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phoneNumber" className="text-sm text-muted-foreground font-normal">Phone Number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                placeholder="+44 1234 567890"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="wpUrl" className="text-sm text-muted-foreground font-normal">WordPress URL</Label>
-              <Input
-                id="wpUrl"
-                type="url"
-                value={formData.wpUrl}
-                onChange={(e) => setFormData({ ...formData, wpUrl: e.target.value })}
-                onFocus={handleUrlFocus}
-                placeholder="https://client-website.com"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                The WordPress site where pages will be published
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="contactUrl" className="text-sm text-muted-foreground font-normal">Contact URL</Label>
-              <Input
-                id="contactUrl"
-                type="url"
-                value={formData.contactUrl}
-                onChange={(e) => setFormData({ ...formData, contactUrl: e.target.value })}
-                onFocus={handleUrlFocus}
-                placeholder="https://client-website.com/contact"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="serviceDescription" className="text-sm text-muted-foreground font-normal">Service Description</Label>
-              <Textarea
-                id="serviceDescription"
-                value={formData.serviceDescription}
-                onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
-                placeholder="Describe the services this business provides..."
-                rows={3}
-                required
-              />
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              <div className="grid gap-2">
+                <Label htmlFor="wpUrl" className="text-sm text-muted-foreground font-normal">WordPress URL</Label>
+                <Input
+                  id="wpUrl"
+                  type="url"
+                  value={formData.wpUrl}
+                  onChange={(e) => setFormData({ ...formData, wpUrl: e.target.value })}
+                  onFocus={handleUrlFocus}
+                  placeholder="https://client-website.com"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  The WordPress site where pages will be published
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="blogUrl" className="text-sm text-muted-foreground font-normal">Blog URL</Label>
+                <Input
+                  id="blogUrl"
+                  type="url"
+                  value={formData.blogUrl}
+                  onChange={(e) => setFormData({ ...formData, blogUrl: e.target.value })}
+                  onFocus={handleUrlFocus}
+                  placeholder="https://client-website.com/blog"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Root URL where blog posts are published
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contactUrl" className="text-sm text-muted-foreground font-normal">Contact URL</Label>
+                <Input
+                  id="contactUrl"
+                  type="url"
+                  value={formData.contactUrl}
+                  onChange={(e) => setFormData({ ...formData, contactUrl: e.target.value })}
+                  onFocus={handleUrlFocus}
+                  placeholder="https://client-website.com/contact"
+                  required
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

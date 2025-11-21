@@ -36,7 +36,7 @@ export function Navigation() {
         <div className="flex h-16 items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
             <div 
-              style={{ backgroundColor: '#242424' }} 
+              style={{ backgroundColor: '#006239' }} 
               className="p-2 rounded-lg"
             >
               <MapPin className="h-5 w-5" style={{ color: '#e2e8f0' }} />
