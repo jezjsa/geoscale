@@ -1,0 +1,219 @@
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Loader2 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { createProject } from '@/api/projects'
+import { toast } from 'sonner'
+
+interface CreateClientDialogProps {
+  userId: string
+}
+
+export function CreateClientDialog({ userId }: CreateClientDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    companyName: '',
+    contactName: '',
+    contactEmail: '',
+    phoneNumber: '',
+    contactUrl: 'https://',
+    serviceDescription: '',
+    wpUrl: 'https://',
+  })
+
+  const queryClient = useQueryClient()
+
+  const capitalizeWords = (str: string) => {
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
+  const handleUrlFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === 'https://') {
+      // Move cursor to the end (after the //)
+      setTimeout(() => {
+        e.target.setSelectionRange(e.target.value.length, e.target.value.length)
+      }, 0)
+    }
+  }
+
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return createProject({
+        companyName: data.companyName,
+        contactName: data.contactName,
+        contactEmail: data.contactEmail,
+        phoneNumber: data.phoneNumber,
+        contactUrl: data.contactUrl,
+        serviceDescription: data.serviceDescription,
+        wpUrl: data.wpUrl,
+        userId: userId,
+      })
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['agencyProjects', userId] })
+      toast.success('Project created successfully', {
+        description: `${formData.companyName} has been added. WordPress API Key: ${result.wpApiKey}`,
+        duration: 10000,
+      })
+      setOpen(false)
+      setFormData({ 
+        companyName: '', 
+        contactName: '', 
+        contactEmail: '', 
+        phoneNumber: '', 
+        contactUrl: 'https://', 
+        serviceDescription: '', 
+        wpUrl: 'https://' 
+      })
+    },
+    onError: (error: Error) => {
+      toast.error('Error creating project', {
+        description: error.message,
+      })
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    createProjectMutation.mutate(formData)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button style={{ backgroundColor: '#006239' }} className="hover:opacity-90 text-white">
+          Create a Project
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Create New Client Project</DialogTitle>
+          <DialogDescription>
+            Add a new client project. You'll manage their WordPress site and generate location pages for them.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="companyName" className="text-sm text-muted-foreground font-normal">Company Name</Label>
+              <Input
+                id="companyName"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: capitalizeWords(e.target.value) })}
+                placeholder="ABC Plumbing Ltd"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contactName" className="text-sm text-muted-foreground font-normal">Contact Name</Label>
+              <Input
+                id="contactName"
+                value={formData.contactName}
+                onChange={(e) => setFormData({ ...formData, contactName: capitalizeWords(e.target.value) })}
+                placeholder="John Smith"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contactEmail" className="text-sm text-muted-foreground font-normal">Contact Email</Label>
+              <Input
+                id="contactEmail"
+                type="email"
+                value={formData.contactEmail}
+                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                placeholder="client@example.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phoneNumber" className="text-sm text-muted-foreground font-normal">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                placeholder="+44 1234 567890"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="wpUrl" className="text-sm text-muted-foreground font-normal">WordPress URL</Label>
+              <Input
+                id="wpUrl"
+                type="url"
+                value={formData.wpUrl}
+                onChange={(e) => setFormData({ ...formData, wpUrl: e.target.value })}
+                onFocus={handleUrlFocus}
+                placeholder="https://client-website.com"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                The WordPress site where pages will be published
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contactUrl" className="text-sm text-muted-foreground font-normal">Contact URL</Label>
+              <Input
+                id="contactUrl"
+                type="url"
+                value={formData.contactUrl}
+                onChange={(e) => setFormData({ ...formData, contactUrl: e.target.value })}
+                onFocus={handleUrlFocus}
+                placeholder="https://client-website.com/contact"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="serviceDescription" className="text-sm text-muted-foreground font-normal">Service Description</Label>
+              <Textarea
+                id="serviceDescription"
+                value={formData.serviceDescription}
+                onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
+                placeholder="Describe the services this business provides..."
+                rows={3}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              style={{ backgroundColor: '#006239' }}
+              className="hover:opacity-90 text-white"
+              disabled={createProjectMutation.isPending}
+            >
+              {createProjectMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Project'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
