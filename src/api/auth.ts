@@ -44,9 +44,12 @@ export async function signUp({ email, password, name, plan }: SignUpData) {
 }
 
 export async function signIn({ email, password }: SignInData) {
+  // Normalize email: trim whitespace and convert to lowercase
+  const normalizedEmail = email.trim().toLowerCase()
+  
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+    email: normalizedEmail,
+    password: password.trim(),
   })
 
   if (error) {
@@ -63,27 +66,55 @@ export async function signOut() {
   }
 }
 
-export async function getCurrentUser(): Promise<(User & { email?: string }) | null> {
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-
-  if (!authUser) {
-    return null
-  }
-
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('supabase_auth_user_id', authUser.id)
-    .single()
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  })
 
   if (error) {
-    console.error('Error fetching user:', error)
+    throw error
+  }
+}
+
+export async function getCurrentUser(): Promise<(User & { email?: string }) | null> {
+  try {
+    // First check if we have a valid session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session) {
+      // No valid session, clear any stale auth state
+      await supabase.auth.signOut()
+      return null
+    }
+
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !authUser) {
+      // Auth user fetch failed, likely expired session
+      await supabase.auth.signOut()
+      return null
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('supabase_auth_user_id', authUser.id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching user:', error)
+      return null
+    }
+
+    return {
+      ...user,
+      email: authUser.email,
+    } as User & { email?: string }
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error)
+    // On any error, sign out to clear stale state
+    await supabase.auth.signOut()
     return null
   }
-
-  return {
-    ...user,
-    email: authUser.email,
-  } as User & { email?: string }
 }
 

@@ -3,6 +3,7 @@ import { HomePage } from './pages/HomePage'
 import { PlansPage } from './pages/PlansPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { LoginPage } from './pages/LoginPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
@@ -57,6 +58,13 @@ const loginRoute = createRoute({
       throw redirect({ to: '/dashboard' })
     }
   },
+})
+
+// Reset password route
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage,
 })
 
 // Dashboard route (protected)
@@ -135,6 +143,7 @@ const routeTree = rootRoute.addChildren([
   plansRoute,
   signupRoute,
   loginRoute,
+  resetPasswordRoute,
   dashboardRoute,
   settingsRoute,
   projectDetailRoute,
