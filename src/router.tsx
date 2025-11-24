@@ -163,38 +163,8 @@ const routeTree = rootRoute.addChildren([
   testDataForSEORoute,
 ])
 
-// Create router with proper configuration
-export const router = createRouter({ 
-  routeTree,
-  // Ensure router stays active and handles navigation properly
-  defaultPreload: 'intent',
-  defaultPreloadDelay: 0,
-  // Ensure router history is properly maintained
-  history: typeof window !== 'undefined' ? window.history : undefined,
-  // Add error handling for navigation
-  defaultErrorComponent: ({ error }) => {
-    console.error('Router error:', error)
-    // If navigation fails, try to reload the page
-    if (error?.message?.includes('redirect')) {
-      return null // Let redirects work
-    }
-    // For other errors, show a simple error message
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Navigation Error</h1>
-          <p className="text-muted-foreground mb-4">Please refresh the page</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-primary text-primary-foreground rounded"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    )
-  },
-})
+// Create router - keep it simple like snapbase
+export const router = createRouter({ routeTree })
 
 // Register router types
 declare module '@tanstack/react-router' {
