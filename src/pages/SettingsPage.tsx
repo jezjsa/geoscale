@@ -51,9 +51,9 @@ function AgencyProjectsView({ userId }: { userId: string }) {
 }
 
 export function SettingsPage() {
-  const { user, isLoading } = useAuth()
+  const { user, loading } = useAuth()
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
