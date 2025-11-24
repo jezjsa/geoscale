@@ -12,13 +12,8 @@ export function setupAuthListener(queryClient: QueryClient) {
     } else if (event === 'SIGNED_OUT') {
       // Clear user data
       queryClient.setQueryData(['currentUser'], null)
-      // Redirect to login if we're on a protected route
-      if (window.location.pathname !== '/login' && 
-          window.location.pathname !== '/signup' && 
-          window.location.pathname !== '/' &&
-          !window.location.pathname.startsWith('/reset-password')) {
-        window.location.href = '/login'
-      }
+      // Don't redirect here - let the router handle navigation
+      // The signOut mutation in useAuth will handle the redirect
     } else if (event === 'USER_UPDATED') {
       // User data was updated
       await queryClient.refetchQueries({ queryKey: ['currentUser'] })

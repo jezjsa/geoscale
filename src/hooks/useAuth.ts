@@ -29,7 +29,7 @@ export function useAuth() {
     mutationFn: signOut,
     onSuccess: () => {
       queryClient.setQueryData(['currentUser'], null)
-      router.navigate({ to: '/' })
+      router.navigate({ to: '/login' })
     },
   })
 
