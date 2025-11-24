@@ -11,9 +11,11 @@ export function setupAuthListener(queryClient: QueryClient) {
       await queryClient.refetchQueries({ queryKey: ['currentUser'] })
     } else if (event === 'SIGNED_OUT') {
       // Clear user data
+      // Note: The signOut mutation in useAuth will also clear and redirect
+      // This is just a backup to ensure state is cleared
       queryClient.setQueryData(['currentUser'], null)
-      // Don't redirect here - let the router handle navigation
-      // The signOut mutation in useAuth will handle the redirect
+      // Don't redirect here - let the mutation handle navigation
+      // to avoid race conditions
     } else if (event === 'USER_UPDATED') {
       // User data was updated
       await queryClient.refetchQueries({ queryKey: ['currentUser'] })
