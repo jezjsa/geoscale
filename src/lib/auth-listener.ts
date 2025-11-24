@@ -3,7 +3,7 @@ import { QueryClient } from '@tanstack/react-query'
 
 export function setupAuthListener(queryClient: QueryClient) {
   // Listen for auth state changes
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  supabase.auth.onAuthStateChange(async (event) => {
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
       // Wait a moment for the database trigger to complete
       await new Promise(resolve => setTimeout(resolve, 500))
