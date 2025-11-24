@@ -82,16 +82,15 @@ export async function getCurrentUser(): Promise<(User & { email?: string }) | nu
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session) {
-      // No valid session, clear any stale auth state
-      await supabase.auth.signOut()
+      // No valid session - don't call signOut here as it can break navigation
+      // Just return null and let the router handle redirect
       return null
     }
 
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !authUser) {
-      // Auth user fetch failed, likely expired session
-      await supabase.auth.signOut()
+      // Auth user fetch failed - don't sign out here, just return null
       return null
     }
 
@@ -112,8 +111,7 @@ export async function getCurrentUser(): Promise<(User & { email?: string }) | nu
     } as User & { email?: string }
   } catch (error) {
     console.error('Error in getCurrentUser:', error)
-    // On any error, sign out to clear stale state
-    await supabase.auth.signOut()
+    // Don't sign out on error - just return null
     return null
   }
 }

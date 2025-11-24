@@ -29,7 +29,14 @@ export function useAuth() {
     mutationFn: signOut,
     onSuccess: () => {
       queryClient.setQueryData(['currentUser'], null)
-      router.navigate({ to: '/login' })
+      // Use window.location for logout to ensure clean state
+      window.location.href = '/login'
+    },
+    onError: (error) => {
+      console.error('Sign out error:', error)
+      // Even on error, clear user data and redirect
+      queryClient.setQueryData(['currentUser'], null)
+      window.location.href = '/login'
     },
   })
 

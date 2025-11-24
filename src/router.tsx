@@ -73,8 +73,14 @@ const dashboardRoute = createRoute({
   path: '/dashboard',
   component: DashboardPage,
   beforeLoad: async () => {
-    const user = await getCurrentUser()
-    if (!user) {
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        throw redirect({ to: '/login' })
+      }
+    } catch (error) {
+      // If getCurrentUser fails, redirect to login
+      console.error('Error in dashboard beforeLoad:', error)
       throw redirect({ to: '/login' })
     }
   },
@@ -86,8 +92,14 @@ const settingsRoute = createRoute({
   path: '/settings',
   component: SettingsPage,
   beforeLoad: async () => {
-    const user = await getCurrentUser()
-    if (!user) {
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        throw redirect({ to: '/login' })
+      }
+    } catch (error) {
+      // If getCurrentUser fails, redirect to login
+      console.error('Error in settings beforeLoad:', error)
       throw redirect({ to: '/login' })
     }
   },
@@ -157,6 +169,29 @@ export const router = createRouter({
   // Ensure router stays active and handles navigation properly
   defaultPreload: 'intent',
   defaultPreloadDelay: 0,
+  // Add error handling for navigation
+  defaultErrorComponent: ({ error }) => {
+    console.error('Router error:', error)
+    // If navigation fails, try to reload the page
+    if (error?.message?.includes('redirect')) {
+      return null // Let redirects work
+    }
+    // For other errors, show a simple error message
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Navigation Error</h1>
+          <p className="text-muted-foreground mb-4">Please refresh the page</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    )
+  },
 })
 
 // Register router types
