@@ -8,12 +8,13 @@ import { setupAuthListener } from './lib/auth-listener'
 import './index.css'
 
 // Create a query client with default options
+// Configuration similar to snapbase - simple and reliable
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false, // Prevent refetch on tab switch (keep data when switching tabs)
-      refetchOnMount: false, // Don't refetch on mount to preserve data when navigating
+      staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 minutes
+      refetchOnWindowFocus: false, // Don't refetch when tab regains focus (like snapbase)
+      refetchOnMount: true, // Always refetch on mount to ensure fresh data (default behavior)
       refetchOnReconnect: true, // Refetch when network reconnects
       retry: 1,
       // Keep data in cache even when components unmount

@@ -20,32 +20,8 @@ export function setupAuthListener(queryClient: QueryClient) {
     }
   })
 
-  // Periodically check if session is still valid (only when tab is visible)
-  const checkSession = async () => {
-    // Only check if document is visible (tab is active)
-    if (document.hidden) {
-      return
-    }
-    
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error || !session) {
-      // Only clear if we're sure the session is invalid
-      // Don't clear on temporary errors
-      if (error && error.message !== 'Session not found') {
-        return
-      }
-      queryClient.setQueryData(['currentUser'], null)
-    }
-  }
-  
-  // Check session periodically, but only when tab is visible
-  setInterval(checkSession, 60000) // Check every minute
-  
-  // Also check when tab becomes visible again
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      checkSession()
-    }
-  })
+  // Simplified session handling - similar to snapbase's approach
+  // Don't aggressively check session - let Supabase's built-in session management handle it
+  // The onAuthStateChange listener above will handle session changes automatically
 }
 
