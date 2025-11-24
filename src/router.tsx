@@ -151,8 +151,13 @@ const routeTree = rootRoute.addChildren([
   testDataForSEORoute,
 ])
 
-// Create router
-export const router = createRouter({ routeTree })
+// Create router with proper configuration
+export const router = createRouter({ 
+  routeTree,
+  // Ensure router stays active and handles navigation properly
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 0,
+})
 
 // Register router types
 declare module '@tanstack/react-router' {
