@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -115,9 +116,9 @@ export function LoginPage() {
                 </button>
                 <p className="text-sm text-center text-muted-foreground">
                   Don't have an account?{' '}
-                  <a href="/signup" className="text-primary hover:underline">
+                  <Link to="/signup" className="text-primary hover:underline">
                     Sign up
-                  </a>
+                  </Link>
                 </p>
               </>
             ) : (

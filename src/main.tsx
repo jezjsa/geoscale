@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App.tsx'
@@ -14,8 +14,8 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 minutes
       refetchOnWindowFocus: false, // Don't refetch when tab regains focus (like snapbase)
-      refetchOnMount: true, // Always refetch on mount to ensure fresh data (default behavior)
-      refetchOnReconnect: true, // Refetch when network reconnects
+      refetchOnMount: false, // Don't refetch on mount - preserve data when navigating/returning to tab
+      refetchOnReconnect: false, // Don't refetch on reconnect - preserve state
       retry: 1,
       // Keep data in cache even when components unmount
       gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
@@ -26,14 +26,19 @@ const queryClient = new QueryClient({
 // Set up auth state listener
 setupAuthListener(queryClient)
 
+// Remove StrictMode in production to prevent double invocations
+// StrictMode can cause issues with navigation and state after tab switches
+const isDevelopment = import.meta.env.DEV
+const AppWrapper = isDevelopment ? StrictMode : React.Fragment
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <AppWrapper>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <App />
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>
-  </StrictMode>,
+  </AppWrapper>,
 )
 

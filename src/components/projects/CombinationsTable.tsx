@@ -298,16 +298,10 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
 
   const handleViewContent = (id: string) => {
     console.log('Navigating to view content:', { projectId, locationKeywordId: id })
-    try {
-      navigate({ 
-        to: '/projects/$projectId/content/$locationKeywordId',
-        params: { projectId, locationKeywordId: id }
-      })
-    } catch (error) {
-      console.error('Navigation error:', error)
-      // Fallback to direct URL navigation
-      window.location.href = `/projects/${projectId}/content/${id}`
-    }
+    navigate({ 
+      to: '/projects/$projectId/content/$locationKeywordId',
+      params: { projectId, locationKeywordId: id }
+    })
   }
 
   // Mutation to generate or regenerate a single combination

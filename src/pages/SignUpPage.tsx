@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useNavigate, useSearch, Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { signUp, type SignUpData } from '@/api/auth'
 import { Button } from '@/components/ui/button'
@@ -143,9 +143,9 @@ export function SignUpPage() {
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{' '}
-              <a href="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-primary hover:underline">
                 Sign in
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </form>

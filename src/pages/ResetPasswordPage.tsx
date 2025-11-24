@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, Link } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,9 +128,9 @@ export function ResetPasswordPage() {
               {isResetting ? 'Resetting...' : 'Reset Password'}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              <a href="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-primary hover:underline">
                 Back to login
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </form>
