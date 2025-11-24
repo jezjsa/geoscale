@@ -116,7 +116,7 @@ export function LoginPage() {
                 </button>
                 <p className="text-sm text-center text-muted-foreground">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-primary hover:underline">
+                  <Link to="/signup" search={{ plan: undefined }} className="text-primary hover:underline">
                     Sign up
                   </Link>
                 </p>
