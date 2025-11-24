@@ -26,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastEventTime, setLastEventTime] = useState<number>(0)
+  const [lastEvent, setLastEvent] = useState<string>('')
 
   useEffect(() => {
     console.log('[AuthContext] Initializing...')
@@ -33,9 +34,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('[AuthContext] Initial session:', !!session)
+      
+      if (!session) {
+        console.log('[AuthContext] No session found, user not logged in')
+        setSession(null)
+        setUser(null)
+        setLoading(false)
+        return
+      }
+      
       setSession(session)
       
       if (session?.user) {
+        console.log('[AuthContext] Session found, fetching user data')
         // Fetch user from database
         const { data: dbUser } = await supabase
           .from('users')
@@ -58,12 +69,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = Date.now()
       console.log('[AuthContext] Auth state changed:', _event, !!session)
       
-      // Debounce duplicate events within 500ms
-      if (now - lastEventTime < 500 && _event === 'SIGNED_IN') {
+      // Ignore SIGNED_IN events that come within 1 second after SIGNED_OUT
+      // This prevents ghost re-authentication after logout
+      if (_event === 'SIGNED_IN' && lastEvent === 'SIGNED_OUT' && now - lastEventTime < 1000) {
+        console.log('[AuthContext] Ignoring SIGNED_IN event after recent SIGNED_OUT')
+        return
+      }
+      
+      // Debounce duplicate SIGNED_IN events within 500ms
+      if (now - lastEventTime < 500 && _event === 'SIGNED_IN' && lastEvent === 'SIGNED_IN') {
         console.log('[AuthContext] Ignoring duplicate SIGNED_IN event')
         return
       }
+      
       setLastEventTime(now)
+      setLastEvent(_event)
       
       // Handle sign out immediately
       if (_event === 'SIGNED_OUT') {
@@ -79,39 +99,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         console.log('[AuthContext] Fetching user from database for:', session.user.id)
         
-        // Add a small delay to ensure database is ready after auth state change
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Fetch user from database
-        const { data: dbUser, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('supabase_auth_user_id', session.user.id)
-          .single()
-        
-        console.log('[AuthContext] Database user fetch result:', { 
-          dbUser, 
-          error,
-          hasId: dbUser?.id,
-          keys: dbUser ? Object.keys(dbUser) : []
-        })
-        
-        // Check if dbUser has actual data by checking if it has keys
-        // After tab switches, dbUser.id might not be directly accessible even though it exists
-        const hasData = dbUser && Object.keys(dbUser).length > 0
-        
-        if (hasData) {
-          const userWithEmail = { ...dbUser, email: session.user.email }
-          console.log('[AuthContext] Setting user:', userWithEmail)
-          setUser(userWithEmail)
-        } else {
-          console.log('[AuthContext] No valid user found in database (no keys)')
-          console.log('[AuthContext] Current user state:', user)
-          // Don't set user to null if we already have a user - keep existing state
-          if (!user) {
-            setUser(null)
+        try {
+          // Add timeout to prevent hanging
+          const fetchPromise = supabase
+            .from('users')
+            .select('*')
+            .eq('supabase_auth_user_id', session.user.id)
+            .single()
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database fetch timeout')), 5000)
+          )
+          
+          const { data: dbUser, error } = await Promise.race([fetchPromise, timeoutPromise]) as any
+          
+          console.log('[AuthContext] Database user fetch result:', { 
+            dbUser, 
+            error,
+            hasId: dbUser?.id,
+            keys: dbUser ? Object.keys(dbUser) : []
+          })
+          
+          // Check if dbUser has actual data by checking if it has keys
+          // After tab switches, dbUser.id might not be directly accessible even though it exists
+          const hasData = dbUser && Object.keys(dbUser).length > 0
+          
+          if (hasData) {
+            const userWithEmail = { ...dbUser, email: session.user.email }
+            console.log('[AuthContext] Setting user:', userWithEmail)
+            setUser(userWithEmail)
           } else {
-            console.log('[AuthContext] Keeping existing user state')
+            console.log('[AuthContext] No valid user found in database (no keys)')
+          }
+        } catch (err) {
+          console.error('[AuthContext] Database fetch error:', err)
+          // If fetch fails or times out, only reload if we're not on the login page
+          // (to avoid ugly refresh after logout)
+          if (window.location.pathname !== '/login') {
+            console.log('[AuthContext] Reloading page due to fetch error')
+            window.location.reload()
+          } else {
+            console.log('[AuthContext] On login page, not reloading')
+            setUser(null)
           }
         }
       } else {
@@ -135,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     console.log('[AuthContext] Signing out...')
+    console.trace('[AuthContext] Sign out called from:')
     // Clear state immediately to prevent flash of content
     setUser(null)
     setSession(null)

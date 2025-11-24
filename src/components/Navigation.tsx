@@ -26,7 +26,10 @@ export function Navigation() {
       .slice(0, 2)
   }
 
-  const handleSignOut = async () => {
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('[Navigation] handleSignOut called')
     await signOut()
   }
 
