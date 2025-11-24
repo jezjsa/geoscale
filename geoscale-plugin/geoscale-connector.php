@@ -170,6 +170,12 @@ class GeoScale_Connector {
             'callback' => array($this, 'handle_update_request'),
             'permission_callback' => array($this, 'verify_api_key'),
         ));
+
+        register_rest_route('geoscale/v1', '/update-meta', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_update_meta_request'),
+            'permission_callback' => array($this, 'verify_api_key'),
+        ));
     }
     
     /**
@@ -544,6 +550,68 @@ class GeoScale_Connector {
             
         } catch (Exception $e) {
             $this->log('Exception in handle_update_request: ' . $e->getMessage(), 'error');
+            return new WP_Error('update_error', $e->getMessage(), array('status' => 500));
+        }
+    }
+
+    /**
+     * Handle update meta request - updates only meta title and description
+     */
+    public function handle_update_meta_request($request) {
+        $params = $request->get_json_params();
+        
+        // Validate required fields
+        if (empty($params['page_id'])) {
+            return new WP_Error('missing_fields', 'Page ID is required', array('status' => 400));
+        }
+        
+        $page_id = intval($params['page_id']);
+        
+        // Check if page exists
+        $page = get_post($page_id);
+        if (!$page || ($page->post_type !== 'page' && $page->post_type !== 'post')) {
+            return new WP_Error('page_not_found', 'Page not found', array('status' => 404));
+        }
+        
+        try {
+            $this->log('Updating meta for page ID: ' . $page_id);
+            
+            // Update SEO meta
+            if (!empty($params['meta_title'])) {
+                update_post_meta($page_id, '_yoast_wpseo_title', sanitize_text_field($params['meta_title']));
+                update_post_meta($page_id, 'rank_math_title', sanitize_text_field($params['meta_title']));
+                $this->log('Updated meta title for page ID: ' . $page_id);
+            }
+            
+            if (!empty($params['meta_description'])) {
+                update_post_meta($page_id, '_yoast_wpseo_metadesc', sanitize_text_field($params['meta_description']));
+                update_post_meta($page_id, 'rank_math_description', sanitize_text_field($params['meta_description']));
+                $this->log('Updated meta description for page ID: ' . $page_id);
+            }
+            
+            // Clear caches
+            clean_post_cache($page_id);
+            
+            // Purge LiteSpeed Cache
+            if (defined('LSCWP_V')) {
+                do_action('litespeed_purge_post', $page_id);
+            }
+            
+            // Purge Cloudflare
+            if (class_exists('CF\WordPress\Hooks')) {
+                do_action('cloudflare_purge_by_url', get_permalink($page_id));
+            }
+
+            $this->log('Meta update complete for page ID: ' . $page_id, 'success');
+            
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => 'Page meta updated successfully',
+                'page_id' => $page_id,
+            ));
+            
+        } catch (Exception $e) {
+            $this->log('Exception in handle_update_meta_request: ' . $e->getMessage(), 'error');
             return new WP_Error('update_error', $e->getMessage(), array('status' => 500));
         }
     }

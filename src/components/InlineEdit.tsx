@@ -105,10 +105,10 @@ export function InlineEdit({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className={`cursor-pointer hover:bg-accent/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors relative group ${className}`}
+      className="cursor-pointer rounded px-2 py-1 -mx-2 -my-1 transition-colors relative group"
     >
       <div className="flex items-start gap-2">
-        <span className="text-sm break-words flex-1 min-w-0">{value || placeholder}</span>
+        <span className={`break-words flex-1 min-w-0 ${className}`}>{value || placeholder}</span>
         <div className="flex-shrink-0">
           {showSuccess && (
             <Check className="h-4 w-4 text-green-600" />

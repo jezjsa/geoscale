@@ -5,11 +5,10 @@ import { Navigation } from '@/components/Navigation'
 import { InlineEdit } from '@/components/InlineEdit'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { generateContent } from '@/api/content-generator'
+import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { toast } from 'sonner'
 
 export function ViewContentPage() {
@@ -21,19 +20,34 @@ export function ViewContentPage() {
     return <div>Project or content not found</div>
   }
   const [projectName, setProjectName] = useState<string>('')
+  const [projectUrl, setProjectUrl] = useState<string>('')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerateProgress, setRegenerateProgress] = useState(0)
+  const [isPublishing, setIsPublishing] = useState(false)
 
-  // Fetch project name
+  // Fetch project details
   useEffect(() => {
     if (projectId) {
       supabase
         .from('projects')
-        .select('project_name')
+        .select('project_name, blog_url, wp_url')
         .eq('id', projectId)
         .single()
         .then(({ data }) => {
-          if (data) setProjectName(data.project_name)
+          if (data) {
+            setProjectName(data.project_name)
+            // Use blog_url first, fallback to wp_url
+            const url = data.blog_url || data.wp_url || ''
+            // Extract domain from URL
+            if (url) {
+              try {
+                const urlObj = new URL(url)
+                setProjectUrl(urlObj.hostname)
+              } catch {
+                setProjectUrl(url)
+              }
+            }
+          }
         })
     }
   }, [projectId])
@@ -218,6 +232,33 @@ export function ViewContentPage() {
     navigate(`/projects/${projectId}?view=combinations`)
   }
 
+  const handlePublishToWordPress = async () => {
+    setIsPublishing(true)
+    toast.info('Publishing to WordPress...')
+    
+    try {
+      const result = await publishGeneratedPageToWordPress(locationKeywordId, projectId)
+      
+      if (result.success) {
+        toast.success('Successfully published to WordPress!', {
+          description: result.page_url ? `View page: ${result.page_url}` : undefined,
+        })
+        queryClient.invalidateQueries({ queryKey: ['generatedContent', locationKeywordId] })
+        queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+      } else {
+        toast.error('Failed to publish to WordPress', {
+          description: result.error,
+        })
+      }
+    } catch (error) {
+      toast.error('Error publishing to WordPress', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -259,7 +300,7 @@ export function ViewContentPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto py-8 space-y-6">
+      <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -280,28 +321,50 @@ export function ViewContentPage() {
           <h1 className="text-3xl font-bold tracking-tight">Generated Content</h1>
           {content.location_keyword && (
             <p className="text-muted-foreground">
+              <span className="text-xs uppercase tracking-wider">Keyword Combination: </span>
               {content.location_keyword.phrase}
             </p>
           )}
         </div>
-        <Button
-          onClick={handleRegenerate}
-          disabled={isRegenerating || regenerateMutation.isPending}
-          className="gap-2"
-          style={{ backgroundColor: '#006239' }}
-        >
-          {isRegenerating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Regenerating...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              Regenerate Content
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handlePublishToWordPress}
+            disabled={isPublishing || isRegenerating}
+            variant="outline"
+            className="gap-2"
+            style={{ borderColor: '#006239', color: '#006239' }}
+          >
+            {isPublishing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <ArrowUpToLine className="h-4 w-4" />
+                Republish to WordPress
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleRegenerate}
+            disabled={isRegenerating || regenerateMutation.isPending}
+            className="gap-2"
+            style={{ backgroundColor: '#006239' }}
+          >
+            {isRegenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Regenerating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Regenerate Content
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -325,95 +388,86 @@ export function ViewContentPage() {
         </Card>
       )}
 
-      {/* Page Title */}
+      {/* Google Search Preview */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Page Title</CardTitle>
-            <Badge variant="secondary">{content.location_keyword?.phrase}</Badge>
+        <CardContent className="pt-6">
+          <div className="border rounded-lg p-6 !bg-white dark:!bg-[#202124]">
+            {/* Favicon and URL */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-[#006239] flex items-center justify-center text-white text-xs font-bold">
+                G
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm !text-gray-700 dark:!text-gray-300">{projectUrl || 'yoursite.com'}</span>
+                <div className="flex items-center text-xs !text-gray-600 dark:!text-gray-400 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+                  <span>{projectUrl || 'yoursite.com'}/</span>
+                  <InlineEdit
+                    value={content.slug || ''}
+                    onSave={(value) => handleUpdateField('slug', value)}
+                    className="text-xs !text-gray-600 dark:!text-gray-400 font-normal"
+                    placeholder="page-slug"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Title (clickable in Google) */}
+            <div className="mb-1 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+              <InlineEdit
+                value={content.meta_title || content.title}
+                onSave={(value) => handleUpdateField('meta_title', value)}
+                className="text-xl leading-7 !text-[#1a0dab] dark:!text-[#8ab4f8] cursor-pointer font-normal"
+              />
+            </div>
+            
+            {/* Date line */}
+            <div className="flex items-center gap-2 mb-3 text-sm !text-gray-600 dark:!text-gray-400">
+              <span>{new Date(content.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              <span className="!text-gray-500 dark:!text-gray-500">—</span>
+            </div>
+            
+            {/* Meta Description */}
+            <div className="[&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+              <InlineEdit
+                value={content.meta_description || ''}
+                onSave={(value) => handleUpdateField('meta_description', value)}
+                multiline
+                className="text-sm !text-gray-700 dark:!text-gray-300 leading-relaxed"
+                placeholder="Add meta description..."
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                {content.meta_description?.length || 0}/155 characters
+                {content.meta_description && content.meta_description.length > 155 && (
+                  <span className="text-orange-500 ml-2">⚠️ Too long</span>
+                )}
+              </p>
+            </div>
           </div>
-          <CardDescription>Click to edit</CardDescription>
+          
+        </CardContent>
+      </Card>
+
+      {/* Page Title (H1) */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Page Title (H1)</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <InlineEdit
             value={content.title}
             onSave={(value) => handleUpdateField('title', value)}
-            className="text-lg font-medium"
+            className="text-4xl font-bold tracking-tight"
           />
         </CardContent>
       </Card>
 
-      {/* Slug */}
-      <Card>
-        <CardHeader>
-          <CardTitle>URL Slug</CardTitle>
-          <CardDescription>WordPress permalink format - click to edit</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">/</span>
-            <InlineEdit
-              value={content.slug || ''}
-              onSave={(value) => handleUpdateField('slug', value)}
-              className="font-mono"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* SEO Meta Data */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Meta Title</CardTitle>
-            <CardDescription>SEO title (60 characters max) - click to edit</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InlineEdit
-              value={content.meta_title || ''}
-              onSave={(value) => handleUpdateField('meta_title', value)}
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              {content.meta_title?.length || 0} characters
-              {content.meta_title && content.meta_title.length > 60 && (
-                <span className="text-orange-500 ml-2">⚠️ Too long</span>
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Meta Description</CardTitle>
-            <CardDescription>SEO description (155 characters max) - click to edit</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InlineEdit
-              value={content.meta_description || ''}
-              onSave={(value) => handleUpdateField('meta_description', value)}
-              multiline
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              {content.meta_description?.length || 0} characters
-              {content.meta_description && content.meta_description.length > 155 && (
-                <span className="text-orange-500 ml-2">⚠️ Too long</span>
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Page Content */}
       <Card>
-        <CardHeader>
-          <CardTitle>Page Content</CardTitle>
-          <CardDescription>HTML content ready for WordPress</CardDescription>
-        </CardHeader>
         <CardContent>
           {/* Preview Section */}
           <div className="space-y-4">
-            <div className="border rounded-lg p-8">
-              <h3 className="text-sm font-medium mb-6 text-muted-foreground">Preview</h3>
+            <div className="border rounded-lg p-8 mt-8">
+              <h3 className="text-sm font-medium mb-6 text-muted-foreground">Content</h3>
               <style>{`
                 .content-preview {
                   max-width: none;

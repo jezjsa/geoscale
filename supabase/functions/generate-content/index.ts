@@ -261,13 +261,14 @@ Rules:
 - Include proper HTML structure but NO html, head, or body tags - just the content.
 
 Also provide:
-- A meta title (60 characters max)
+- A page title (will be used as the H1 heading by WordPress) - DO NOT include the business name in this title, just use the service and location (e.g., "Web Design in ${location}")
+- A meta title (60 characters max) - CAN include the business name for SEO purposes
 - A meta description (155 characters max)
 
 Format your response as JSON:
 {
-  "title": "Page title here",
-  "meta_title": "Meta title here",
+  "title": "Service in Location (NO business name)",
+  "meta_title": "Meta title here (can include business name)",
   "meta_description": "Meta description here",
   "content": "HTML content here"
 }`;

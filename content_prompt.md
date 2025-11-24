@@ -22,7 +22,7 @@ Example of testimonials_block:
 
 Instructions:
 
-1. Create a H1 using the full keyword phrase: "{service_name} {location}".
+1. Create a H1 using ONLY the service and location: "{service_name} in {location}" - DO NOT include the business name in the H1.
 
 2. Write an intro paragraph that:
    - Explains what the service is and why it benefits local customers.

@@ -145,7 +145,13 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
           if (oldStatus === 'generating' && newStatus === 'generated') {
             // Only show toast for single-item operations
             if (recordId === currentGeneratingId && generatingIds.size === 1) {
-              toast.success('Content generated successfully!')
+              toast.success('Content generated successfully!', {
+                description: 'Ready to push to WordPress',
+                action: {
+                  label: 'Push to WordPress',
+                  onClick: () => handlePushToWordPress(recordId)
+                }
+              })
             }
           } else if (oldStatus === 'generating' && (newStatus === 'error' || newStatus === 'failed')) {
             // Only show toast for single-item operations
@@ -673,6 +679,15 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                     <Badge 
                       variant={getStatusBadgeVariant(combo.status)}
                       className="text-xs"
+                      style={combo.status === 'generated' ? {
+                        backgroundColor: '#1e40af',
+                        color: 'white',
+                        borderColor: '#1e40af'
+                      } : combo.status === 'pushed' ? {
+                        backgroundColor: '#006239',
+                        color: 'white',
+                        borderColor: '#006239'
+                      } : undefined}
                     >
                       {combo.status === 'generating' && (
                         <Loader2 className="mr-1 h-3 w-3 animate-spin inline" />

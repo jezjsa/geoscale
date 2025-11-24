@@ -142,6 +142,43 @@ export async function publishToWordPress(params: {
 }
 
 /**
+ * Update WordPress page meta data
+ */
+export async function updateWordPressPageMeta(params: {
+  pageId: number
+  metaTitle: string
+  metaDescription: string
+  wordpressUrl: string
+  wordpressApiKey: string
+}): Promise<{ success: boolean; message: string }> {
+  // Get session to ensure JWT token is included
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  const { data, error } = await supabase.functions.invoke('update-wordpress-meta', {
+    body: {
+      pageId: params.pageId,
+      metaTitle: params.metaTitle,
+      metaDescription: params.metaDescription,
+      wordpressUrl: params.wordpressUrl,
+      wordpressApiKey: params.wordpressApiKey,
+    },
+    headers: session ? {
+      Authorization: `Bearer ${session.access_token}`,
+    } : {},
+  })
+
+  if (error) {
+    throw new Error(error.message || 'Failed to update WordPress page meta')
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to update WordPress page meta')
+  }
+
+  return data
+}
+
+/**
  * Test WordPress connection
  */
 export async function testWordPressConnection(

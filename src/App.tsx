@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ViewContentPage } from './pages/ViewContentPage'
+import { WordPressSitemapPage } from './pages/WordPressSitemapPage'
 import { TestDataForSEOPage } from './pages/TestDataForSEO'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
@@ -29,6 +30,7 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/content/:locationKeywordId" element={<ProtectedRoute><ViewContentPage /></ProtectedRoute>} />
+        <Route path="/projects/:projectId/sitemap" element={<ProtectedRoute><WordPressSitemapPage /></ProtectedRoute>} />
         <Route path="/test-dataforseo" element={<ProtectedRoute><TestDataForSEOPage /></ProtectedRoute>} />
       </Routes>
     </Router>

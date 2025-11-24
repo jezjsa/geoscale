@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigation } from '@/components/Navigation'
 import { InlineEdit } from '@/components/InlineEdit'
@@ -34,6 +34,7 @@ import { generateWordPressApiKey } from '@/utils/api-key-generator'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const currentView = (searchParams.get('view') as 'combinations' | 'testimonials' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
@@ -221,6 +222,13 @@ export function ProjectDetailPage() {
               className={currentView === 'settings' ? 'text-white hover:bg-[#4a4a4a]' : 'bg-card hover:bg-[#4a4a4a] hover:text-white'}
             >
               Project Settings
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/projects/${projectId}/sitemap`)}
+              className="bg-card hover:bg-[#4a4a4a] hover:text-white"
+            >
+              WordPress Sitemap
             </Button>
           </div>
         </div>
