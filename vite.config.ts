@@ -13,6 +13,7 @@ export default defineConfig({
   },
   // Prevent page refreshes in production
   build: {
+    outDir: 'dist',
     // Ensure proper chunking
     rollupOptions: {
       output: {
