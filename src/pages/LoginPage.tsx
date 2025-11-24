@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,16 @@ import { resetPassword } from '@/api/auth'
 import { toast } from 'sonner'
 
 export function LoginPage() {
-  const { signIn } = useAuth()
+  const { user, loading, signIn } = useAuth()
   const navigate = useNavigate()
+  
+  // Redirect if already logged in (e.g., after page reload with valid session)
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('[LoginPage] User already logged in, redirecting to dashboard')
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, loading, navigate])
   
   const [formData, setFormData] = useState({
     email: '',
