@@ -169,6 +169,8 @@ export const router = createRouter({
   // Ensure router stays active and handles navigation properly
   defaultPreload: 'intent',
   defaultPreloadDelay: 0,
+  // Ensure router history is properly maintained
+  history: typeof window !== 'undefined' ? window.history : undefined,
   // Add error handling for navigation
   defaultErrorComponent: ({ error }) => {
     console.error('Router error:', error)
