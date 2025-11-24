@@ -78,37 +78,50 @@ export async function resetPassword(email: string) {
 
 export async function getCurrentUser(): Promise<(User & { email?: string }) | null> {
   try {
-    // First check if we have a valid session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session) {
-      // No valid session - don't call signOut here as it can break navigation
-      // Just return null and let the router handle redirect
-      return null
-    }
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.warn('getCurrentUser timeout - returning null')
+        resolve(null)
+      }, 5000) // 5 second timeout
+    })
 
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+    const userPromise = (async () => {
+      // First check if we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        // No valid session - don't call signOut here as it can break navigation
+        // Just return null and let the router handle redirect
+        return null
+      }
 
-    if (userError || !authUser) {
-      // Auth user fetch failed - don't sign out here, just return null
-    return null
-  }
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('supabase_auth_user_id', authUser.id)
-    .single()
+      if (userError || !authUser) {
+        // Auth user fetch failed - don't sign out here, just return null
+        return null
+      }
 
-  if (error) {
-    console.error('Error fetching user:', error)
-    return null
-  }
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('supabase_auth_user_id', authUser.id)
+        .single()
 
-  return {
-    ...user,
-    email: authUser.email,
-  } as User & { email?: string }
+      if (error) {
+        console.error('Error fetching user:', error)
+        return null
+      }
+
+      return {
+        ...user,
+        email: authUser.email,
+      } as User & { email?: string }
+    })()
+
+    // Race between user fetch and timeout
+    return await Promise.race([userPromise, timeoutPromise])
   } catch (error) {
     console.error('Error in getCurrentUser:', error)
     // Don't sign out on error - just return null

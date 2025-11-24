@@ -11,8 +11,12 @@ export function useAuth() {
     queryKey: ['currentUser'],
     queryFn: getCurrentUser,
     staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 2,
-    retryDelay: 1000,
+    retry: 1, // Reduce retries to fail faster
+    retryDelay: 500,
+    // Add timeout to prevent infinite loading
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+    // Ensure query doesn't hang - fail gracefully
+    throwOnError: false,
   })
 
   // Sign in mutation
