@@ -42,10 +42,11 @@ export function useAuth() {
       }
     },
     onSettled: () => {
-      // Always clear state and redirect, regardless of success/error
+      // Always clear user state and redirect, regardless of success/error
       // This ensures sign out completes even if Supabase is slow/unresponsive
       queryClient.setQueryData(['currentUser'], null)
-      queryClient.clear()
+      // Don't clear all queries - that can break page refreshes
+      // Only clear the user query, other cached data is fine
       // Use navigate for SPA navigation (works reliably after tab switch)
       navigate('/login', { replace: true })
     },
