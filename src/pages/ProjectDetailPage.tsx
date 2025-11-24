@@ -316,65 +316,65 @@ export function ProjectDetailPage() {
                 </CardContent>
               </Card>
             ) : currentView === 'settings' ? (
-              <Card>
-                <CardHeader>
+            <Card>
+              <CardHeader>
                   <CardTitle>Project Settings</CardTitle>
                   <CardDescription>
                     Manage project information, contact details, and WordPress configuration
                   </CardDescription>
-                </CardHeader>
+              </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-12">
                     {/* Left Column - Project Details */}
                     <div className="space-y-6">
                       <h3 className="text-lg font-semibold mb-4">Project Details</h3>
                       
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-                        <Badge 
-                          className="text-xs"
-                          style={project.project_status === 'active' ? { 
-                            backgroundColor: '#313131', 
-                            color: 'white',
-                            borderColor: '#313131'
-                          } : {
-                            backgroundColor: '#541c15',
-                            color: 'white',
-                            borderColor: '#541c15'
-                          }}
-                        >
-                          {project.project_status === 'active' ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                  <Badge 
+                    className="text-xs"
+                    style={project.project_status === 'active' ? { 
+                      backgroundColor: '#313131', 
+                      color: 'white',
+                      borderColor: '#313131'
+                    } : {
+                      backgroundColor: '#541c15',
+                      color: 'white',
+                      borderColor: '#541c15'
+                    }}
+                  >
+                    {project.project_status === 'active' ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Contact Name</p>
-                        <InlineEdit
-                          value={project.contact_name}
-                          onSave={(value) => handleFieldUpdate('contact_name', value)}
-                          placeholder="Enter contact name"
-                        />
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Contact Name</p>
+                  <InlineEdit
+                    value={project.contact_name}
+                    onSave={(value) => handleFieldUpdate('contact_name', value)}
+                    placeholder="Enter contact name"
+                  />
+                </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Contact Email</p>
-                        <InlineEdit
-                          value={project.contact_email}
-                          onSave={(value) => handleFieldUpdate('contact_email', value)}
-                          type="email"
-                          placeholder="Enter contact email"
-                        />
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Contact Email</p>
+                  <InlineEdit
+                    value={project.contact_email}
+                    onSave={(value) => handleFieldUpdate('contact_email', value)}
+                    type="email"
+                    placeholder="Enter contact email"
+                  />
+                </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Phone</p>
-                        <InlineEdit
-                          value={project.phone_number}
-                          onSave={(value) => handleFieldUpdate('phone_number', value)}
-                          type="tel"
-                          placeholder="Enter phone number"
-                        />
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Phone</p>
+                  <InlineEdit
+                    value={project.phone_number}
+                    onSave={(value) => handleFieldUpdate('phone_number', value)}
+                    type="tel"
+                    placeholder="Enter phone number"
+                  />
+                </div>
 
                       <div>
                         <p className="text-sm font-medium text-muted-foreground mb-1">Contact URL</p>
@@ -415,42 +415,42 @@ export function ProjectDetailPage() {
                     {/* Right Column - WordPress Settings */}
                     <div className="space-y-6">
                       <h3 className="text-lg font-semibold mb-4">WordPress Settings</h3>
-                      
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">WordPress URL</p>
-                        <InlineEdit
-                          value={project.wp_url}
-                          onSave={(value) => handleFieldUpdate('wp_url', value)}
-                          type="url"
-                          placeholder="Enter WordPress URL"
-                        />
-                      </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Blog Root URL</p>
-                        <InlineEdit
-                          value={project.blog_url}
-                          onSave={(value) => handleFieldUpdate('blog_url', value)}
-                          type="url"
-                          placeholder="e.g., https://example.com/blog"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Root URL where pages are published. Used for rank tracking.
-                        </p>
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">WordPress URL</p>
+                  <InlineEdit
+                    value={project.wp_url}
+                    onSave={(value) => handleFieldUpdate('wp_url', value)}
+                    type="url"
+                    placeholder="Enter WordPress URL"
+                  />
+                </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-3">WordPress API Key</p>
-                        <WordPressApiKeyDisplay
-                          apiKey={project.wp_api_key}
-                          onRegenerate={async () => {
-                            // TODO: Implement API key regeneration
-                            toast.error('API key regeneration coming soon')
-                          }}
-                        />
-                      </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Blog Root URL</p>
+                  <InlineEdit
+                    value={project.blog_url}
+                    onSave={(value) => handleFieldUpdate('blog_url', value)}
+                    type="url"
+                    placeholder="e.g., https://example.com/blog"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Root URL where pages are published. Used for rank tracking.
+                  </p>
+                </div>
 
-                      <div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-3">WordPress API Key</p>
+                  <WordPressApiKeyDisplay
+                    apiKey={project.wp_api_key}
+                    onRegenerate={async () => {
+                      // TODO: Implement API key regeneration
+                      toast.error('API key regeneration coming soon')
+                    }}
+                  />
+                </div>
+
+                <div>
                         <p className="text-sm font-medium text-muted-foreground mb-2">Page Template</p>
                         <Select
                           value={project.wp_page_template || undefined}
@@ -483,9 +483,9 @@ export function ProjectDetailPage() {
                             ? 'Install the GeoScale WordPress plugin to see available templates'
                             : 'WordPress page template for generated pages'}
                         </p>
-                      </div>
+                </div>
 
-                      <div>
+                <div>
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
                             <Label htmlFor="wp-publish-status" className="text-sm font-medium text-muted-foreground">
@@ -501,13 +501,13 @@ export function ProjectDetailPage() {
                             onCheckedChange={(checked) => 
                               handleFieldUpdate('wp_publish_status', checked ? 'publish' : 'draft')
                             }
-                          />
-                        </div>
+                  />
+                </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                </div>
+              </CardContent>
+            </Card>
             ) : null}
         </div>
       </div>

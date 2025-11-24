@@ -24,19 +24,30 @@ export function useAuth() {
     },
   })
 
-  // Sign out mutation
+  // Sign out mutation - make it resilient to hanging after tab switch
   const signOutMutation = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => {
-      queryClient.setQueryData(['currentUser'], null)
-      // Use window.location for logout to ensure clean state reset
-      window.location.href = '/login'
+    mutationFn: async () => {
+      // Try to sign out, but don't wait too long
+      // After tab switch, Supabase might be slow to respond
+      try {
+        await Promise.race([
+          signOut(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Sign out timeout')), 3000)
+          )
+        ])
+      } catch (error) {
+        // Log but don't throw - we'll clear state anyway
+        console.warn('Sign out may have timed out:', error)
+      }
     },
-    onError: (error) => {
-      console.error('Sign out error:', error)
-      // Even on error, clear user data and redirect
+    onSettled: () => {
+      // Always clear state and redirect, regardless of success/error
+      // This ensures sign out completes even if Supabase is slow/unresponsive
       queryClient.setQueryData(['currentUser'], null)
-      window.location.href = '/login'
+      queryClient.clear()
+      // Use navigate for SPA navigation (works reliably after tab switch)
+      navigate('/login', { replace: true })
     },
   })
 

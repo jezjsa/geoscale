@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 minutes
       refetchOnWindowFocus: false, // Don't refetch when tab regains focus (like snapbase)
-      refetchOnMount: true, // Refetch on mount - needed for page refreshes to work
+      refetchOnMount: false, // Don't refetch on mount - preserve data when navigating/returning to tab
       refetchOnReconnect: false, // Don't refetch on reconnect - preserve state
       retry: 1,
       // Keep data in cache even when components unmount

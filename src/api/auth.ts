@@ -91,24 +91,24 @@ export async function getCurrentUser(): Promise<(User & { email?: string }) | nu
 
     if (userError || !authUser) {
       // Auth user fetch failed - don't sign out here, just return null
-      return null
-    }
+    return null
+  }
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('supabase_auth_user_id', authUser.id)
-      .single()
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('supabase_auth_user_id', authUser.id)
+    .single()
 
-    if (error) {
-      console.error('Error fetching user:', error)
-      return null
-    }
+  if (error) {
+    console.error('Error fetching user:', error)
+    return null
+  }
 
-    return {
-      ...user,
-      email: authUser.email,
-    } as User & { email?: string }
+  return {
+    ...user,
+    email: authUser.email,
+  } as User & { email?: string }
   } catch (error) {
     console.error('Error in getCurrentUser:', error)
     // Don't sign out on error - just return null

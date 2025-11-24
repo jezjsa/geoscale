@@ -122,10 +122,10 @@ export function LoginPage() {
                 >
                   Forgot your password?
                 </button>
-                <p className="text-sm text-center text-muted-foreground">
-                  Don't have an account?{' '}
+            <p className="text-sm text-center text-muted-foreground">
+              Don't have an account?{' '}
                   <Link to="/signup" className="text-primary hover:underline">
-                    Sign up
+                Sign up
                   </Link>
                 </p>
               </>
