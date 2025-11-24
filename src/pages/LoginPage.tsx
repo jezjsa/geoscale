@@ -42,14 +42,13 @@ export function LoginPage() {
       
       if (signInError) {
         setError(signInError.message || 'Failed to sign in')
-      } else {
-        // AuthContext will handle navigation via onAuthStateChange
-        navigate('/dashboard')
+        setIsSigningIn(false)
       }
+      // Don't navigate here - let the useEffect handle it when user is set
+      // This prevents race conditions where we navigate before user is fetched
     } catch (err: any) {
       console.error('Login error:', err)
       setError(err.message || 'Failed to sign in')
-    } finally {
       setIsSigningIn(false)
     }
   }
