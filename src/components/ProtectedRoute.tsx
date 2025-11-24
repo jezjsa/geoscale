@@ -7,9 +7,12 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading } = useAuth()
+  const { user, loading } = useAuth()
 
-  if (isLoading) {
+  console.log('[ProtectedRoute] State:', { user, loading })
+
+  if (loading) {
+    console.log('[ProtectedRoute] Showing loading state')
     return (
       <div className="flex items-center justify-center" style={{ height: '100vh' }}>
         <div className="text-center">
@@ -21,9 +24,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
+    console.log('[ProtectedRoute] No user, redirecting to login')
     return <Navigate to="/login" replace />
   }
 
+  console.log('[ProtectedRoute] User authenticated, rendering children')
   return <>{children}</>
 }
 

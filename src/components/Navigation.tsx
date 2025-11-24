@@ -14,7 +14,7 @@ import { ThemeSwitcher } from './ThemeSwitcher'
 import { MapPin, Settings, LogOut } from 'lucide-react'
 
 export function Navigation() {
-  const { user, signOut, isSigningOut } = useAuth()
+  const { user, signOut } = useAuth()
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U'
@@ -26,8 +26,8 @@ export function Navigation() {
       .slice(0, 2)
   }
 
-  const handleSignOut = () => {
-    signOut()
+  const handleSignOut = async () => {
+    await signOut()
   }
 
   return (
@@ -77,11 +77,10 @@ export function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    disabled={isSigningOut}
                     className="flex items-center gap-2"
                   >
                     <LogOut className="h-4 w-4" />
-                    {isSigningOut ? 'Signing out...' : 'Log out'}
+                    Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

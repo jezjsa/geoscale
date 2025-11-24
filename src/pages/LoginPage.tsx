@@ -5,20 +5,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { resetPassword, type SignInData } from '@/api/auth'
+import { resetPassword } from '@/api/auth'
 import { toast } from 'sonner'
 
 export function LoginPage() {
-  const { user, signIn, isSigningIn, isLoading } = useAuth()
+  const { user, signIn, loading } = useAuth()
   const navigate = useNavigate()
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!isLoading && user) {
+    if (!loading && user) {
       navigate('/dashboard', { replace: true })
     }
-  }, [user, isLoading, navigate])
-  const [formData, setFormData] = useState<SignInData>({
+  }, [user, loading, navigate])
+  
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
@@ -26,28 +27,30 @@ export function LoginPage() {
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [isResetting, setIsResetting] = useState(false)
+  const [isSigningIn, setIsSigningIn] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    // Normalize email input
-    const normalizedFormData = {
-      ...formData,
-      email: formData.email.trim().toLowerCase(),
-      password: formData.password.trim(),
-    }
+    setIsSigningIn(true)
 
     try {
-      signIn(normalizedFormData, {
-        onError: (err: any) => {
-          console.error('Login error:', err)
-          setError(err.message || 'Failed to sign in')
-        },
-      })
+      const { error: signInError } = await signIn(
+        formData.email.trim().toLowerCase(),
+        formData.password.trim()
+      )
+      
+      if (signInError) {
+        setError(signInError.message || 'Failed to sign in')
+      } else {
+        // AuthContext will handle navigation via onAuthStateChange
+        navigate('/dashboard')
+      }
     } catch (err: any) {
       console.error('Login error:', err)
       setError(err.message || 'Failed to sign in')
+    } finally {
+      setIsSigningIn(false)
     }
   }
 

@@ -9,14 +9,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-})
+// Create Supabase client - use default config like Snapbase for reliability
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Note: API keys for third-party services (Google, DataForSEO, OpenAI, Stripe)
 // will be stored in Supabase Secrets and accessed via Edge Functions or

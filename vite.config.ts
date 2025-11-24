@@ -11,10 +11,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Prevent page refreshes in production
   build: {
     outDir: 'dist',
-    // Ensure proper chunking
     rollupOptions: {
       output: {
         manualChunks: {
@@ -25,18 +23,9 @@ export default defineConfig({
       },
     },
   },
-  // Disable HMR in production builds
   server: {
-    port: 5174, // Use port 5174 to avoid conflict with other apps
-    hmr: {
-      // Only enable HMR in development
-      protocol: 'ws',
-    },
-  },
-  // Ensure no refresh on focus in production
-  define: {
-    // Prevent any window focus refresh logic
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    port: 5174,
+    host: 'localhost'
   },
 })
 

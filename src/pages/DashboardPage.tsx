@@ -9,7 +9,9 @@ import { getDashboardStats } from '@/api/projects'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export function DashboardPage() {
-  const { user, isLoading } = useAuth()
+  const { user, loading } = useAuth()
+  
+  console.log('[DashboardPage] Render:', { user, loading })
 
   const { data: companySettings } = useQuery({
     queryKey: ['companySettings', user?.id],
@@ -23,7 +25,7 @@ export function DashboardPage() {
     enabled: !!user,
   })
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
