@@ -32,10 +32,8 @@ export function ProjectTestimonialsManager({ projectId }: ProjectTestimonialsMan
   })
 
   const { data: testimonials, isLoading } = useQuery({
-    queryKey: ['projectTestimonials', projectId],
+    queryKey: ['projectTestimonials', projectId, 'v2'],
     queryFn: async () => {
-      console.log('Fetching testimonials for projectId:', projectId)
-      
       const { data, error } = await supabase
         .from('project_testimonials')
         .select('*')
@@ -43,27 +41,7 @@ export function ProjectTestimonialsManager({ projectId }: ProjectTestimonialsMan
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching testimonials:', error)
         throw error
-      }
-      
-      console.log('Fetched testimonials count:', data?.length || 0)
-      console.log('Fetched testimonials data:', JSON.stringify(data, null, 2))
-      
-      if (data && data.length > 0) {
-        const first = data[0]
-        console.log('First testimonial raw object:', first)
-        console.log('First testimonial keys:', Object.keys(first))
-        console.log('First testimonial testimonial_text:', first.testimonial_text)
-        console.log('First testimonial testimonial_text type:', typeof first.testimonial_text)
-        console.log('First testimonial full:', {
-          id: first.id,
-          project_id: first.project_id,
-          testimonial_text: first.testimonial_text,
-          customer_name: first.customer_name,
-          business_name: first.business_name,
-          all_keys: Object.keys(first)
-        })
       }
       
       return (data || []) as Testimonial[]
@@ -266,12 +244,6 @@ export function ProjectTestimonialsManager({ projectId }: ProjectTestimonialsMan
         <div className="space-y-4">
           {testimonials.map((testimonial) => {
             const hasText = testimonial.testimonial_text && testimonial.testimonial_text.trim().length > 0
-            console.log('Rendering testimonial:', {
-              id: testimonial.id,
-              hasText,
-              textLength: testimonial.testimonial_text?.length,
-              textPreview: testimonial.testimonial_text?.substring(0, 50)
-            })
             
             return (
             <Card key={testimonial.id} className="border">

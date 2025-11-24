@@ -731,7 +731,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                         size="sm"
                         onClick={() => handlePushToWordPress(combo.id)}
                         disabled={
-                          combo.status !== 'generated' || 
+                          (combo.status !== 'generated' && combo.status !== 'pushed') || 
                           pushingIds.has(combo.id)
                         }
                         className="h-8 w-8 p-0"

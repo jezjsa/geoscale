@@ -208,7 +208,7 @@ ${serviceDescription ? `Service description: ${serviceDescription}` : ""}
 
 Instructions:
 
-1. Create a H1 using the full keyword phrase: "${serviceName} in ${location}".
+1. DO NOT include an H1 heading in the content - WordPress will use the page title as the H1.
 
 2. Write an intro paragraph that:
    - Explains what the service is and why it benefits local customers.
@@ -216,11 +216,14 @@ Instructions:
    - Invites users to call the phone number${phoneNumber ? ` (${phoneNumber})` : ""} or use the contact page URL${contactUrl ? ` (${contactUrl})` : ""}.
    - Optionally includes a short testimonial sentence if it fits naturally.
 
-3. Create a section titled: "Why Choose ${businessName} for ${serviceName} in ${location}".
+3. Create a section with a natural-sounding H2 heading about why to choose the business.
+   - Use natural phrasing like "Why Choose ${businessName} for Web Design in ${location}" or "Why Choose ${businessName} as Your Web Design Agency in ${location}".
+   - Adapt the phrasing to make grammatical sense with the service type (e.g., add "your" or rephrase as needed).
    - Include 5 to 7 bullet points.
    - You may reference outcomes that match the testimonials, but do not rewrite or change the testimonial quotes themselves.
 
-4. Create a section titled: "Our ${serviceName} Services".
+4. Create a section with an H2 heading about the services offered.
+   - Use natural phrasing like "Our Web Design Services" or "Web Design Services in ${location}".
    - Include 3 to 5 service sub headings with short paragraphs.
 
 5. Create a section titled: "What Our Clients Say".
@@ -253,8 +256,8 @@ Rules:
 - DO NOT invent specific businesses, projects, or case studies.
 - Only use the 8 sections specified in the instructions above - do not add additional sections.
 - Output ONLY valid HTML content (no markdown, no explanation text).
-- Start with the H1 tag and include all sections as HTML.
-- Use semantic HTML tags (h1, h2, h3, p, ul, li, etc.).
+- DO NOT include an H1 tag in the content - start with the intro paragraph.
+- Use semantic HTML tags (h2, h3, p, ul, li, etc.) but NO H1 tags.
 - Include proper HTML structure but NO html, head, or body tags - just the content.
 
 Also provide:

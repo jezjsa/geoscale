@@ -1,23 +1,26 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Copy, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Copy, RefreshCw, TestTube2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { copyApiKeyToClipboard, maskApiKey } from '@/utils/api-key-generator'
+import { copyApiKeyToClipboard } from '@/utils/api-key-generator'
 
 interface WordPressApiKeyDisplayProps {
   apiKey: string
+  wordpressUrl?: string
   onRegenerate?: () => void
+  onTestConnection?: () => void
   isRegenerating?: boolean
+  isTesting?: boolean
 }
 
 export function WordPressApiKeyDisplay({ 
   apiKey, 
+  wordpressUrl,
   onRegenerate,
-  isRegenerating = false 
+  onTestConnection,
+  isRegenerating = false,
+  isTesting = false
 }: WordPressApiKeyDisplayProps) {
-  const [showFullKey, setShowFullKey] = useState(false)
-
   const handleCopy = async () => {
     const success = await copyApiKeyToClipboard(apiKey)
     if (success) {
@@ -27,24 +30,16 @@ export function WordPressApiKeyDisplay({
     }
   }
 
-  const displayKey = showFullKey ? apiKey : maskApiKey(apiKey)
+  const canTest = wordpressUrl && apiKey
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Input
-          value={displayKey}
+          value={apiKey}
           readOnly
           className="font-mono text-sm"
         />
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setShowFullKey(!showFullKey)}
-          title={showFullKey ? 'Hide API key' : 'Show API key'}
-        >
-          {showFullKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </Button>
         <Button
           variant="outline"
           size="icon"
@@ -53,6 +48,17 @@ export function WordPressApiKeyDisplay({
         >
           <Copy className="h-4 w-4" />
         </Button>
+        {onTestConnection && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onTestConnection}
+            disabled={isTesting || !canTest}
+            title={canTest ? "Test WordPress connection" : "Enter WordPress URL first"}
+          >
+            <TestTube2 className={`h-4 w-4 ${isTesting ? 'animate-pulse' : ''}`} />
+          </Button>
+        )}
         {onRegenerate && (
           <Button
             variant="outline"
@@ -66,7 +72,7 @@ export function WordPressApiKeyDisplay({
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Copy this API key and paste it into this WordPress plugin settings. Keep it secure - it provides access to create and update pages on this WordPress site.
+        Copy this API key and paste it into the WordPress plugin settings. Keep it secure - it provides access to create and update pages on this WordPress site.
       </p>
     </div>
   )

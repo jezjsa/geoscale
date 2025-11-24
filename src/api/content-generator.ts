@@ -154,7 +154,7 @@ export async function publishGeneratedPageToWordPress(
     // Get project WordPress settings
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('wp_url, wp_api_key, wp_page_template, wp_publish_status')
+      .select('wp_url, blog_url, wp_api_key, wp_page_template, wp_publish_status')
       .eq('id', projectId)
       .single();
 
@@ -162,24 +162,36 @@ export async function publishGeneratedPageToWordPress(
       throw new Error('Project not found');
     }
 
-    if (!project.wp_url || !project.wp_api_key) {
+    const wpUrl = project.blog_url || project.wp_url;
+    
+    if (!wpUrl || !project.wp_api_key) {
       throw new Error('WordPress URL and API key not configured for this project');
     }
 
-    // Publish to WordPress
+    // Publish to WordPress using the project's publish status setting
     const result = await publishToWordPress({
       combinationId: locationKeywordId,
       title: page.title,
       content: page.content,
       metaTitle: page.meta_title || page.title,
       metaDescription: page.meta_description || '',
-      wordpressUrl: project.wp_url,
+      wordpressUrl: wpUrl,
       wordpressApiKey: project.wp_api_key,
       pageTemplate: project.wp_page_template || '',
-      publishStatus: (project.wp_publish_status as 'draft' | 'publish') || 'draft',
+      publishStatus: (project.wp_publish_status as 'draft' | 'publish') || 'publish',
       location: combination.project_locations?.name || '',
       keyword: combination.keyword_variations?.keyword || '',
     });
+
+    // Update location_keywords with WordPress page ID and URL
+    await supabase
+      .from('location_keywords')
+      .update({
+        status: 'pushed',
+        wp_page_id: result.page_id,
+        wp_page_url: result.page_url,
+      })
+      .eq('id', locationKeywordId);
 
     return {
       success: true,

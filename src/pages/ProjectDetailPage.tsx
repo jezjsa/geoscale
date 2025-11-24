@@ -27,9 +27,10 @@ import {
 import { ArrowLeft, Plus, Upload } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import { getProjectCombinations } from '@/api/combinations'
-import { fetchWordPressTemplates } from '@/api/wordpress'
+import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpress'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { generateWordPressApiKey } from '@/utils/api-key-generator'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -46,6 +47,8 @@ export function ProjectDetailPage() {
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
   const [wpTemplates, setWpTemplates] = useState<Array<{ value: string; label: string }>>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
   
   const setCurrentView = (view: 'combinations' | 'testimonials' | 'settings') => {
     setSearchParams({ view })
@@ -88,6 +91,7 @@ export function ProjectDetailPage() {
       await updateProject(projectId, { [field]: value })
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
       queryClient.invalidateQueries({ queryKey: ['agencyProjects'] })
+      toast.success('Field updated successfully')
     } catch (error) {
       toast.error('Error updating field', {
         description: error instanceof Error ? error.message : 'Failed to save',
@@ -96,22 +100,37 @@ export function ProjectDetailPage() {
     }
   }
 
+  const handlePageTemplateUpdate = async (value: string) => {
+    try {
+      await updateProject(projectId, { wp_page_template: value })
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['agencyProjects'] })
+      toast.success('Page template updated successfully')
+    } catch (error) {
+      toast.error('Error updating page template', {
+        description: error instanceof Error ? error.message : 'Failed to save',
+      })
+    }
+  }
+
   // Load WordPress templates when project has WP URL and API key
   useEffect(() => {
-    if (project?.wp_url && project?.wp_api_key) {
+    const wpUrl = project?.blog_url || project?.wp_url
+    if (wpUrl && project?.wp_api_key) {
       loadWpTemplates()
     } else {
       // Reset templates if WP settings are removed
       setWpTemplates([])
     }
-  }, [project?.wp_url, project?.wp_api_key])
+  }, [project?.blog_url, project?.wp_url, project?.wp_api_key])
 
   const loadWpTemplates = async () => {
-    if (!project?.wp_url || !project?.wp_api_key) return
+    const wpUrl = project?.blog_url || project?.wp_url
+    if (!wpUrl || !project?.wp_api_key) return
     
     setLoadingTemplates(true)
     try {
-      const templates = await fetchWordPressTemplates(project.wp_url, project.wp_api_key)
+      const templates = await fetchWordPressTemplates(wpUrl, project.wp_api_key)
       setWpTemplates(templates)
     } catch (error) {
       console.error('Failed to load WordPress templates:', error)
@@ -324,9 +343,9 @@ export function ProjectDetailPage() {
                   </CardDescription>
               </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-12">
+                  <div className="grid grid-cols-2 gap-6">
                     {/* Left Column - Project Details */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 border rounded-lg p-6">
                       <h3 className="text-lg font-semibold mb-4">Project Details</h3>
                       
                 <div>
@@ -413,7 +432,7 @@ export function ProjectDetailPage() {
                     </div>
 
                     {/* Right Column - WordPress Settings */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 border rounded-lg p-6">
                       <h3 className="text-lg font-semibold mb-4">WordPress Settings</h3>
 
                 <div>
@@ -443,9 +462,36 @@ export function ProjectDetailPage() {
                   <p className="text-sm font-medium text-muted-foreground mb-3">WordPress API Key</p>
                   <WordPressApiKeyDisplay
                     apiKey={project.wp_api_key}
+                    wordpressUrl={project.blog_url || project.wp_url}
+                    isRegenerating={isRegeneratingApiKey}
+                    isTesting={isTestingConnection}
+                    onTestConnection={async () => {
+                      try {
+                        setIsTestingConnection(true)
+                        const testUrl = project.blog_url || project.wp_url
+                        const result = await testWordPressConnection(testUrl, project.wp_api_key)
+                        if (result.success) {
+                          toast.success(result.message)
+                        } else {
+                          toast.error(result.message)
+                        }
+                      } catch (error) {
+                        toast.error('Failed to test connection')
+                      } finally {
+                        setIsTestingConnection(false)
+                      }
+                    }}
                     onRegenerate={async () => {
-                      // TODO: Implement API key regeneration
-                      toast.error('API key regeneration coming soon')
+                      try {
+                        setIsRegeneratingApiKey(true)
+                        const newApiKey = generateWordPressApiKey()
+                        await handleFieldUpdate('wp_api_key', newApiKey)
+                        toast.success('API key regenerated successfully')
+                      } catch (error) {
+                        toast.error('Failed to regenerate API key')
+                      } finally {
+                        setIsRegeneratingApiKey(false)
+                      }
                     }}
                   />
                 </div>
@@ -454,8 +500,8 @@ export function ProjectDetailPage() {
                         <p className="text-sm font-medium text-muted-foreground mb-2">Page Template</p>
                         <Select
                           value={project.wp_page_template || undefined}
-                          onValueChange={(value) => handleFieldUpdate('wp_page_template', value)}
-                          disabled={loadingTemplates || !project.wp_url || !project.wp_api_key}
+                          onValueChange={handlePageTemplateUpdate}
+                          disabled={loadingTemplates || !(project.blog_url || project.wp_url) || !project.wp_api_key}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder={loadingTemplates ? 'Loading templates...' : 'Select template'} />
@@ -477,7 +523,7 @@ export function ProjectDetailPage() {
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {!project.wp_url || !project.wp_api_key 
+                          {!(project.blog_url || project.wp_url) || !project.wp_api_key 
                             ? 'Configure WordPress URL and API key to load templates'
                             : wpTemplates.length === 0 && !loadingTemplates
                             ? 'Install the GeoScale WordPress plugin to see available templates'
