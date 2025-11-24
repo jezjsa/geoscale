@@ -43,6 +43,16 @@ export function LoginPage() {
       if (signInError) {
         setError(signInError.message || 'Failed to sign in')
         setIsSigningIn(false)
+      } else {
+        // Sign in succeeded - wait a moment for auth state to update
+        // If navigation doesn't happen within 2 seconds, reload the page
+        // This handles the edge case where auth state gets stuck after tab switches
+        setTimeout(() => {
+          if (window.location.pathname === '/login') {
+            console.log('[LoginPage] Navigation did not occur, reloading page')
+            window.location.reload()
+          }
+        }, 2000)
       }
       // Don't navigate here - let the useEffect handle it when user is set
       // This prevents race conditions where we navigate before user is fetched
