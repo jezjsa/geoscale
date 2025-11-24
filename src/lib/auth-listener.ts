@@ -20,13 +20,32 @@ export function setupAuthListener(queryClient: QueryClient) {
     }
   })
 
-  // Periodically check if session is still valid
-  setInterval(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      // Session expired, clear user data
+  // Periodically check if session is still valid (only when tab is visible)
+  const checkSession = async () => {
+    // Only check if document is visible (tab is active)
+    if (document.hidden) {
+      return
+    }
+    
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error || !session) {
+      // Only clear if we're sure the session is invalid
+      // Don't clear on temporary errors
+      if (error && error.message !== 'Session not found') {
+        return
+      }
       queryClient.setQueryData(['currentUser'], null)
     }
-  }, 60000) // Check every minute
+  }
+  
+  // Check session periodically, but only when tab is visible
+  setInterval(checkSession, 60000) // Check every minute
+  
+  // Also check when tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkSession()
+    }
+  })
 }
 

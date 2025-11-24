@@ -12,9 +12,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false, // Prevent refetch on tab switch
-      refetchOnMount: false,
+      refetchOnWindowFocus: false, // Prevent refetch on tab switch (keep data when switching tabs)
+      refetchOnMount: false, // Don't refetch on mount to preserve data when navigating
+      refetchOnReconnect: true, // Refetch when network reconnects
       retry: 1,
+      // Keep data in cache even when components unmount
+      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     },
   },
 })
