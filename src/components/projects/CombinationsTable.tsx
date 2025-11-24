@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -298,10 +298,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
 
   const handleViewContent = (id: string) => {
     console.log('Navigating to view content:', { projectId, locationKeywordId: id })
-    navigate({ 
-      to: '/projects/$projectId/content/$locationKeywordId',
-      params: { projectId, locationKeywordId: id }
-    })
+        navigate(`/projects/${projectId}/content/${id}`)
   }
 
   // Mutation to generate or regenerate a single combination

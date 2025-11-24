@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { getPlans } from '@/api/plans'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -60,7 +60,7 @@ export function PlansPage() {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full" size="lg">
-                  <Link to="/signup" search={{ plan: plan.name }}>
+                  <Link to={`/signup?plan=${plan.name}`}>
                     Get Started
                   </Link>
                 </Button>

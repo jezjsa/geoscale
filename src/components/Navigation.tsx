@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -91,7 +91,7 @@ export function Navigation() {
                   <Link to="/login">Sign In</Link>
                 </Button>
                 <Button asChild>
-                  <Link to="/plans" search={{ plan: undefined }}>Get Started</Link>
+                  <Link to="/plans">Get Started</Link>
                 </Button>
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from '@tanstack/react-router'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ export function ResetPasswordPage() {
 
         if (exchangeError) {
           toast.error('Invalid or expired reset link')
-          navigate({ to: '/login' })
+          navigate('/login')
         }
         // Clear the hash from URL
         window.history.replaceState(null, '', window.location.pathname)
@@ -39,7 +39,7 @@ export function ResetPasswordPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
           toast.error('Invalid or expired reset link')
-          navigate({ to: '/login' })
+          navigate('/login')
         }
       }
     }
@@ -72,7 +72,7 @@ export function ResetPasswordPage() {
       }
 
       toast.success('Password reset successfully!')
-      navigate({ to: '/login' })
+      navigate('/login')
     } catch (err: any) {
       setError(err.message || 'Failed to reset password')
     } finally {

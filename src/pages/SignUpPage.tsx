@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearch, Link } from '@tanstack/react-router'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { signUp, type SignUpData } from '@/api/auth'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { calculatePasswordStrength } from '@/utils/password-strength'
 
 export function SignUpPage() {
   const navigate = useNavigate()
-  const search = useSearch({ from: '/signup' })
+  const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,7 +19,7 @@ export function SignUpPage() {
   })
   const [error, setError] = useState<string | null>(null)
 
-  const selectedPlan = (search as any)?.plan || 'individual'
+  const selectedPlan = searchParams.get('plan') || 'individual'
   const passwordStrength = calculatePasswordStrength(formData.password)
 
   const queryClient = useQueryClient()
@@ -34,7 +34,7 @@ export function SignUpPage() {
       await queryClient.refetchQueries({ queryKey: ['currentUser'] })
       
       // Navigate to dashboard
-      navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     },
     onError: (err: any) => {
       setError(err.message || 'Failed to sign up')

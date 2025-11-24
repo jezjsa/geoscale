@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigation } from '@/components/Navigation'
 import { InlineEdit } from '@/components/InlineEdit'
@@ -13,9 +13,13 @@ import { generateContent } from '@/api/content-generator'
 import { toast } from 'sonner'
 
 export function ViewContentPage() {
-  const { projectId, locationKeywordId } = useParams({ from: '/projects/$projectId/content/$locationKeywordId' })
+  const { projectId, locationKeywordId } = useParams<{ projectId: string; locationKeywordId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  
+  if (!projectId || !locationKeywordId) {
+    return <div>Project or content not found</div>
+  }
   const [projectName, setProjectName] = useState<string>('')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerateProgress, setRegenerateProgress] = useState(0)
@@ -211,11 +215,7 @@ export function ViewContentPage() {
   }
 
   const handleBack = () => {
-    navigate({
-      to: '/projects/$projectId',
-      params: { projectId },
-      search: { view: 'combinations' }
-    })
+    navigate(`/projects/${projectId}?view=combinations`)
   }
 
   if (isLoading) {

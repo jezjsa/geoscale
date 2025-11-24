@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 export function HomePage() {
@@ -15,7 +15,7 @@ export function HomePage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Button asChild size="lg">
-            <Link to="/plans" search={{ plan: undefined }}>View Plans</Link>
+            <Link to="/plans">View Plans</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
             <Link to="/login">Sign In</Link>
@@ -55,7 +55,7 @@ export function HomePage() {
           Choose a plan that fits your needs and start generating landing pages today.
         </p>
         <Button asChild size="lg">
-          <Link to="/plans" search={{ plan: undefined }}>View Plans</Link>
+          <Link to="/plans">View Plans</Link>
         </Button>
       </section>
     </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,15 @@ import { resetPassword, type SignInData } from '@/api/auth'
 import { toast } from 'sonner'
 
 export function LoginPage() {
-  const { signIn, isSigningIn } = useAuth()
+  const { user, signIn, isSigningIn, isLoading } = useAuth()
+  const navigate = useNavigate()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, isLoading, navigate])
   const [formData, setFormData] = useState<SignInData>({
     email: '',
     password: '',
@@ -116,7 +124,7 @@ export function LoginPage() {
                 </button>
                 <p className="text-sm text-center text-muted-foreground">
                   Don't have an account?{' '}
-                  <Link to="/signup" search={{ plan: undefined }} className="text-primary hover:underline">
+                  <Link to="/signup" className="text-primary hover:underline">
                     Sign up
                   </Link>
                 </p>

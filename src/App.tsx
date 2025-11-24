@@ -1,6 +1,38 @@
-import { RouterProvider } from '@tanstack/react-router'
-import { router } from './router'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { HomePage } from './pages/HomePage'
+import { PlansPage } from './pages/PlansPage'
+import { SignUpPage } from './pages/SignUpPage'
+import { LoginPage } from './pages/LoginPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { ProjectDetailPage } from './pages/ProjectDetailPage'
+import { ViewContentPage } from './pages/ViewContentPage'
+import { TestDataForSEOPage } from './pages/TestDataForSEO'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
-export function App() {
-  return <RouterProvider router={router} />
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* Root redirects to home */}
+        <Route path="/" element={<HomePage />} />
+        
+        {/* Public Routes */}
+        <Route path="/plans" element={<PlansPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+        <Route path="/projects/:projectId/content/:locationKeywordId" element={<ProtectedRoute><ViewContentPage /></ProtectedRoute>} />
+        <Route path="/test-dataforseo" element={<ProtectedRoute><TestDataForSEOPage /></ProtectedRoute>} />
+      </Routes>
+    </Router>
+  )
 }
+
+export default App

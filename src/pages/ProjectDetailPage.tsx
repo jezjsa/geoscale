@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigation } from '@/components/Navigation'
 import { InlineEdit } from '@/components/InlineEdit'
@@ -32,11 +32,14 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 export function ProjectDetailPage() {
-  const { projectId } = useParams({ from: '/projects/$projectId' })
-  const search = useSearch({ from: '/projects/$projectId' })
-  const currentView = search.view || 'combinations'
-  const navigate = useNavigate()
+  const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentView = (searchParams.get('view') as 'combinations' | 'testimonials' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
+  
+  if (!projectId) {
+    return <div>Project not found</div>
+  }
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAddSpecificDialog, setShowAddSpecificDialog] = useState(false)
   const [showResearchKeywordsDialog, setShowResearchKeywordsDialog] = useState(false)
@@ -45,11 +48,7 @@ export function ProjectDetailPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   
   const setCurrentView = (view: 'combinations' | 'testimonials' | 'settings') => {
-    navigate({
-      to: '/projects/$projectId',
-      params: { projectId },
-      search: { view },
-    })
+    setSearchParams({ view })
   }
 
   const { data: project, isLoading } = useQuery({

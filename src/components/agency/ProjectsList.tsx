@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ExternalLink, Search, Eye } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 interface ProjectsListProps {
@@ -95,9 +95,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                   <TableRow key={project.id} className="hover:bg-accent/50">
                     <TableCell className="font-medium">
                       <Link 
-                        to="/projects/$projectId"
-                        params={{ projectId: project.id }}
-                        search={{ view: 'combinations' }}
+                        to={`/projects/${project.id}?view=combinations`}
                         className="hover:underline hover:text-primary transition-colors"
                       >
                         {project.company_name || project.project_name}
@@ -150,7 +148,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                         asChild
                         className="h-8 w-8"
                       >
-                        <Link to="/projects/$projectId" params={{ projectId: project.id }} search={{ view: 'combinations' }}>
+                        <Link to={`/projects/${project.id}?view=combinations`}>
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>

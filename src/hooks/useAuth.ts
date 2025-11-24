@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { signIn, signOut, getCurrentUser, type SignInData } from '@/api/auth'
 
 export function useAuth() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   // Get current user
@@ -20,7 +20,7 @@ export function useAuth() {
     mutationFn: signIn,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['currentUser'] })
-      router.navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     },
   })
 
