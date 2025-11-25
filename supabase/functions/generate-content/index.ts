@@ -280,7 +280,7 @@ Format your response as JSON:
   "content": "HTML content here"
 }`;
 
-        // Call OpenAI API with o1 model
+        // Call OpenAI API with GPT-4 Turbo model
         const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -288,7 +288,7 @@ Format your response as JSON:
             Authorization: `Bearer ${openaiApiKey}`,
           },
           body: JSON.stringify({
-            model: "o1",
+            model: "gpt-4-turbo",
             messages: [
               {
                 role: "user",
@@ -365,7 +365,7 @@ Format your response as JSON:
           endpoint: "/v1/chat/completions",
           method: "POST",
           status_code: 200,
-          request_body: { model: "o1", prompt_length: prompt.length },
+          request_body: { model: "gpt-4-turbo", prompt_length: prompt.length },
           response_body: { success: true },
         });
 

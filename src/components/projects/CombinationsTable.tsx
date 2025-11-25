@@ -20,17 +20,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ArrowUpToLine } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ArrowUpToLine, ExternalLink, HelpCircle, Plus, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
+import { publishGeneratedPageToWordPress } from '@/api/content-generator'
+import { queueContentGeneration } from '@/api/content-queue'
 import { checkRankings } from '@/api/rankings'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Combination {
   id: string
   phrase: string
   status: string
+  wp_page_url: string | null
   position: number | null
   previous_position: number | null
   last_position_check: string | null
@@ -47,11 +50,13 @@ interface Combination {
 interface CombinationsTableProps {
   combinations: Combination[]
   projectId: string
+  blogUrl?: string
 }
 
-export function CombinationsTable({ combinations, projectId }: CombinationsTableProps) {
+export function CombinationsTable({ combinations, projectId, blogUrl }: CombinationsTableProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTown, setSelectedTown] = useState<string>('all')
   const [deleteMode, setDeleteMode] = useState(false)
@@ -60,6 +65,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
   const [currentGeneratingId, setCurrentGeneratingId] = useState<string | null>(null)
   const [pushingIds, setPushingIds] = useState<Set<string>>(new Set())
+  const [showHelp, setShowHelp] = useState(false)
 
   // Calculate generation progress
   const generationProgress = useMemo(() => {
@@ -224,27 +230,27 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
 
   const generateMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      // Track which IDs are being generated
-      setGeneratingIds(new Set(ids))
+      if (!user?.id) {
+        throw new Error('User not authenticated')
+      }
+
+      console.log('📋 [UI] Queueing', ids.length, 'jobs for generation')
       
-      // Immediately refetch to show 'generating' status
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
-      }, 500)
-      
-      const response = await generateContent(ids)
+      // Queue the jobs instead of generating directly
+      const response = await queueContentGeneration(ids, projectId, user.id)
       return response
     },
-    onSuccess: () => {
-      // Refetch to get final status
+    onSuccess: (data) => {
+      toast.success(`${data.jobsCreated} items queued for generation`, {
+        description: 'Content will be generated in the background. You can navigate away.',
+      })
       queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
       setGenerateMode(false)
       setSelectedIds(new Set())
-      // Don't show toast here - will be shown when generation completes
     },
     onError: (error: Error) => {
       setGeneratingIds(new Set())
-      toast.error('Error starting content generation', {
+      toast.error('Error queuing content generation', {
         description: error.message,
       })
     },
@@ -310,45 +316,28 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   // Mutation to generate or regenerate a single combination
   const singleGenerateMutation = useMutation({
     mutationFn: async ({ locationKeywordId, status }: { locationKeywordId: string, status: string }) => {
-      console.log('🔄 MUTATION: Starting mutation for', locationKeywordId, 'with status', status)
-      
-      // Track this ID as generating
-      setCurrentGeneratingId(locationKeywordId)
-      setGeneratingIds(new Set([locationKeywordId]))
-      
-      // Immediately set status to 'generating' for visual feedback
-      console.log('📝 MUTATION: Setting status to generating...')
-      const { error: updateError } = await supabase
-        .from('location_keywords')
-        .update({ status: 'generating' })
-        .eq('id', locationKeywordId)
-      
-      if (updateError) {
-        console.error('❌ MUTATION: Update error:', updateError)
-        throw updateError
+      if (!user?.id) {
+        throw new Error('User not authenticated')
       }
-      console.log('✅ MUTATION: Status set to generating')
 
-      // Small delay to ensure real-time subscription picks up the change
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Trigger generation (Edge Function will upsert the content)
-      console.log('🤖 MUTATION: Calling generateContent API...')
-      const response = await generateContent([locationKeywordId])
-      console.log('✅ MUTATION: API call completed:', response)
+      console.log('🔄 [UI] Queueing single job for', locationKeywordId, 'with status', status)
+      
+      // Queue the job instead of generating directly
+      const response = await queueContentGeneration([locationKeywordId], projectId, user.id)
       return response
     },
     onSuccess: (data, _variables) => {
-      console.log('✅ MUTATION: onSuccess triggered', data)
-      // Don't show success toast here - Edge Function will update status to 'generated' when complete
-      // Real-time subscription will pick up the change and update the UI
+      console.log('✅ [UI] Job queued successfully', data)
+      toast.success('Content generation queued', {
+        description: 'Your content will be generated in the background.',
+      })
       queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
     },
     onError: (error: Error) => {
-      console.error('❌ MUTATION: onError triggered', error)
+      console.error('❌ [UI] Failed to queue job', error)
       setCurrentGeneratingId(null)
       setGeneratingIds(new Set())
-      toast.error('Failed to generate content', {
+      toast.error('Failed to queue content generation', {
         description: error.message,
       })
     },
@@ -359,9 +348,9 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
     console.log('📍 SINGLE GENERATE: locationKeywordId:', id)
     console.log('📍 SINGLE GENERATE: status:', status)
     
-    if (status === 'generating') {
-      console.log('⚠️ SINGLE GENERATE: Already generating, aborting')
-      toast.error('Content is already being generated')
+    if (status === 'generating' || status === 'queued') {
+      console.log('⚠️ SINGLE GENERATE: Already generating/queued, aborting')
+      toast.error(status === 'queued' ? 'Content is already queued' : 'Content is already being generated')
       return
     }
     
@@ -437,6 +426,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   }
 
   return (
+    <>
     <div className="space-y-4">
       {/* Generation Progress Bar */}
       {generationProgress && (
@@ -555,6 +545,14 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHelp(true)}
+                title="Help & Instructions"
+              >
+                <HelpCircle className="h-4 w-4" />
+              </Button>
             </>
           ) : deleteMode ? (
             <>
@@ -664,7 +662,18 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-medium">{combo.phrase}</TableCell>
+                  <TableCell className="font-medium">
+                    {combo.status === 'generated' || combo.status === 'pushed' ? (
+                      <button
+                        onClick={() => handleViewContent(combo.id)}
+                        className="text-left hover:text-[#006239] hover:underline cursor-pointer transition-colors"
+                      >
+                        {combo.phrase}
+                      </button>
+                    ) : (
+                      <span>{combo.phrase}</span>
+                    )}
+                  </TableCell>
                   <TableCell>{combo.location?.name || '-'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {combo.keyword?.keyword || '-'}
@@ -689,7 +698,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                         borderColor: '#006239'
                       } : undefined}
                     >
-                      {combo.status === 'generating' && (
+                      {(combo.status === 'generating' || combo.status === 'queued') && (
                         <Loader2 className="mr-1 h-3 w-3 animate-spin inline" />
                       )}
                       {combo.status}
@@ -717,10 +726,12 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                         variant="ghost"
                         size="sm"
                         onClick={() => handleSingleGenerate(combo.id, combo.status)}
-                        disabled={combo.status === 'generating' || currentGeneratingId === combo.id}
+                        disabled={combo.status === 'generating' || combo.status === 'queued' || currentGeneratingId === combo.id}
                         className="h-8 w-8 p-0"
                         title={
-                          combo.status === 'generating' || currentGeneratingId === combo.id
+                          combo.status === 'queued'
+                            ? 'Content is queued for generation'
+                            : combo.status === 'generating' || currentGeneratingId === combo.id
                             ? 'Content is being generated'
                             : combo.status === 'pending'
                             ? 'Generate content'
@@ -733,7 +744,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       >
                         <RefreshCw 
                           className={`h-4 w-4 ${
-                            combo.status === 'generating' || currentGeneratingId === combo.id
+                            combo.status === 'generating' || combo.status === 'queued' || currentGeneratingId === combo.id
                               ? 'text-muted-foreground/30 cursor-not-allowed animate-spin'
                               : 'text-muted-foreground hover:text-[#006239] cursor-pointer'
                           }`}
@@ -792,6 +803,21 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                           }`}
                         />
                       </Button>
+                      
+                      {/* External Link Icon - Only show if pushed to WordPress */}
+                      {combo.status === 'pushed' && combo.wp_page_url && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(combo.wp_page_url!, '_blank')}
+                          className="h-8 w-8 p-0"
+                          title="View on WordPress"
+                        >
+                          <ExternalLink 
+                            className="h-4 w-4 text-muted-foreground hover:text-[#006239] cursor-pointer"
+                          />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -800,7 +826,331 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
           </TableBody>
         </Table>
       </div>
+
+      {/* Help Panel - Slides in from right */}
+      <div
+        className={`fixed top-0 right-0 h-full w-96 bg-background border-l shadow-2xl transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${
+          showHelp ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="p-6">
+          {/* Header with close button */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Help & Instructions</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHelp(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Instructions Content */}
+          <div className="space-y-6 text-sm">
+            {/* Adding Combinations */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <Plus className="h-5 w-5 text-[#006239]" />
+                Adding Combinations
+              </h3>
+              <div className="space-y-3 ml-7">
+                <div>
+                  <p className="font-medium mb-1">Towns Button</p>
+                  <p className="text-muted-foreground">Add new towns/locations to your project. These will be combined with your keywords to create landing pages.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Keywords Button</p>
+                  <p className="text-muted-foreground">Add or research new keyword variations. Use the search feature to find related keywords with search volume data.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <Upload className="h-4 w-4" /> Upload CSV
+                  </p>
+                  <p className="text-muted-foreground">Bulk upload specific location-keyword combinations from a CSV file. Download the template for the correct format.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Managing Combinations */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <Wand2 className="h-5 w-5 text-[#006239]" />
+                Managing Content
+              </h3>
+              <div className="space-y-3 ml-7">
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <RefreshCw className="h-4 w-4" /> Generate/Regenerate
+                  </p>
+                  <p className="text-muted-foreground">Click the refresh icon on any row to generate or regenerate AI content. Jobs are queued and processed in the background.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <ArrowUpToLine className="h-4 w-4" /> Push to WordPress
+                  </p>
+                  <p className="text-muted-foreground">Publish generated content to your WordPress site. Only available for generated content.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <Eye className="h-4 w-4" /> View Content
+                  </p>
+                  <p className="text-muted-foreground">Preview and edit generated content. Click the eye icon or the phrase itself to view.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <ExternalLink className="h-4 w-4" /> View on WordPress
+                  </p>
+                  <p className="text-muted-foreground">Opens the published page on your WordPress site in a new tab. Only visible for pushed content.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Status Badges */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3">Status Indicators</h3>
+              <div className="space-y-2 ml-7">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">pending</Badge>
+                  <span className="text-muted-foreground">Ready to generate content</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    queued
+                  </Badge>
+                  <span className="text-muted-foreground">Waiting in queue for generation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    generating
+                  </Badge>
+                  <span className="text-muted-foreground">AI is creating content</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="text-xs" style={{ backgroundColor: '#1e40af', color: 'white' }}>generated</Badge>
+                  <span className="text-muted-foreground">Content ready to publish</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="text-xs" style={{ backgroundColor: '#006239', color: 'white' }}>pushed</Badge>
+                  <span className="text-muted-foreground">Published to WordPress</span>
+                </div>
+              </div>
+            </section>
+
+            {/* Bulk Actions */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-[#006239]" />
+                Bulk Actions
+              </h3>
+              <div className="space-y-3 ml-7">
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <Wand2 className="h-4 w-4" /> Generate Content
+                  </p>
+                  <p className="text-muted-foreground">Select multiple pending combinations and generate content for all at once. Jobs are queued and you can navigate away.</p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1 flex items-center gap-1">
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </p>
+                  <p className="text-muted-foreground">Select multiple combinations to delete them. This action cannot be undone.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Ranking */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <GoogleIcon className="h-5 w-5" />
+                Google Rankings
+              </h3>
+              <div className="space-y-2 ml-7">
+                <p className="text-muted-foreground">Click the Google icon to check current rankings for all pushed pages. Rankings are tracked over time with position changes indicated by arrows.</p>
+              </div>
+            </section>
+
+            {/* Filtering */}
+            <section>
+              <h3 className="font-semibold text-lg mb-3">Filtering & Search</h3>
+              <div className="space-y-2 ml-7">
+                <p className="text-muted-foreground">Use the search box to filter by phrase, and the dropdown to filter by specific towns. Combine both for precise filtering.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
     </div>
+
+    {/* Help Panel - Slides in from right */}
+    <div
+      className={`fixed top-0 right-0 h-full w-96 bg-background border-l shadow-2xl transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${
+        showHelp ? 'translate-x-0' : 'translate-x-full'
+      }`}
+    >
+      <div className="p-6">
+        {/* Header with close button */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">Help & Instructions</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowHelp(false)}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Instructions Content */}
+        <div className="space-y-6 text-sm">
+          {/* Adding Combinations */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <Plus className="h-5 w-5 text-[#006239]" />
+              Adding Combinations
+            </h3>
+            <div className="space-y-3 ml-7">
+              <div>
+                <p className="font-medium mb-1">Towns Button</p>
+                <p className="text-muted-foreground">Add new towns/locations to your project. These will be combined with your keywords to create landing pages.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1">Keywords Button</p>
+                <p className="text-muted-foreground">Add or research new keyword variations. Use the search feature to find related keywords with search volume data.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <Upload className="h-4 w-4" /> Upload CSV
+                </p>
+                <p className="text-muted-foreground">Bulk upload specific location-keyword combinations from a CSV file. Download the template for the correct format.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Managing Combinations */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-[#006239]" />
+              Managing Content
+            </h3>
+            <div className="space-y-3 ml-7">
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <RefreshCw className="h-4 w-4" /> Generate/Regenerate
+                </p>
+                <p className="text-muted-foreground">Click the refresh icon on any row to generate or regenerate AI content. Jobs are queued and processed in the background.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <ArrowUpToLine className="h-4 w-4" /> Push to WordPress
+                </p>
+                <p className="text-muted-foreground">Publish generated content to your WordPress site. Only available for generated content.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <Eye className="h-4 w-4" /> View Content
+                </p>
+                <p className="text-muted-foreground">Preview and edit generated content. Click the eye icon or the phrase itself to view.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <ExternalLink className="h-4 w-4" /> View on WordPress
+                </p>
+                <p className="text-muted-foreground">Opens the published page on your WordPress site in a new tab. Only visible for pushed content.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Status Badges */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3">Status Indicators</h3>
+            <div className="space-y-2 ml-7">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">pending</Badge>
+                <span className="text-muted-foreground">Ready to generate content</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  queued
+                </Badge>
+                <span className="text-muted-foreground">Waiting in queue for generation</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  generating
+                </Badge>
+                <span className="text-muted-foreground">AI is creating content</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="text-xs" style={{ backgroundColor: '#1e40af', color: 'white' }}>generated</Badge>
+                <span className="text-muted-foreground">Content ready to publish</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="text-xs" style={{ backgroundColor: '#006239', color: 'white' }}>pushed</Badge>
+                <span className="text-muted-foreground">Published to WordPress</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Bulk Actions */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-[#006239]" />
+              Bulk Actions
+            </h3>
+            <div className="space-y-3 ml-7">
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <Wand2 className="h-4 w-4" /> Generate Content
+                </p>
+                <p className="text-muted-foreground">Select multiple pending combinations and generate content for all at once. Jobs are queued and you can navigate away.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1 flex items-center gap-1">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </p>
+                <p className="text-muted-foreground">Select multiple combinations to delete them. This action cannot be undone.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Ranking */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <GoogleIcon className="h-5 w-5" />
+              Google Rankings
+            </h3>
+            <div className="space-y-2 ml-7">
+              <p className="text-muted-foreground">Click the Google icon to check current rankings for all pushed pages. Rankings are tracked over time with position changes indicated by arrows.</p>
+            </div>
+          </section>
+
+          {/* Filtering */}
+          <section>
+            <h3 className="font-semibold text-lg mb-3">Filtering & Search</h3>
+            <div className="space-y-2 ml-7">
+              <p className="text-muted-foreground">Use the search box to filter by phrase, and the dropdown to filter by specific towns. Combine both for precise filtering.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    {/* Overlay when help panel is open */}
+    {showHelp && (
+      <div
+        className="fixed inset-0 bg-black/20 z-40"
+        onClick={() => setShowHelp(false)}
+      />
+    )}
+    </>
   )
 }
 

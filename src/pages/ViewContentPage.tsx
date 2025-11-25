@@ -273,7 +273,6 @@ export function ViewContentPage() {
   }
 
   if (error || !content) {
-    toast.error('Failed to load content')
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -283,6 +282,7 @@ export function ViewContentPage() {
               <CardTitle>Error Loading Content</CardTitle>
               <CardDescription>
                 The generated content could not be found or loaded.
+                {error && <span className="block mt-2 text-destructive">{error instanceof Error ? error.message : 'Unknown error'}</span>}
               </CardDescription>
             </CardHeader>
             <CardContent>

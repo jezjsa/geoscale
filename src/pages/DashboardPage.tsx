@@ -1,15 +1,20 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Navigation } from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getCompanySettings } from '@/api/company-settings'
 import { getDashboardStats } from '@/api/projects'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { PlanUsageCard } from '@/components/PlanUsageCard'
+import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 
 export function DashboardPage() {
   const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const [userProject, setUserProject] = useState<any>(null)
   
   console.log('[DashboardPage] Render:', { user, loading })
 
@@ -24,6 +29,34 @@ export function DashboardPage() {
     queryFn: () => user ? getDashboardStats(user.id) : null,
     enabled: !!user,
   })
+
+  // Fetch user's project for individual users
+  useEffect(() => {
+    async function fetchUserProject() {
+      if (user?.id && user.plan !== 'agency') {
+        const { data } = await supabase
+          .from('projects')
+          .select('id, project_name')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        
+        if (data) {
+          setUserProject(data)
+        }
+      }
+    }
+    fetchUserProject()
+  }, [user])
+
+  const handleManageProjects = () => {
+    // If individual user with a project, go directly to their project
+    if (user?.plan !== 'agency' && userProject) {
+      navigate(`/projects/${userProject.id}`)
+    } else {
+      // Agency users go to settings to manage multiple projects
+      navigate('/settings')
+    }
+  }
 
   if (loading) {
     return (
@@ -76,7 +109,7 @@ export function DashboardPage() {
                 <div className="flex-1">
                   <CardTitle className="text-orange-900">Complete Your Setup</CardTitle>
                   <CardDescription className="text-orange-700">
-                    Add your company information and testimonials to start generating landing pages
+                    Add your company information to start creating projects
                   </CardDescription>
                 </div>
               </div>
@@ -104,6 +137,11 @@ export function DashboardPage() {
             </CardHeader>
           </Card>
         )}
+
+        {/* Plan Usage Card */}
+        <div className="mb-8">
+          <PlanUsageCard />
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Link to="/settings">
@@ -166,8 +204,11 @@ export function DashboardPage() {
               <CardDescription>Create and manage your WordPress projects</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="bg-white text-black hover:bg-gray-100">
-                <Link to="/settings">Manage Projects</Link>
+              <Button 
+                onClick={handleManageProjects}
+                className="bg-white text-black hover:bg-gray-100"
+              >
+                Manage Projects
               </Button>
             </CardContent>
           </Card>

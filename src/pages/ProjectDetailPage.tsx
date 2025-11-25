@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigation } from '@/components/Navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { InlineEdit } from '@/components/InlineEdit'
+import { AddFirstCombinationDialog } from '@/components/projects/AddFirstCombinationDialog'
 import { AddSpecificCombinationsDialog } from '@/components/projects/AddSpecificCombinationsDialog'
 import { ResearchKeywordsDialog } from '@/components/projects/ResearchKeywordsDialog'
 import { UploadCsvDialog } from '@/components/projects/UploadCsvDialog'
@@ -35,14 +37,19 @@ import { generateWordPressApiKey } from '@/utils/api-key-generator'
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const currentView = (searchParams.get('view') as 'combinations' | 'testimonials' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
+  
+  // Check if user is on individual plan (not agency)
+  const isIndividualUser = user?.plan !== 'agency'
   
   if (!projectId) {
     return <div>Project not found</div>
   }
   const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showAddFirstDialog, setShowAddFirstDialog] = useState(false)
   const [showAddSpecificDialog, setShowAddSpecificDialog] = useState(false)
   const [showResearchKeywordsDialog, setShowResearchKeywordsDialog] = useState(false)
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
@@ -180,15 +187,28 @@ export function ProjectDetailPage() {
               <span className="text-gray-400">Client / </span>
               {project.company_name || project.project_name}
             </h1>
-            <Button 
-              variant="outline" 
-              asChild
-            >
-              <Link to="/settings">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Projects
-              </Link>
-            </Button>
+            {!isIndividualUser && (
+              <Button 
+                variant="outline" 
+                asChild
+              >
+                <Link to="/settings">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Projects
+                </Link>
+              </Button>
+            )}
+            {isIndividualUser && (
+              <Button 
+                variant="outline" 
+                asChild
+              >
+                <Link to="/dashboard">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* View switcher buttons */}
@@ -260,10 +280,17 @@ export function ProjectDetailPage() {
                         <Button
                           style={{ backgroundColor: '#006239' }}
                           className="hover:opacity-90 text-white"
-                          onClick={() => setShowAddSpecificDialog(true)}
+                          onClick={() => {
+                            // Show simple dialog if no combinations, complex one if they have some
+                            if (!combinations || combinations.length === 0) {
+                              setShowAddFirstDialog(true)
+                            } else {
+                              setShowAddSpecificDialog(true)
+                            }
+                          }}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Auto-Generate
+                          {!combinations || combinations.length === 0 ? 'Create First Combination' : 'Auto-Generate'}
                         </Button>
                         <Button
                           variant="outline"
@@ -320,7 +347,11 @@ export function ProjectDetailPage() {
                         </Button>
                       </div>
                     </div>
-                    <CombinationsTable combinations={combinations} projectId={projectId} />
+                    <CombinationsTable 
+                      combinations={combinations} 
+                      projectId={projectId}
+                      blogUrl={project?.blog_url || project?.wp_url}
+                    />
                   </div>
                 )}
                 </CardContent>
@@ -566,7 +597,14 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Add Towns Dialog */}
+      {/* Add First Combination Dialog (Simple) */}
+      <AddFirstCombinationDialog
+        projectId={projectId}
+        open={showAddFirstDialog}
+        onOpenChange={setShowAddFirstDialog}
+      />
+
+      {/* Add Towns Dialog (Complex) */}
       <AddSpecificCombinationsDialog
         projectId={projectId}
         open={showAddSpecificDialog}

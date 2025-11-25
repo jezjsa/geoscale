@@ -34,13 +34,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('*')
         .eq('supabase_auth_user_id', authUser.id)
-        .single()
+        .maybeSingle()
 
       if (dbUser) {
         console.log('[AuthContext] Background profile loaded')
         setUser(prev => ({ ...dbUser, email: authUser.email }))
       } else if (error) {
         console.error('[AuthContext] Background fetch error:', error)
+      } else {
+        console.log('[AuthContext] No user profile found yet, will retry')
       }
     } catch (err) {
       console.error('[AuthContext] Background fetch exception:', err)

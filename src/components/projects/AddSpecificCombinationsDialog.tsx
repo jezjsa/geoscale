@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { usePlanLimits } from '@/hooks/usePlanLimits'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { addSpecificCombinations } from '@/api/combinations'
 import { UK_REGIONS } from '@/data/uk-regions'
@@ -31,6 +33,7 @@ export function AddSpecificCombinationsDialog({
   baseKeyword = ''
 }: AddSpecificCombinationsDialogProps) {
   const queryClient = useQueryClient()
+  const { limits, usage } = usePlanLimits()
   
   // Section A: Selected regions
   const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set())
@@ -40,6 +43,10 @@ export function AddSpecificCombinationsDialog({
   
   // Section C: Custom town input
   const [customTown, setCustomTown] = useState('')
+  
+  // Section D: Keywords
+  const [keywords, setKeywords] = useState<Set<string>>(new Set(baseKeyword ? [baseKeyword] : []))
+  const [customKeyword, setCustomKeyword] = useState('')
   
   // All available towns for the checklist (sorted)
   const allAvailableTowns = useMemo(() => {
@@ -114,6 +121,22 @@ export function AddSpecificCombinationsDialog({
     }
   }, [customTown])
 
+  const handleAddCustomKeyword = useCallback(() => {
+    const trimmedKeyword = customKeyword.trim()
+    if (trimmedKeyword) {
+      setKeywords(prev => new Set([...prev, trimmedKeyword]))
+      setCustomKeyword('')
+    }
+  }, [customKeyword])
+
+  const handleRemoveKeyword = useCallback((keyword: string) => {
+    setKeywords(prev => {
+      const newKeywords = new Set(prev)
+      newKeywords.delete(keyword)
+      return newKeywords
+    })
+  }, [])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -122,16 +145,21 @@ export function AddSpecificCombinationsDialog({
       return
     }
 
-    if (!baseKeyword.trim()) {
-      toast.error('No base keyword found. Please set up your project first.')
+    if (keywords.size === 0) {
+      toast.error('Please add at least one keyword phrase')
       return
     }
 
-    // Create combinations for each selected town with the base keyword
-    const combinations = Array.from(selectedTowns).map(town => ({
-      location: town,
-      keyword: baseKeyword,
-    }))
+    // Create combinations for each town × keyword pair
+    const combinations: Array<{ location: string; keyword: string }> = []
+    Array.from(selectedTowns).forEach(town => {
+      Array.from(keywords).forEach(keyword => {
+        combinations.push({
+          location: town,
+          keyword: keyword,
+        })
+      })
+    })
 
     addMutation.mutate(combinations)
   }
@@ -145,21 +173,24 @@ export function AddSpecificCombinationsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden flex flex-col bg-[#1a1a1a]">
         <DialogHeader>
-          <DialogTitle>Add Towns</DialogTitle>
+          <DialogTitle>Auto-Generate Combinations</DialogTitle>
           <DialogDescription>
-            Select regions or individual towns to add to your project. Each town will be combined with "{baseKeyword}".
+            Select towns and add keyword phrases. Every town will be combined with every keyword to create your combinations.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto py-4 space-y-6">
+          <div className="flex-1 overflow-y-auto py-4 pr-2 space-y-6">
             
             {/* Section A: Quick Add Regions */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Quick Add by Region</Label>
+                <div>
+                  <Label className="text-base font-semibold">Step 1: Select Locations</Label>
+                  <p className="text-xs text-muted-foreground mt-1">Quick add by region</p>
+                </div>
                 <span className="text-xs text-muted-foreground">{selectedRegions.size} regions selected</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -189,10 +220,12 @@ export function AddSpecificCombinationsDialog({
             {allAvailableTowns.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Select Individual Towns</Label>
+                  <div>
+                    <Label className="text-sm font-medium">Or Select Individual Towns</Label>
+                  </div>
                   <span className="text-xs text-muted-foreground">{selectedTowns.size} towns selected</span>
                 </div>
-                <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto">
+                <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto bg-transparent">
                   <div className="grid grid-cols-3 gap-2">
                     {allAvailableTowns.map((town) => (
                       <div
@@ -219,7 +252,7 @@ export function AddSpecificCombinationsDialog({
 
             {/* Section C: Manual Entry */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Add Custom Town</Label>
+              <Label className="text-sm font-medium">Or Add Custom Town</Label>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter town name (e.g., Hull)"
@@ -243,13 +276,78 @@ export function AddSpecificCombinationsDialog({
               </div>
             </div>
 
+            {/* Section D: Keywords */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base font-semibold">Step 2: Add Keyword Phrases</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  For the {selectedTowns.size} location{selectedTowns.size !== 1 ? 's' : ''} selected above
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter keyword phrase (e.g., plumber, emergency plumber)"
+                    value={customKeyword}
+                    onChange={(e) => setCustomKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddCustomKeyword()
+                      }
+                    }}
+                    disabled={addMutation.isPending}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddCustomKeyword}
+                    disabled={!customKeyword.trim() || addMutation.isPending}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Press Enter or click + to add each keyword phrase
+                </p>
+              </div>
+              
+              {keywords.size > 0 && (
+                <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/50">
+                  {Array.from(keywords).map((keyword) => (
+                    <Badge key={keyword} variant="secondary" className="text-sm">
+                      {keyword}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveKeyword(keyword)}
+                        className="ml-2 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
 
           <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <p className="text-sm text-muted-foreground">
-                {selectedTowns.size} town{selectedTowns.size !== 1 ? 's' : ''} will be added with keyword "{baseKeyword}"
+                {selectedTowns.size} town{selectedTowns.size !== 1 ? 's' : ''} × {keywords.size} keyword{keywords.size !== 1 ? 's' : ''} = {selectedTowns.size * keywords.size} combination{selectedTowns.size * keywords.size !== 1 ? 's' : ''}
               </p>
+              {limits && usage && (
+                <>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your plan allows {limits.combinationPageLimit} total combinations ({usage.combinationCount} currently used)
+                  </p>
+                  {(usage.combinationCount + (selectedTowns.size * keywords.size)) > limits.combinationPageLimit && (
+                    <p className="text-xs text-red-500 font-medium mt-2">
+                      ⚠️ This would exceed your plan limit by {(usage.combinationCount + (selectedTowns.size * keywords.size)) - limits.combinationPageLimit} combinations. Please upgrade or reduce selections.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             <DialogFooter>
@@ -265,11 +363,18 @@ export function AddSpecificCombinationsDialog({
                 type="submit"
                 style={{ backgroundColor: '#006239' }}
                 className="hover:opacity-90 text-white"
-                disabled={selectedTowns.size === 0 || addMutation.isPending}
+                disabled={
+                  selectedTowns.size === 0 || 
+                  keywords.size === 0 || 
+                  addMutation.isPending ||
+                  (limits && usage && (usage.combinationCount + (selectedTowns.size * keywords.size)) > limits.combinationPageLimit)
+                }
               >
                 {addMutation.isPending 
-                  ? 'Adding...' 
-                  : `Add ${selectedTowns.size} Town${selectedTowns.size !== 1 ? 's' : ''}`
+                  ? 'Creating...' 
+                  : (limits && usage && (usage.combinationCount + (selectedTowns.size * keywords.size)) > limits.combinationPageLimit)
+                    ? 'Exceeds Plan Limit'
+                    : `Create ${selectedTowns.size * keywords.size} Combination${selectedTowns.size * keywords.size !== 1 ? 's' : ''}`
                 }
               </Button>
             </DialogFooter>
