@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (dbUser) {
         console.log('[AuthContext] Background profile loaded')
-        setUser(prev => ({ ...dbUser, email: authUser.email }))
+        setUser({ ...dbUser, email: authUser.email })
       } else if (error) {
         console.error('[AuthContext] Background fetch error:', error)
       } else {

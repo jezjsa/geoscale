@@ -53,7 +53,7 @@ interface CombinationsTableProps {
   blogUrl?: string
 }
 
-export function CombinationsTable({ combinations, projectId, blogUrl }: CombinationsTableProps) {
+export function CombinationsTable({ combinations, projectId }: CombinationsTableProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
