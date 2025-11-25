@@ -210,23 +210,26 @@ Instructions:
 
 1. DO NOT include an H1 heading in the content - WordPress will use the page title as the H1.
 
-2. Write an intro paragraph that:
+2. Write an intro paragraph wrapped in <div class="geo-intro">:
    - Explains what the service is and why it benefits local customers.
    - Mentions the business name.
    - Invites users to call the phone number${phoneNumber ? ` (${phoneNumber})` : ""} or use the contact page URL${contactUrl ? ` (${contactUrl})` : ""}.
    - Optionally includes a short testimonial sentence if it fits naturally.
+   - Close with </div>
 
-3. Create a section with a natural-sounding H2 heading about why to choose the business.
+3. Create a section wrapped in <div class="geo-why-choose"> with a natural-sounding H2 heading about why to choose the business.
    - Use natural phrasing like "Why Choose ${businessName} for Web Design in ${location}" or "Why Choose ${businessName} as Your Web Design Agency in ${location}".
    - Adapt the phrasing to make grammatical sense with the service type (e.g., add "your" or rephrase as needed).
    - Include 5 to 7 bullet points.
    - You may reference outcomes that match the testimonials, but do not rewrite or change the testimonial quotes themselves.
+   - Close with </div>
 
-4. Create a section with an H2 heading about the services offered.
+4. Create a section wrapped in <div class="geo-services"> with an H2 heading about the services offered.
    - Use natural phrasing like "Our Web Design Services" or "Web Design Services in ${location}".
    - Include 3 to 5 service sub headings with short paragraphs.
+   - Close with </div>
 
-5. Create a section titled: "What Our Clients Say".
+5. Create a section wrapped in <div class="geo-testimonials"> titled: "What Our Clients Say".
    - Use the supplied testimonial if available.
    - Quote the testimonial exactly as provided inside quotation marks.
    - Wrap each testimonial in a div with class "testimonial" for proper HTML formatting.
@@ -236,15 +239,19 @@ Instructions:
        <blockquote>"Full testimonial quote here."</blockquote>
        <p class="testimonial-author"><em>- Name, Company/Role</em></p>
      </div>
+   - Close with </div>
 
-6. Create a clear call to action section.
+6. Create a clear call to action section wrapped in <div class="geo-cta">.
    - Tell users to call the phone number and link to the contact page URL.
    - You may briefly refer to the testimonial as social proof.
+   - Close with </div>
 
-7. Create an SEO friendly FAQ section with 4 common questions related to the service and location.
+7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq"> with 4 common questions related to the service and location.
+   - Close with </div>
 
-8. Finish with a short summary reinforcing the main keyword and location.
+8. Finish with a short summary wrapped in <div class="geo-summary"> reinforcing the main keyword and location.
    - Remind users they can call the phone number or use the contact page URL.
+   - Close with </div>
 
 Rules:
 - All non testimonial text must be original, human sounding, and helpful.
