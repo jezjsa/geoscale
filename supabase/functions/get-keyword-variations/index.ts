@@ -15,6 +15,9 @@ interface KeywordVariationsRequest {
   limit?: number;
 }
 
+// Cache duration in days
+const CACHE_DAYS = 30;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -27,43 +30,86 @@ serve(async (req) => {
     const dataForSeoLogin = Deno.env.get("DATAFORSEO_LOGIN");
     const dataForSeoPassword = Deno.env.get("DATAFORSEO_PASSWORD");
 
-    console.log("Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey,
-      hasDataForSeoLogin: !!dataForSeoLogin,
-      hasDataForSeoPassword: !!dataForSeoPassword,
-    });
-
     if (!dataForSeoLogin || !dataForSeoPassword) {
       throw new Error("DataForSEO credentials are not set");
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // For now, skip JWT verification during development
-    // TODO: Re-enable JWT verification for production
-
     const requestBody = await req.json();
-    console.log("Request body:", requestBody);
-
     const {
       project_id,
       base_keyword,
       location = "GB",
-      limit = 50,
+      limit = 20,
     }: KeywordVariationsRequest = requestBody;
 
-    console.log("📊 Fetching keyword variations for:", base_keyword);
+    const seedKeyword = base_keyword.toLowerCase().trim();
+    const locationCode = 2826; // United Kingdom
+
+    console.log(`📊 Checking cache for: "${seedKeyword}"`);
+
+    // Check cache first - look for keywords updated within CACHE_DAYS
+    const cacheThreshold = new Date();
+    cacheThreshold.setDate(cacheThreshold.getDate() - CACHE_DAYS);
+
+    const { data: cachedKeywords, error: cacheError } = await supabase
+      .from("keyword_cache")
+      .select("keyword, search_volume, difficulty, updated_at")
+      .eq("seed_keyword", seedKeyword)
+      .eq("location_code", locationCode)
+      .gte("updated_at", cacheThreshold.toISOString())
+      .order("search_volume", { ascending: false })
+      .limit(limit);
+
+    if (!cacheError && cachedKeywords && cachedKeywords.length >= limit) {
+      console.log(`✅ Cache HIT! Found ${cachedKeywords.length} cached keywords for "${seedKeyword}"`);
+      
+      const keywords = cachedKeywords.map((kw) => ({
+        keyword: kw.keyword,
+        search_volume: kw.search_volume || 0,
+        difficulty: kw.difficulty || null,
+      }));
+
+      // Still store in project's keyword_variations for their use
+      const keywordsToInsert = keywords.map((kw) => ({
+        project_id,
+        keyword: kw.keyword,
+        search_volume: kw.search_volume,
+        difficulty: kw.difficulty,
+      }));
+
+      await supabase
+        .from("keyword_variations")
+        .upsert(keywordsToInsert, {
+          onConflict: "project_id,keyword",
+          ignoreDuplicates: true,
+        });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          keywords_count: keywords.length,
+          new_keywords_count: 0,
+          keywords,
+          from_cache: true,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log(`🔍 Cache MISS for "${seedKeyword}", calling DataForSEO API...`);
 
     // Create Basic Auth header
     const auth = base64Encode(
       new TextEncoder().encode(`${dataForSeoLogin}:${dataForSeoPassword}`)
     );
 
-    // Call DataForSEO Related Keywords API (recommended by DataForSEO support)
-    // Docs: https://docs.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live/
+    // Call DataForSEO Keywords For Keywords API
     const response = await fetch(
-      "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
+      "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live",
       {
         method: "POST",
         headers: {
@@ -72,11 +118,13 @@ serve(async (req) => {
         },
         body: JSON.stringify([
           {
-            keyword: base_keyword,
-            location_code: 2826, // United Kingdom
+            keywords: [base_keyword],
+            location_code: locationCode,
             language_code: "en",
             include_seed_keyword: true,
-            limit: limit, // Restricts response to this many keywords
+            include_serp_info: false,
+            sort_by: "search_volume",
+            limit: limit,
           },
         ]),
       }
@@ -89,39 +137,46 @@ serve(async (req) => {
 
     const data = await response.json();
 
-    console.log("DataForSEO Response:", JSON.stringify(data, null, 2));
-
-    // Check for API errors
     if (data.tasks?.[0]?.status_code !== 20000) {
       const errorMessage = data.tasks?.[0]?.status_message || "Unknown error";
       throw new Error(`DataForSEO API error: ${errorMessage}`);
     }
 
-    // Parse results from Related Keywords API
-    // Response structure: tasks[0].result[0].items[]
-    const resultData = data.tasks?.[0]?.result?.[0];
-    const items = resultData?.items || [];
+    // Parse results - enforce limit client-side
+    const allItems = data.tasks?.[0]?.result || [];
+    const items = allItems.slice(0, limit);
 
-    console.log(`Raw items count: ${items.length}`);
-    
-    if (items.length > 0) {
-      console.log("First item sample:", JSON.stringify(items[0], null, 2));
+    console.log(`📥 DataForSEO returned ${allItems.length} items, using ${items.length}`);
+
+    const keywords = items.map((item: any) => ({
+      keyword: item.keyword,
+      search_volume: item.search_volume || 0,
+      difficulty: item.competition_index || null,
+    }));
+
+    // Store in global cache for future users
+    const cacheEntries = keywords.map((kw: any) => ({
+      seed_keyword: seedKeyword,
+      location_code: locationCode,
+      keyword: kw.keyword,
+      search_volume: kw.search_volume,
+      difficulty: kw.difficulty,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error: cacheInsertError } = await supabase
+      .from("keyword_cache")
+      .upsert(cacheEntries, {
+        onConflict: "seed_keyword,location_code,keyword",
+      });
+
+    if (cacheInsertError) {
+      console.error("Failed to cache keywords:", cacheInsertError);
+    } else {
+      console.log(`💾 Cached ${cacheEntries.length} keywords for "${seedKeyword}"`);
     }
 
-    // Extract keywords from Related Keywords API response
-    // Each item has keyword_data with the keyword info
-    const keywords = items.map((item: any) => {
-      const keywordData = item.keyword_data || item;
-      return {
-        keyword: keywordData.keyword,
-        search_volume: keywordData.keyword_info?.search_volume || 0,
-        difficulty: keywordData.keyword_properties?.keyword_difficulty || null,
-      };
-    });
-
-    console.log(`✅ Found ${keywords.length} keyword variations (limited from ${items.length})`);
-
-    // Store keywords in database
+    // Store in project's keyword_variations
     const keywordsToInsert = keywords.map((kw: any) => ({
       project_id,
       keyword: kw.keyword,
@@ -129,7 +184,6 @@ serve(async (req) => {
       difficulty: kw.difficulty,
     }));
 
-    // Use upsert with ignoreDuplicates to skip existing keywords
     const { data: insertData, error } = await supabase
       .from("keyword_variations")
       .upsert(keywordsToInsert, {
@@ -140,11 +194,7 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    console.log(
-      `💾 Stored ${insertData?.length || 0} new keywords (${
-        keywordsToInsert.length - (insertData?.length || 0)
-      } were duplicates)`
-    );
+    console.log(`✅ Stored ${insertData?.length || 0} keywords for project`);
 
     return new Response(
       JSON.stringify({
@@ -152,6 +202,7 @@ serve(async (req) => {
         keywords_count: keywords.length,
         new_keywords_count: insertData?.length || 0,
         keywords,
+        from_cache: false,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
