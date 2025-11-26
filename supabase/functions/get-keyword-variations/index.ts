@@ -60,9 +60,10 @@ serve(async (req) => {
       new TextEncoder().encode(`${dataForSeoLogin}:${dataForSeoPassword}`)
     );
 
-    // Call DataForSEO Keywords For Keywords API
+    // Call DataForSEO Related Keywords API (recommended by DataForSEO support)
+    // Docs: https://docs.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live/
     const response = await fetch(
-      "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords_for_keywords/live",
+      "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live",
       {
         method: "POST",
         headers: {
@@ -71,18 +72,11 @@ serve(async (req) => {
         },
         body: JSON.stringify([
           {
-            keywords: [base_keyword],
+            keyword: base_keyword,
             location_code: 2826, // United Kingdom
             language_code: "en",
             include_seed_keyword: true,
-            include_serp_info: false, // Disable SERP info to reduce cost
-            sort_by: "search_volume",
-            filters: [
-              ["search_volume", ">", 100], // Only keywords with >100 monthly searches
-              ["competition_index", "<", 80], // Only low-medium competition
-            ],
-            limit: limit, // This limits the number of results returned
-            order_by: ["search_volume,desc"], // Order by search volume descending
+            limit: limit, // Restricts response to this many keywords
           },
         ]),
       }
@@ -103,23 +97,27 @@ serve(async (req) => {
       throw new Error(`DataForSEO API error: ${errorMessage}`);
     }
 
-    // Parse results - the result array IS the items
-    const items = data.tasks?.[0]?.result || [];
+    // Parse results from Related Keywords API
+    // Response structure: tasks[0].result[0].items[]
+    const resultData = data.tasks?.[0]?.result?.[0];
+    const items = resultData?.items || [];
 
     console.log(`Raw items count: ${items.length}`);
     
-    // Limit results to the requested amount (DataForSEO sometimes ignores the limit parameter)
-    const limitedItems = items.slice(0, limit);
-    
-    if (limitedItems.length > 0) {
-      console.log("First item sample:", JSON.stringify(limitedItems[0], null, 2));
+    if (items.length > 0) {
+      console.log("First item sample:", JSON.stringify(items[0], null, 2));
     }
 
-    const keywords = limitedItems.map((item: any) => ({
-      keyword: item.keyword,
-      search_volume: item.search_volume || 0,
-      difficulty: item.competition_index || null, // Using competition_index as difficulty
-    }));
+    // Extract keywords from Related Keywords API response
+    // Each item has keyword_data with the keyword info
+    const keywords = items.map((item: any) => {
+      const keywordData = item.keyword_data || item;
+      return {
+        keyword: keywordData.keyword,
+        search_volume: keywordData.keyword_info?.search_volume || 0,
+        difficulty: keywordData.keyword_properties?.keyword_difficulty || null,
+      };
+    });
 
     console.log(`✅ Found ${keywords.length} keyword variations (limited from ${items.length})`);
 

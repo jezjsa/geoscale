@@ -325,7 +325,7 @@ export function ProjectDetailPage() {
                           className="bg-transparent hover:bg-[#006239]/10"
                         >
                           <Plus className="mr-0 h-4 w-4" />
-                          Towns
+                          Create Combinations
                         </Button>
                         <Button
                           size="sm"
