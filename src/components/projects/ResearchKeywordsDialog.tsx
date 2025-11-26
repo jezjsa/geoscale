@@ -68,7 +68,7 @@ export function ResearchKeywordsDialog({
         project_id: projectId,
         base_keyword: searchTerm.trim(),
         location: 'GB',
-        limit: 50,
+        limit: 20,
       })
       setKeywordResults(results)
       toast.success(`Found ${results.length} keyword variations`)
