@@ -5,18 +5,18 @@ import { TypewriterLocations } from '@/components/TypewriterLocations'
 
 export function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16 md:pt-0">
       <Navigation />
       
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="container mx-auto px-[30px] md:px-4 py-20 text-center">
         <div className="mb-8">
           <TypewriterLocations />
         </div>
-        <h1 className="text-6xl font-bold mb-6 max-w-5xl mx-auto">
+        <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-5xl mx-auto">
           Generate Location-Based Landing Pages at Scale, in Minutes.
         </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+        <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
           Create dozens or hundreds of SEO-optimized geo landing pages for your WordPress site. 
           Powered by AI and automated for scale.
         </p>
