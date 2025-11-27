@@ -6,11 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Configuration
+const BATCH_SIZE = 5; // Process up to 5 jobs per cron run
+const MAX_EXECUTION_TIME_MS = 50000; // Stop processing after 50 seconds to avoid timeout
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
+  const results: Array<{ job_id: string; success: boolean; error?: string }> = [];
 
   try {
     // Note: This function is called by cron jobs, so we don't verify JWT
@@ -21,16 +28,16 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log("🔄 [QUEUE WORKER] Starting queue processing...");
+    console.log(`🔄 [QUEUE WORKER] Starting batch processing (up to ${BATCH_SIZE} jobs)...`);
 
-    // Get the next queued job (ordered by priority desc, then created_at asc)
+    // Get batch of queued jobs (ordered by priority desc, then created_at asc)
     const { data: jobs, error: fetchError } = await supabase
       .from("content_generation_jobs")
       .select("*")
       .eq("status", "queued")
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
-      .limit(1);
+      .limit(BATCH_SIZE);
 
     if (fetchError) {
       console.error("❌ [QUEUE WORKER] Error fetching jobs:", fetchError);
@@ -40,71 +47,78 @@ serve(async (req) => {
     if (!jobs || jobs.length === 0) {
       console.log("✅ [QUEUE WORKER] No jobs in queue");
       return new Response(
-        JSON.stringify({ success: true, message: "No jobs to process" }),
+        JSON.stringify({ success: true, message: "No jobs to process", processed: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const job = jobs[0];
-    
-    // Check if job has exceeded max attempts
-    if (job.attempts >= job.max_attempts) {
-      console.log(`⚠️ [QUEUE WORKER] Job ${job.id} has exceeded max attempts, skipping`);
-      await supabase
-        .from("content_generation_jobs")
-        .update({ status: "failed" })
-        .eq("id", job.id);
-      return new Response(
-        JSON.stringify({ success: true, message: "Job exceeded max attempts" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    console.log(`📋 [QUEUE WORKER] Processing job ${job.id} for location_keyword ${job.location_keyword_id}`);
+    console.log(`📋 [QUEUE WORKER] Found ${jobs.length} jobs to process`);
 
-    // Mark job as processing
-    const { error: updateError } = await supabase
-      .from("content_generation_jobs")
-      .update({
-        status: "processing",
-        started_at: new Date().toISOString(),
-        attempts: job.attempts + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
-
-    if (updateError) {
-      console.error("❌ [QUEUE WORKER] Error updating job status:", updateError);
-      throw updateError;
-    }
-
-    // Also update location_keyword status
-    await supabase
-      .from("location_keywords")
-      .update({ status: "generating" })
-      .eq("id", job.location_keyword_id);
-
-    try {
-      // Fetch location keyword data
-      const { data: lkData, error: lkError } = await supabase
-        .from("location_keywords")
-        .select(`
-          *,
-          location:project_locations!location_id(*),
-          keyword:keyword_variations!keyword_id(*),
-          project:projects!project_id(*)
-        `)
-        .eq("id", job.location_keyword_id)
-        .single();
-
-      if (lkError || !lkData) {
-        throw new Error(`Location keyword not found: ${job.location_keyword_id}`);
+    // Process each job in sequence
+    for (const job of jobs) {
+      // Check if we're running out of time
+      if (Date.now() - startTime > MAX_EXECUTION_TIME_MS) {
+        console.log(`⏱️ [QUEUE WORKER] Approaching timeout, stopping batch processing`);
+        break;
       }
 
-      console.log(`📝 [QUEUE WORKER] Generating content for: ${lkData.phrase}`);
+      // Check if job has exceeded max attempts
+      if (job.attempts >= job.max_attempts) {
+        console.log(`⚠️ [QUEUE WORKER] Job ${job.id} has exceeded max attempts, marking as failed`);
+        await supabase
+          .from("content_generation_jobs")
+          .update({ status: "failed" })
+          .eq("id", job.id);
+        results.push({ job_id: job.id, success: false, error: "Max attempts exceeded" });
+        continue;
+      }
+    
+      console.log(`📋 [QUEUE WORKER] Processing job ${job.id} for location_keyword ${job.location_keyword_id}`);
 
-      // Build the prompt
-      const prompt = `You are an expert SEO content writer. Create a comprehensive, engaging landing page for the following:
+      // Mark job as processing
+      const { error: updateError } = await supabase
+        .from("content_generation_jobs")
+        .update({
+          status: "processing",
+          started_at: new Date().toISOString(),
+          attempts: job.attempts + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", job.id);
+
+      if (updateError) {
+        console.error("❌ [QUEUE WORKER] Error updating job status:", updateError);
+        results.push({ job_id: job.id, success: false, error: updateError.message });
+        continue;
+      }
+
+      // Also update location_keyword status
+      await supabase
+        .from("location_keywords")
+        .update({ status: "generating" })
+        .eq("id", job.location_keyword_id);
+
+      try {
+        // Fetch location keyword data
+        const { data: lkData, error: lkError } = await supabase
+          .from("location_keywords")
+          .select(`
+            *,
+            location:project_locations!location_id(*),
+            keyword:keyword_variations!keyword_id(*),
+            project:projects!project_id(*)
+          `)
+          .eq("id", job.location_keyword_id)
+          .single();
+
+        if (lkError || !lkData) {
+          throw new Error(`Location keyword not found: ${job.location_keyword_id}`);
+        }
+
+        console.log(`📝 [QUEUE WORKER] Generating content for: ${lkData.phrase}`);
+
+        // Build the prompt
+        const prompt = `You are an expert SEO content writer. Create a comprehensive, engaging landing page for the following:
 
 Business: ${lkData.project.company_name || lkData.project.project_name}
 Service: ${lkData.project.service_description || lkData.keyword.keyword}
@@ -133,157 +147,169 @@ Format your response as JSON:
   "content": "HTML content here"
 }`;
 
-      // Call OpenAI API
-      console.log(`🤖 [QUEUE WORKER] Calling OpenAI API...`);
-      const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiApiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4-turbo",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
-      });
+        // Call OpenAI API
+        console.log(`🤖 [QUEUE WORKER] Calling OpenAI API...`);
+        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiApiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4-turbo",
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+          }),
+        });
 
-      if (!openaiResponse.ok) {
-        const errorText = await openaiResponse.text();
-        throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
-      }
-
-      const openaiData = await openaiResponse.json();
-      const generatedText = openaiData.choices[0]?.message?.content;
-
-      if (!generatedText) {
-        throw new Error("No content generated from OpenAI");
-      }
-
-      console.log(`✅ [QUEUE WORKER] OpenAI response received`);
-
-      // Parse JSON response
-      let parsedContent;
-      try {
-        const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsedContent = JSON.parse(jsonMatch[0]);
-        } else {
-          parsedContent = JSON.parse(generatedText);
+        if (!openaiResponse.ok) {
+          const errorText = await openaiResponse.text();
+          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
         }
-      } catch (parseError) {
-        console.error("❌ [QUEUE WORKER] JSON parse error:", parseError);
-        throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
-      }
 
-      // Generate slug
-      const slug = lkData.phrase
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
+        const openaiData = await openaiResponse.json();
+        const generatedText = openaiData.choices[0]?.message?.content;
 
-      // Upsert generated page
-      console.log(`💾 [QUEUE WORKER] Saving generated content...`);
-      const { data: generatedPage, error: insertError } = await supabase
-        .from("generated_pages")
-        .upsert({
-          project_id: lkData.project_id,
-          location_keyword_id: job.location_keyword_id,
-          title: parsedContent.title,
-          slug: slug,
-          content: parsedContent.content,
-          meta_title: parsedContent.meta_title || parsedContent.title,
-          meta_description: parsedContent.meta_description || "",
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+        if (!generatedText) {
+          throw new Error("No content generated from OpenAI");
+        }
 
-      if (insertError) {
-        console.error("❌ [QUEUE WORKER] Error saving content:", insertError);
-        throw insertError;
-      }
+        console.log(`✅ [QUEUE WORKER] OpenAI response received`);
 
-      // Update location_keyword status to generated
-      await supabase
-        .from("location_keywords")
-        .update({ status: "generated", updated_at: new Date().toISOString() })
-        .eq("id", job.location_keyword_id);
+        // Parse JSON response
+        let parsedContent;
+        try {
+          const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsedContent = JSON.parse(jsonMatch[0]);
+          } else {
+            parsedContent = JSON.parse(generatedText);
+          }
+        } catch (parseError: any) {
+          console.error("❌ [QUEUE WORKER] JSON parse error:", parseError);
+          throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
+        }
 
-      // Mark job as completed
-      await supabase
-        .from("content_generation_jobs")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
+        // Generate slug
+        const slug = lkData.phrase
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
 
-      // Log to api_logs
-      await supabase.from("api_logs").insert({
-        user_id: job.user_id,
-        project_id: job.project_id,
-        api_type: "openai",
-        endpoint: "/v1/chat/completions",
-        method: "POST",
-        status_code: 200,
-        request_body: { model: "gpt-4-turbo", prompt_length: prompt.length, job_id: job.id },
-        response_body: { success: true, generated_page_id: generatedPage.id },
-      });
+        // Upsert generated page
+        console.log(`💾 [QUEUE WORKER] Saving generated content...`);
+        const { data: generatedPage, error: insertError } = await supabase
+          .from("generated_pages")
+          .upsert({
+            project_id: lkData.project_id,
+            location_keyword_id: job.location_keyword_id,
+            title: parsedContent.title,
+            slug: slug,
+            content: parsedContent.content,
+            meta_title: parsedContent.meta_title || parsedContent.title,
+            meta_description: parsedContent.meta_description || "",
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
 
-      console.log(`✅ [QUEUE WORKER] Job ${job.id} completed successfully`);
+        if (insertError) {
+          console.error("❌ [QUEUE WORKER] Error saving content:", insertError);
+          throw insertError;
+        }
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          job_id: job.id,
-          location_keyword_id: job.location_keyword_id,
-          generated_page_id: generatedPage.id,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (error: any) {
-      console.error(`❌ [QUEUE WORKER] Job ${job.id} failed:`, error);
+        // Update location_keyword status to generated
+        await supabase
+          .from("location_keywords")
+          .update({ status: "generated", updated_at: new Date().toISOString() })
+          .eq("id", job.location_keyword_id);
 
-      // Determine if we should retry
-      const shouldRetry = job.attempts + 1 < job.max_attempts;
-      const newStatus = shouldRetry ? "queued" : "failed";
+        // Mark job as completed
+        await supabase
+          .from("content_generation_jobs")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
 
-      // Update job with error
-      await supabase
-        .from("content_generation_jobs")
-        .update({
-          status: newStatus,
+        // Log to api_logs
+        await supabase.from("api_logs").insert({
+          user_id: job.user_id,
+          project_id: job.project_id,
+          api_type: "openai",
+          endpoint: "/v1/chat/completions",
+          method: "POST",
+          status_code: 200,
+          request_body: { model: "gpt-4-turbo", prompt_length: prompt.length, job_id: job.id },
+          response_body: { success: true, generated_page_id: generatedPage.id },
+        });
+
+        console.log(`✅ [QUEUE WORKER] Job ${job.id} completed successfully`);
+        results.push({ job_id: job.id, success: true });
+
+      } catch (error: any) {
+        console.error(`❌ [QUEUE WORKER] Job ${job.id} failed:`, error);
+
+        // Determine if we should retry
+        const shouldRetry = job.attempts + 1 < job.max_attempts;
+        const newStatus = shouldRetry ? "queued" : "failed";
+
+        // Update job with error
+        await supabase
+          .from("content_generation_jobs")
+          .update({
+            status: newStatus,
+            error_message: error.message || String(error),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
+
+        // Update location_keyword status
+        await supabase
+          .from("location_keywords")
+          .update({ status: "error", updated_at: new Date().toISOString() })
+          .eq("id", job.location_keyword_id);
+
+        // Log error to api_logs
+        await supabase.from("api_logs").insert({
+          user_id: job.user_id,
+          project_id: job.project_id,
+          api_type: "openai",
+          endpoint: "/v1/chat/completions",
+          method: "POST",
+          status_code: 500,
+          request_body: { job_id: job.id },
           error_message: error.message || String(error),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
+        });
 
-      // Update location_keyword status
-      await supabase
-        .from("location_keywords")
-        .update({ status: "error", updated_at: new Date().toISOString() })
-        .eq("id", job.location_keyword_id);
+        results.push({ job_id: job.id, success: false, error: error.message });
+        // Continue to next job instead of throwing
+      }
+    } // End of for loop
 
-      // Log error to api_logs
-      await supabase.from("api_logs").insert({
-        user_id: job.user_id,
-        project_id: job.project_id,
-        api_type: "openai",
-        endpoint: "/v1/chat/completions",
-        method: "POST",
-        status_code: 500,
-        request_body: { job_id: job.id },
-        error_message: error.message || String(error),
-      });
+    // Return summary of all processed jobs
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    console.log(`🏁 [QUEUE WORKER] Batch complete: ${successCount} succeeded, ${failCount} failed`);
 
-      throw error;
-    }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        processed: results.length,
+        succeeded: successCount,
+        failed: failCount,
+        results,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
   } catch (error: any) {
     console.error("❌ [QUEUE WORKER] Fatal error:", error);
     return new Response(

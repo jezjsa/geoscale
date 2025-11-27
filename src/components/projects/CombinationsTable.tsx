@@ -25,6 +25,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { queueContentGeneration } from '@/api/content-queue'
+import { QueueStatusIndicator } from './QueueStatusIndicator'
 import { checkRankings } from '@/api/rankings'
 import { togglePositionTracking, getTrackedCombinationsCount } from '@/api/combinations'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
@@ -445,9 +446,15 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
     }
   }
 
+  // Check if there are any queued items to show the queue status
+  const hasQueuedItems = combinations.some(c => c.status === 'queued' || c.status === 'generating')
+
   return (
     <>
     <div className="space-y-4">
+      {/* Queue Status Indicator - shows when items are queued */}
+      {hasQueuedItems && <QueueStatusIndicator projectId={projectId} />}
+
       {/* Generation Progress Bar */}
       {generationProgress && (
         <div className="bg-card border rounded-lg p-4 space-y-3">

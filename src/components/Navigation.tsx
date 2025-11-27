@@ -49,8 +49,8 @@ export function Navigation() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar style={{ backgroundColor: '#242424' }}>
-                      <AvatarFallback style={{ backgroundColor: '#242424', color: '#e2e8f0' }}>
+                    <Avatar className="bg-gray-300 dark:bg-[#242424]">
+                      <AvatarFallback className="bg-gray-300 dark:bg-[#242424] text-gray-700 dark:text-gray-200">
                         {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>

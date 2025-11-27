@@ -36,6 +36,12 @@ interface ServiceFaqsManagerProps {
   projectId: string
 }
 
+// Helper to capitalize first letter
+const capitalizeFirst = (str: string) => {
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
   const queryClient = useQueryClient()
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -195,7 +201,7 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
                 id="question"
                 placeholder="e.g., How long does a website take to build?"
                 value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
+                onChange={(e) => setNewQuestion(capitalizeFirst(e.target.value))}
                 disabled={createFaqMutation.isPending}
               />
             </div>
@@ -205,7 +211,7 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
                 id="answer"
                 placeholder="Enter the answer to this question..."
                 value={newAnswer}
-                onChange={(e) => setNewAnswer(e.target.value)}
+                onChange={(e) => setNewAnswer(capitalizeFirst(e.target.value))}
                 disabled={createFaqMutation.isPending}
                 rows={4}
               />
@@ -243,7 +249,7 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
               <Input
                 id="editQuestion"
                 value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
+                onChange={(e) => setNewQuestion(capitalizeFirst(e.target.value))}
                 disabled={updateFaqMutation.isPending}
               />
             </div>
@@ -252,7 +258,7 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
               <Textarea
                 id="editAnswer"
                 value={newAnswer}
-                onChange={(e) => setNewAnswer(e.target.value)}
+                onChange={(e) => setNewAnswer(capitalizeFirst(e.target.value))}
                 disabled={updateFaqMutation.isPending}
                 rows={4}
               />
@@ -357,6 +363,14 @@ function ServiceFaqsList({
         </div>
       ) : (
         <>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onAdd}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add FAQ
+          </Button>
           <div className="space-y-3">
             {faqs.map((faq) => (
               <div
@@ -390,14 +404,6 @@ function ServiceFaqsList({
               </div>
             ))}
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onAdd}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add FAQ
-          </Button>
         </>
       )}
     </div>

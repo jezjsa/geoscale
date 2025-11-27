@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     /* GeoScale Brand Colors */
@@ -11,6 +13,7 @@
     --link-hover: #0b6074;
     --btn-secondary-bg: #e5e7eb;
     --btn-secondary-hover: #d1d5db;
+    --progress-track: #e5e7eb;
     
     --background: oklch(0.9911 0 0);
     --foreground: oklch(0.2046 0 0);
@@ -68,10 +71,15 @@
 
   .dark {
     /* GeoScale Brand Colors - Dark Mode */
+    --brand-dark: #0b6074;
+    --brand-light: #1b9497;
+    --brand-off-white: #2a2a2a;
+    --brand-status-generated: #fb923c;
     --link-color: #ffffff;
     --link-hover: #ffffff;
     --btn-secondary-bg: #ffffff;
     --btn-secondary-hover: #f3f4f6;
+    --progress-track: rgba(55, 65, 81, 0.25);
     
     --background: oklch(0.1822 0 0);
     --foreground: oklch(0.9288 0.0126 255.5078);

@@ -204,11 +204,12 @@ export function ProjectDetailPage() {
             {!isIndividualUser && (
               <Button 
                 variant="outline" 
+                size="sm"
                 asChild
-                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300"
+                className="bg-transparent hover:bg-gray-100 text-black border-gray-300 dark:bg-btn-secondary-bg dark:hover:bg-btn-secondary-hover dark:text-black"
               >
                 <Link to="/settings">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <ArrowLeft className="mr-1 h-3 w-3" />
                   Back to Projects
                 </Link>
               </Button>
@@ -216,11 +217,12 @@ export function ProjectDetailPage() {
             {isIndividualUser && (
               <Button 
                 variant="outline" 
+                size="sm"
                 asChild
-                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300"
+                className="bg-transparent hover:bg-gray-100 text-black border-gray-300 dark:bg-btn-secondary-bg dark:hover:bg-btn-secondary-hover dark:text-black"
               >
                 <Link to="/dashboard">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <ArrowLeft className="mr-1 h-3 w-3" />
                   Back to Dashboard
                 </Link>
               </Button>
@@ -236,7 +238,7 @@ export function ProjectDetailPage() {
                 ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
                 : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
-              Combinations
+              Keyword Combinations
             </Button>
             <Button
               variant="outline"
@@ -249,21 +251,21 @@ export function ProjectDetailPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setCurrentView('testimonials')}
-              className={currentView === 'testimonials' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
-            >
-              Customer Testimonials
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setCurrentView('faqs')}
               className={currentView === 'faqs' 
                 ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
                 : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
-              Service FAQs
+              FAQs
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentView('testimonials')}
+              className={currentView === 'testimonials' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+            >
+              Testimonials
             </Button>
             <Button
               variant="outline"
@@ -346,7 +348,7 @@ export function ProjectDetailPage() {
                           variant="outline"
                           onClick={() => setShowAddLocationsDialog(true)}
                           style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
-                          className="bg-[var(--brand-dark)]/10 dark:text-white hover:bg-[var(--brand-dark)]/20"
+                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
                           Add Locations
@@ -356,7 +358,7 @@ export function ProjectDetailPage() {
                           variant="outline"
                           onClick={() => setShowResearchKeywordsDialog(true)}
                           style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
-                          className="bg-[var(--brand-dark)]/10 dark:text-white hover:bg-[var(--brand-dark)]/20"
+                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
                         >
                                 <Plus className="mr-0 h-4 w-4" />
                           Keywords
@@ -365,6 +367,7 @@ export function ProjectDetailPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setShowUploadCsvDialog(true)}
+                          className="bg-white hover:bg-gray-100 dark:bg-transparent"
                         >
                           <Upload className="mr-2 h-4 w-4" />
                           Upload CSV

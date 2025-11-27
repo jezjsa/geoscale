@@ -58,7 +58,6 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
   const [newServiceDescription, setNewServiceDescription] = useState('')
   const [isFetchingKeywords, setIsFetchingKeywords] = useState(false)
   const [isAddingKeywords, setIsAddingKeywords] = useState(false)
-  const [expandedService, setExpandedService] = useState<string | null>(null)
   
   // For keyword selection step
   const [fetchedKeywords, setFetchedKeywords] = useState<FetchedKeyword[]>([])
@@ -290,22 +289,18 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
             <Accordion
               type="single"
               collapsible
-              value={expandedService || undefined}
-              onValueChange={(value) => setExpandedService(value || null)}
             >
               {services.map((service) => (
                 <AccordionItem key={service.id} value={service.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{service.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {service.selected_keyword_count}/{service.keyword_count} keywords
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {service.faq_count} FAQs
-                        </Badge>
-                      </div>
+                  <AccordionTrigger className="hover:no-underline [&>svg]:pointer-events-none">
+                    <div className="flex items-center gap-3 pointer-events-none">
+                      <span className="font-medium">{service.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {service.selected_keyword_count}/{service.keyword_count} keywords
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {service.faq_count} FAQs
+                      </Badge>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>

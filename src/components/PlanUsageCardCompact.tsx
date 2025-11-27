@@ -4,11 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { useTheme } from '@/components/ThemeProvider';
-
 export function PlanUsageCardCompact() {
   const { plan, usage, limits, percentUsed, isLoading } = usePlanLimits();
-  const { resolvedTheme } = useTheme();
 
   if (isLoading) {
     return (
@@ -50,8 +47,7 @@ export function PlanUsageCardCompact() {
             asChild 
             variant="ghost" 
             size="sm" 
-            className="h-7 px-2 text-xs text-white hover:text-white hover:opacity-80"
-            style={{ backgroundColor: resolvedTheme === 'dark' ? '#3a3a3a' : '#6b7280' }}
+            className="h-7 px-2 text-xs text-white hover:opacity-80 bg-gray-500 dark:bg-transparent dark:border dark:border-gray-500 dark:text-gray-300"
           >
             <Link to="/plans">
               Upgrade

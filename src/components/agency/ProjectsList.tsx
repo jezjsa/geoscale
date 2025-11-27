@@ -70,7 +70,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
         />
       </div>
 
-      <Card>
+      <Card className="bg-gray-50 dark:bg-card">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -132,12 +132,9 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                     <TableCell>
                       <Badge 
                         variant="outline" 
-                        className="text-xs"
-                        style={project.project_status === 'active' ? { 
-                          backgroundColor: 'var(--brand-dark)', 
-                          color: 'white',
-                          borderColor: 'var(--brand-dark)'
-                        } : {}}
+                        className={`text-xs ${project.project_status === 'active' 
+                          ? 'bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600' 
+                          : ''}`}
                       >
                         {project.project_status === 'active' ? 'Active' : 'Inactive'}
                       </Badge>

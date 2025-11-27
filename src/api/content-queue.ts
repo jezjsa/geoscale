@@ -101,3 +101,74 @@ export async function getProjectJobs(projectId: string) {
   if (error) throw error
   return data
 }
+
+export interface QueueStatus {
+  totalQueued: number
+  totalProcessing: number
+  position: number | null // Position of this specific item in queue
+  estimatedWaitMinutes: number
+}
+
+/**
+ * Get real-time queue status for a specific location keyword
+ */
+export async function getQueuePosition(locationKeywordId: string): Promise<QueueStatus> {
+  // Get all queued jobs ordered by priority and created_at
+  const { data: queuedJobs, error } = await supabase
+    .from('content_generation_jobs')
+    .select('id, location_keyword_id, created_at, priority')
+    .eq('status', 'queued')
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  // Get processing count
+  const { count: processingCount } = await supabase
+    .from('content_generation_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'processing')
+
+  const totalQueued = queuedJobs?.length || 0
+  const totalProcessing = processingCount || 0
+
+  // Find position of this specific item
+  let position: number | null = null
+  if (queuedJobs) {
+    const index = queuedJobs.findIndex(job => job.location_keyword_id === locationKeywordId)
+    if (index !== -1) {
+      position = index + 1 // 1-indexed position
+    }
+  }
+
+  // Estimate wait time: ~20 seconds per job, processing 5 at a time per minute
+  // So roughly 5 jobs per minute = 12 seconds per job on average
+  const estimatedWaitMinutes = position ? Math.ceil((position * 12) / 60) : 0
+
+  return {
+    totalQueued,
+    totalProcessing,
+    position,
+    estimatedWaitMinutes,
+  }
+}
+
+/**
+ * Get global queue stats (for all users)
+ */
+export async function getGlobalQueueStats() {
+  const { count: queuedCount } = await supabase
+    .from('content_generation_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'queued')
+
+  const { count: processingCount } = await supabase
+    .from('content_generation_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'processing')
+
+  return {
+    queued: queuedCount || 0,
+    processing: processingCount || 0,
+  }
+}
