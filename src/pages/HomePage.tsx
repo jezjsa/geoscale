@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/Navigation'
+import { TypewriterLocations } from '@/components/TypewriterLocations'
 
 export function HomePage() {
   return (
@@ -9,6 +10,9 @@ export function HomePage() {
       
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
+        <div className="mb-8">
+          <TypewriterLocations />
+        </div>
         <h1 className="text-6xl font-bold mb-6 max-w-5xl mx-auto">
           Generate Location-Based Landing Pages at Scale, in Minutes.
         </h1>
