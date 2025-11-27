@@ -33,7 +33,7 @@ export function ProjectTestimonialsAddButton({ projectId }: ProjectTestimonialsA
   return (
     <Button
       size="sm"
-      style={{ backgroundColor: '#006239' }}
+      style={{ backgroundColor: 'var(--brand-dark)' }}
       className="hover:opacity-90 text-white"
       onClick={handleClick}
     >

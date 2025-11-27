@@ -72,6 +72,7 @@ export async function getProjectCombinations(projectId: string) {
       position,
       previous_position,
       last_position_check,
+      track_position,
       location:project_locations (
         id,
         name,
@@ -398,5 +399,52 @@ export async function uploadCsvCombinations(
     combinations_count: insertedCombos?.length || 0,
     errors,
   }
+}
+
+/**
+ * Toggle position tracking for a combination
+ */
+export async function togglePositionTracking(
+  combinationId: string,
+  trackPosition: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from('location_keywords')
+    .update({ track_position: trackPosition })
+    .eq('id', combinationId)
+
+  if (error) throw error
+}
+
+/**
+ * Get count of tracked combinations for a project
+ */
+export async function getTrackedCombinationsCount(
+  projectId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('location_keywords')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+    .eq('track_position', true)
+
+  if (error) throw error
+  return count || 0
+}
+
+/**
+ * Get total tracked combinations count for a user (across all projects)
+ */
+export async function getUserTrackedCombinationsCount(
+  userId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('location_keywords')
+    .select('*, projects!inner(user_id)', { count: 'exact', head: true })
+    .eq('projects.user_id', userId)
+    .eq('track_position', true)
+
+  if (error) throw error
+  return count || 0
 }
 

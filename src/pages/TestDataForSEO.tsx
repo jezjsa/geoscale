@@ -77,7 +77,7 @@ export function TestDataForSEOPage() {
               <Button
                 onClick={testCredentials}
                 disabled={testing}
-                style={{ backgroundColor: '#006239' }}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
                 className="hover:opacity-90 text-white w-full"
               >
                 {testing ? (
@@ -154,7 +154,7 @@ export function TestDataForSEOPage() {
                           <li><code className="px-1 py-0.5 bg-background rounded text-xs">DATAFORSEO_PASSWORD</code></li>
                         </ul>
                       </li>
-                      <li>You can find your credentials at <a href="https://app.dataforseo.com/api-access" target="_blank" rel="noopener noreferrer" className="text-[#006239] hover:underline">https://app.dataforseo.com/api-access</a></li>
+                      <li>You can find your credentials at <a href="https://app.dataforseo.com/api-access" target="_blank" rel="noopener noreferrer" className="text-[var(--brand-dark)] hover:underline">https://app.dataforseo.com/api-access</a></li>
                     </ol>
                   </div>
                 )}

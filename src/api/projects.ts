@@ -48,12 +48,24 @@ export async function createProject(data: CreateProjectData) {
 export async function getAgencyProjects(userId: string) {
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select(`
+      *,
+      project_services(id),
+      location_keywords(id)
+    `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data
+  
+  // Add service_count and combination_count to each project
+  return (data || []).map(project => ({
+    ...project,
+    service_count: project.project_services?.length || 0,
+    combination_count: project.location_keywords?.length || 0,
+    project_services: undefined, // Remove the raw array
+    location_keywords: undefined, // Remove the raw array
+  }))
 }
 
 export async function getProject(projectId: string) {

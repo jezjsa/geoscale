@@ -187,7 +187,7 @@ export function CompanySettingsForm({ userId }: CompanySettingsFormProps) {
             <Button 
               type="button"
               onClick={() => navigate(`/projects/${userProject.id}`)}
-              className="bg-[#006239] hover:bg-[#005030] text-white"
+              className="bg-[var(--brand-dark)] hover:bg-[#005030] text-white"
             >
               Go to your Project
               <ArrowRight className="ml-2 h-4 w-4" />

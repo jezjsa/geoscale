@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { getCompanySettings } from '@/api/company-settings'
 import { getDashboardStats } from '@/api/projects'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
-import { PlanUsageCard } from '@/components/PlanUsageCard'
+import { PlanUsageCardCompact } from '@/components/PlanUsageCardCompact'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
@@ -138,11 +138,6 @@ export function DashboardPage() {
           </Card>
         )}
 
-        {/* Plan Usage Card */}
-        <div className="mb-8">
-          <PlanUsageCard />
-        </div>
-
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Link to="/settings">
             <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -185,19 +180,6 @@ export function DashboardPage() {
 
         {/* Quick actions */}
         <div className="grid gap-4 md:grid-cols-2">
-          {isIndividual && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Settings</CardTitle>
-                <CardDescription>Manage your business information and testimonials</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full">
-                  <Link to="/settings">Manage Settings</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
           <Card>
             <CardHeader>
               <CardTitle>Projects</CardTitle>
@@ -205,14 +187,32 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               <Button 
+                variant="outline"
                 onClick={handleManageProjects}
-                className="bg-white text-black hover:bg-gray-100"
+                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a] dark:hover:text-white"
               >
                 Manage Projects
               </Button>
             </CardContent>
           </Card>
+          <PlanUsageCardCompact />
         </div>
+
+        {isIndividual && (
+          <div className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Company Settings</CardTitle>
+                <CardDescription>Manage your business information and testimonials</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline">
+                  <Link to="/settings">Manage Settings</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -280,7 +280,7 @@ export function WordPressSitemapPage() {
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-[#006239] hover:underline flex items-center gap-1"
+                          className="text-sm text-[var(--brand-dark)] hover:underline flex items-center gap-1"
                         >
                           {item.slug}
                           <ExternalLink className="h-3 w-3" />

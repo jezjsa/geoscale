@@ -48,10 +48,10 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
     <div className="w-full">
       {showHeader && (
         <div className="text-center mb-16">
-          <h1 className="text-3xl sm:text-5xl font-black text-white mb-4">
+          <h1 className="text-3xl sm:text-5xl font-black text-foreground mb-4">
             Choose Your Plan
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Select the perfect plan for your content needs. All plans include our full suite of AI-powered features.
           </p>
         </div>
@@ -59,14 +59,14 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#006239]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--brand-dark)]"></div>
         </div>
       ) : error ? (
         <div className="text-center py-20">
           <p className="text-red-600 mb-4">{error}</p>
           <button
             onClick={fetchPlans}
-            className="px-6 py-2 text-white rounded-lg font-semibold bg-[#006239] hover:bg-[#005030]"
+            className="px-6 py-2 text-white rounded-lg font-semibold bg-[var(--brand-dark)] hover:opacity-90"
           >
             Try Again
           </button>
@@ -79,41 +79,41 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
             return (
               <div
                 key={plan.id}
-                className={`bg-white rounded-3xl p-6 sm:p-8 border-4 relative transition-all hover:shadow-xl flex flex-col ${
-                  isPopular ? 'border-[#006239] shadow-lg' : 'border-gray-700'
+                className={`bg-card rounded-3xl p-6 sm:p-8 border-4 relative transition-all hover:shadow-xl flex flex-col ${
+                  isPopular ? 'border-[var(--brand-dark)] shadow-lg' : 'border-border'
                 }`}
               >
                 {isPopular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="px-4 py-1 rounded-full text-sm font-bold text-white bg-[#006239]">
+                    <span className="px-4 py-1 rounded-full text-sm font-bold text-white bg-[var(--brand-dark)]">
                       Most Popular
                     </span>
                   </div>
                 )}
 
-                <div className="text-center mb-6 rounded-2xl p-4 sm:p-6 bg-[#f0f9f6]">
-                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-1">
+                <div className="text-center mb-6 rounded-2xl p-4 sm:p-6 bg-muted">
+                  <h3 className="text-xl sm:text-2xl font-black text-foreground mb-1">
                     {plan.displayName}
                   </h3>
                   <div className="mb-3">
-                    <span className="text-4xl sm:text-5xl font-black text-gray-900">
+                    <span className="text-4xl sm:text-5xl font-black text-foreground">
                       {formatPrice(plan.basePriceGbp)}
                       {plan.basePriceGbp > 0 && '/mth'}
                     </span>
                   </div>
                   {plan.perSitePriceGbp > 0 ? (
-                    <p className="text-sm text-gray-600 mb-0">
-                      + £{plan.perSitePriceGbp}/site/mth
+                    <p className="text-sm text-muted-foreground mb-0">
+                      + £{plan.perSitePriceGbp}/site/mth for additional sites
                     </p>
                   ) : (
-                    <p className="text-sm text-gray-600 mb-0 invisible">
+                    <p className="text-sm text-muted-foreground mb-0 invisible">
                       &nbsp;
                     </p>
                   )}
                 </div>
 
                 <div className="text-center mb-6">
-                  <p className="text-gray-900 min-h-[48px]">
+                  <p className="text-foreground min-h-[48px]">
                     {plan.description}
                   </p>
                 </div>
@@ -121,10 +121,10 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                 <ul className="space-y-3 mb-8 flex-grow">
                   {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 bg-[#d4f1ed]">
-                        <Check className="w-3 h-3 text-[#006239]" />
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 bg-[var(--brand-dark)]/20">
+                        <Check className="w-3 h-3 text-[var(--brand-dark)]" />
                       </div>
-                      <span className="text-gray-700 text-sm">{feature}</span>
+                      <span className="text-muted-foreground text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -134,14 +134,14 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                     onClick={() => handleSelectPlan(plan.name)}
                     className={`w-full px-6 py-3 rounded-xl font-bold transition-all ${
                       isPopular
-                        ? 'bg-[#006239] text-white shadow-lg hover:shadow-xl hover:bg-[#005030]'
-                        : 'border-2 border-[#006239] text-[#006239] hover:bg-gray-50'
+                        ? 'bg-[var(--brand-dark)] text-white shadow-lg hover:shadow-xl hover:opacity-90'
+                        : 'border-2 border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-muted'
                     }`}
                   >
                     Get Started
                   </button>
                   {plan.targetCustomer && (
-                    <p className="text-sm text-gray-500 text-center mt-3">
+                    <p className="text-sm text-muted-foreground text-center mt-3">
                       {plan.targetCustomer}
                     </p>
                   )}
@@ -154,12 +154,12 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
 
       {!loading && !error && (
         <div className="mt-16 text-center">
-          <p className="text-gray-400 mb-4">
+          <p className="text-muted-foreground mb-4">
             All plans include a 7-day free trial. No credit card required.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Need a custom plan or have questions?{' '}
-            <a href="mailto:support@geoscale.io" className="font-semibold text-[#006239] hover:underline">
+            <a href="mailto:support@geoscale.app" className="font-semibold text-[var(--brand-dark)] hover:underline">
               Contact us
             </a>
           </p>

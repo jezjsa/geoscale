@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Globe, FileText } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { useTheme } from '@/components/ThemeProvider';
 
-export function PlanUsageCard() {
-  const { plan, usage, limits, remaining, percentUsed, isLoading } = usePlanLimits();
+export function PlanUsageCardCompact() {
+  const { plan, usage, limits, percentUsed, isLoading } = usePlanLimits();
+  const { resolvedTheme } = useTheme();
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Plan Usage</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Plan</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -24,11 +26,10 @@ export function PlanUsageCard() {
   if (!plan) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Plan Usage</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Plan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">No plan selected</p>
           <Button asChild size="sm">
             <Link to="/plans">Choose a Plan</Link>
           </Button>
@@ -42,29 +43,32 @@ export function PlanUsageCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>{plan.displayName} Plan</CardTitle>
-            <CardDescription>Your current usage and limits</CardDescription>
-          </div>
-          <Button asChild variant="outline" size="sm" className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black dark:text-black border-gray-300">
+          <CardTitle className="text-base">{plan.displayName} Plan</CardTitle>
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 px-2 text-xs text-white hover:text-white hover:opacity-80"
+            style={{ backgroundColor: resolvedTheme === 'dark' ? '#3a3a3a' : '#6b7280' }}
+          >
             <Link to="/plans">
               Upgrade
-              <ArrowUpRight className="ml-1 h-4 w-4" />
+              <ArrowUpRight className="ml-1 h-3 w-3" />
             </Link>
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Websites Usage */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">Websites</span>
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm">Websites</span>
             </div>
-            <span className={`font-medium ${
+            <span className={`text-sm ${
               isAtLimit(percentUsed.projects) ? 'text-red-600' : 
               isNearLimit(percentUsed.projects) ? 'text-orange-600' : 
               'text-muted-foreground'
@@ -74,30 +78,21 @@ export function PlanUsageCard() {
           </div>
           <Progress 
             value={percentUsed.projects} 
-            className={`h-2 ${
+            className={`h-1.5 ${
               isAtLimit(percentUsed.projects) ? '[&>div]:bg-red-600' : 
               isNearLimit(percentUsed.projects) ? '[&>div]:bg-orange-600' : '[&>div]:bg-[var(--brand-dark)]'
             }`}
           />
-          {remaining.projects === 0 ? (
-            <p className="text-xs text-red-600">
-              You've reached your website limit. Upgrade to add more.
-            </p>
-          ) : remaining.projects <= 2 ? (
-            <p className="text-xs text-orange-600">
-              {remaining.projects} website{remaining.projects !== 1 ? 's' : ''} remaining
-            </p>
-          ) : null}
         </div>
 
         {/* Combination Pages Usage */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">Combination Pages</span>
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm">Pages</span>
             </div>
-            <span className={`font-medium ${
+            <span className={`text-sm ${
               isAtLimit(percentUsed.combinations) ? 'text-red-600' : 
               isNearLimit(percentUsed.combinations) ? 'text-orange-600' : 
               'text-muted-foreground'
@@ -107,30 +102,11 @@ export function PlanUsageCard() {
           </div>
           <Progress 
             value={percentUsed.combinations} 
-            className={`h-2 ${
+            className={`h-1.5 ${
               isAtLimit(percentUsed.combinations) ? '[&>div]:bg-red-600' : 
               isNearLimit(percentUsed.combinations) ? '[&>div]:bg-orange-600' : '[&>div]:bg-[var(--brand-dark)]'
             }`}
           />
-          {remaining.combinations === 0 ? (
-            <p className="text-xs text-red-600">
-              You've reached your page limit. Upgrade to create more.
-            </p>
-          ) : remaining.combinations <= 10 ? (
-            <p className="text-xs text-orange-600">
-              {remaining.combinations} page{remaining.combinations !== 1 ? 's' : ''} remaining
-            </p>
-          ) : null}
-        </div>
-
-        {/* Plan Features Summary */}
-        <div className="pt-4 border-t">
-          <p className="text-xs text-muted-foreground mb-2">Plan includes:</p>
-          <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• {limits.rankTrackingFrequency === 'daily' ? 'Daily' : 'Weekly'} rank tracking</li>
-            <li>• Content generation</li>
-            <li>• Bulk meta editing</li>
-          </ul>
         </div>
       </CardContent>
     </Card>

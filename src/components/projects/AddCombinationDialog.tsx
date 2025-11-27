@@ -161,7 +161,7 @@ export function AddCombinationDialog({ projectId, open, onOpenChange }: AddCombi
                     value={radius}
                     onChange={(e) => setRadius(parseInt(e.target.value))}
                     disabled={createCombinationsMutation.isPending}
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-[#006239]"
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-[var(--brand-dark)]"
                   />
                   <div className="flex items-baseline gap-1 min-w-[70px]">
                     <span className="text-lg font-semibold">{radius}</span>
@@ -185,7 +185,7 @@ export function AddCombinationDialog({ projectId, open, onOpenChange }: AddCombi
               </Button>
               <Button
                 type="submit"
-                style={{ backgroundColor: '#006239' }}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
                 className="hover:opacity-90 text-white"
                 disabled={createCombinationsMutation.isPending}
               >
@@ -217,9 +217,9 @@ export function AddCombinationDialog({ projectId, open, onOpenChange }: AddCombi
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">{currentStep}</p>
                       <div className="flex gap-1">
-                        <div className="h-1 w-1 rounded-full bg-[#006239] animate-pulse"></div>
-                        <div className="h-1 w-1 rounded-full bg-[#006239] animate-pulse delay-75"></div>
-                        <div className="h-1 w-1 rounded-full bg-[#006239] animate-pulse delay-150"></div>
+                        <div className="h-1 w-1 rounded-full bg-[var(--brand-dark)] animate-pulse"></div>
+                        <div className="h-1 w-1 rounded-full bg-[var(--brand-dark)] animate-pulse delay-75"></div>
+                        <div className="h-1 w-1 rounded-full bg-[var(--brand-dark)] animate-pulse delay-150"></div>
                       </div>
                     </div>
                   )}

@@ -30,12 +30,19 @@ interface LocationKeywordData {
     keyword: string;
   };
   project_id: string;
+  service_id: string | null;
 }
 
 interface TestimonialData {
   testimonial_text: string;
   customer_name: string | null;
   business_name: string | null;
+}
+
+interface ServiceFaqData {
+  question: string;
+  answer: string;
+  sort_order: number | null;
 }
 
 interface GeneratedContent {
@@ -131,6 +138,7 @@ serve(async (req) => {
             id,
             phrase,
             project_id,
+            service_id,
             location:project_locations!location_keywords_location_id_fkey(name),
             keyword:keyword_variations!location_keywords_keyword_id_fkey(keyword)
           `
@@ -184,6 +192,27 @@ serve(async (req) => {
           testimonialBlock = `"${randomTestimonial.testimonial_text}"${attribution ? ` - ${attribution}` : ""}`;
         }
 
+        // Fetch service-specific FAQs if a service is associated
+        let serviceFaqsBlock = "";
+        if (lkData.service_id) {
+          const { data: serviceFaqs, error: faqsError } = await supabase
+            .from("service_faqs")
+            .select("question, answer, sort_order")
+            .eq("service_id", lkData.service_id)
+            .order("sort_order", { ascending: true });
+
+          if (faqsError) {
+            console.error("Failed to fetch service FAQs:", faqsError);
+          }
+
+          if (serviceFaqs && serviceFaqs.length > 0) {
+            const faqsList = (serviceFaqs as ServiceFaqData[])
+              .map((faq) => `Q: ${faq.question}\nA: ${faq.answer}`)
+              .join("\n\n");
+            serviceFaqsBlock = `Service-specific FAQs to include:\n${faqsList}`;
+          }
+        }
+
         // Build the prompt
         const serviceName = lkData.keyword.keyword || projectData.base_keyword || "service";
         const location = lkData.location.name;
@@ -205,6 +234,8 @@ Contact page URL: ${contactUrl}
 ${testimonialBlock ? `Testimonial to include:\n${testimonialBlock}` : "No testimonials provided."}
 
 ${serviceDescription ? `Service description: ${serviceDescription}` : ""}
+
+${serviceFaqsBlock || "No service-specific FAQs provided."}
 
 Instructions:
 
@@ -246,7 +277,10 @@ Instructions:
    - You may briefly refer to the testimonial as social proof.
    - Close with </div>
 
-7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq"> with 4 common questions related to the service and location.
+7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq">:
+   - If service-specific FAQs are provided above, use those questions and answers exactly as given, adapting only to include the location name where appropriate.
+   - If no service-specific FAQs are provided, generate 4 common questions related to the service and location.
+   - Format each FAQ as an H3 for the question and a paragraph for the answer.
    - Close with </div>
 
 8. Finish with a short summary wrapped in <div class="geo-summary"> reinforcing the main keyword and location.

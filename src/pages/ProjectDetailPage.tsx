@@ -6,12 +6,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { InlineEdit } from '@/components/InlineEdit'
 import { AddFirstCombinationDialog } from '@/components/projects/AddFirstCombinationDialog'
 import { AddSpecificCombinationsDialog } from '@/components/projects/AddSpecificCombinationsDialog'
+import { AddLocationsDialog } from '@/components/projects/AddLocationsDialog'
 import { ResearchKeywordsDialog } from '@/components/projects/ResearchKeywordsDialog'
 import { UploadCsvDialog } from '@/components/projects/UploadCsvDialog'
 import { CombinationsTable } from '@/components/projects/CombinationsTable'
 import { ProjectTestimonialsManager } from '@/components/projects/ProjectTestimonialsManager'
 import { ProjectTestimonialsAddButton } from '@/components/projects/ProjectTestimonialsAddButton'
 import { WordPressApiKeyDisplay } from '@/components/projects/WordPressApiKeyDisplay'
+import { ProjectServicesManager } from '@/components/projects/ProjectServicesManager'
+import { ServiceFaqsManager } from '@/components/projects/ServiceFaqsManager'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,13 +36,14 @@ import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpres
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { generateWordPressApiKey } from '@/utils/api-key-generator'
+import { getCurrentUserPlan } from '@/lib/plan-service'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentView = (searchParams.get('view') as 'combinations' | 'testimonials' | 'settings') || 'combinations'
+  const currentView = (searchParams.get('view') as 'combinations' | 'services' | 'testimonials' | 'faqs' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
   
   // Check if user is on individual plan (not agency)
@@ -51,6 +55,7 @@ export function ProjectDetailPage() {
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAddFirstDialog, setShowAddFirstDialog] = useState(false)
   const [showAddSpecificDialog, setShowAddSpecificDialog] = useState(false)
+  const [showAddLocationsDialog, setShowAddLocationsDialog] = useState(false)
   const [showResearchKeywordsDialog, setShowResearchKeywordsDialog] = useState(false)
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
   const [wpTemplates, setWpTemplates] = useState<Array<{ value: string; label: string }>>([])
@@ -58,9 +63,18 @@ export function ProjectDetailPage() {
   const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   
-  const setCurrentView = (view: 'combinations' | 'testimonials' | 'settings') => {
+  const setCurrentView = (view: 'combinations' | 'services' | 'testimonials' | 'faqs' | 'settings') => {
     setSearchParams({ view })
   }
+
+  // Get user's plan for combination limit
+  const { data: userPlan } = useQuery({
+    queryKey: ['userPlan', user?.id],
+    queryFn: () => getCurrentUserPlan(user?.id),
+    enabled: !!user?.id,
+  })
+  
+  const combinationLimit = userPlan?.combinationPageLimit || 100
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],
@@ -191,6 +205,7 @@ export function ProjectDetailPage() {
               <Button 
                 variant="outline" 
                 asChild
+                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300"
               >
                 <Link to="/settings">
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -202,6 +217,7 @@ export function ProjectDetailPage() {
               <Button 
                 variant="outline" 
                 asChild
+                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300"
               >
                 <Link to="/dashboard">
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -212,41 +228,56 @@ export function ProjectDetailPage() {
           </div>
 
           {/* View switcher buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setCurrentView('combinations')}
-              style={currentView === 'combinations' ? {
-                backgroundColor: '#3a3a3a'
-              } : {}}
-              className={currentView === 'combinations' ? 'text-white hover:bg-[#4a4a4a]' : 'bg-card hover:bg-[#4a4a4a] hover:text-white'}
+              className={currentView === 'combinations' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Combinations
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
+              onClick={() => setCurrentView('services')}
+              className={currentView === 'services' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+            >
+              Services
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('testimonials')}
-              style={currentView === 'testimonials' ? {
-                backgroundColor: '#3a3a3a'
-              } : {}}
-              className={currentView === 'testimonials' ? 'text-white hover:bg-[#4a4a4a]' : 'bg-card hover:bg-[#4a4a4a] hover:text-white'}
+              className={currentView === 'testimonials' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Customer Testimonials
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
+              onClick={() => setCurrentView('faqs')}
+              className={currentView === 'faqs' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+            >
+              Service FAQs
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('settings')}
-              style={currentView === 'settings' ? {
-                backgroundColor: '#3a3a3a'
-              } : {}}
-              className={currentView === 'settings' ? 'text-white hover:bg-[#4a4a4a]' : 'bg-card hover:bg-[#4a4a4a] hover:text-white'}
+              className={currentView === 'settings' 
+                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Project Settings
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => navigate(`/projects/${projectId}/sitemap`)}
-              className="bg-card hover:bg-[#4a4a4a] hover:text-white"
+              className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
             >
               WordPress Sitemap
             </Button>
@@ -278,19 +309,12 @@ export function ProjectDetailPage() {
                       </p>
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Button
-                          style={{ backgroundColor: '#006239' }}
+                          style={{ backgroundColor: 'var(--brand-dark)' }}
                           className="hover:opacity-90 text-white"
-                          onClick={() => {
-                            // Show simple dialog if no combinations, complex one if they have some
-                            if (!combinations || combinations.length === 0) {
-                              setShowAddFirstDialog(true)
-                            } else {
-                              setShowAddSpecificDialog(true)
-                            }
-                          }}
+                          onClick={() => setShowAddLocationsDialog(true)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          {!combinations || combinations.length === 0 ? 'Create First Combination' : 'Auto-Generate'}
+                          Add Locations
                         </Button>
                         <Button
                           variant="outline"
@@ -310,7 +334,7 @@ export function ProjectDetailPage() {
                         {/* Temporarily hidden - Google Places API has 31-mile radius limit */}
                         {/* <Button
                           size="sm"
-                          style={{ backgroundColor: '#006239' }}
+                          style={{ backgroundColor: 'var(--brand-dark)' }}
                           className="hover:opacity-90 text-white"
                           onClick={() => setShowAddCombinationDialog(true)}
                         >
@@ -320,19 +344,19 @@ export function ProjectDetailPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setShowAddSpecificDialog(true)}
-                          style={{ borderColor: '#006239', color: 'white' }}
-                          className="bg-transparent hover:bg-[#006239]/10"
+                          onClick={() => setShowAddLocationsDialog(true)}
+                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+                          className="bg-[var(--brand-dark)]/10 dark:text-white hover:bg-[var(--brand-dark)]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
-                          Create Combinations
+                          Add Locations
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setShowResearchKeywordsDialog(true)}
-                          style={{ borderColor: '#006239', color: 'white' }}
-                          className="bg-transparent hover:bg-[#006239]/10"
+                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+                          className="bg-[var(--brand-dark)]/10 dark:text-white hover:bg-[var(--brand-dark)]/20"
                         >
                                 <Plus className="mr-0 h-4 w-4" />
                           Keywords
@@ -356,6 +380,11 @@ export function ProjectDetailPage() {
                 )}
                 </CardContent>
               </Card>
+            ) : currentView === 'services' ? (
+              <ProjectServicesManager 
+                projectId={projectId} 
+                combinationLimit={combinationLimit}
+              />
             ) : currentView === 'testimonials' ? (
               <Card>
                 <CardHeader>
@@ -373,6 +402,8 @@ export function ProjectDetailPage() {
                   <ProjectTestimonialsManager projectId={projectId} />
                 </CardContent>
               </Card>
+            ) : currentView === 'faqs' ? (
+              <ServiceFaqsManager projectId={projectId} />
             ) : currentView === 'settings' ? (
             <Card>
               <CardHeader>
@@ -604,12 +635,19 @@ export function ProjectDetailPage() {
         onOpenChange={setShowAddFirstDialog}
       />
 
-      {/* Add Towns Dialog (Complex) */}
+      {/* Add Towns Dialog (Complex) - Legacy */}
       <AddSpecificCombinationsDialog
         projectId={projectId}
         open={showAddSpecificDialog}
         onOpenChange={setShowAddSpecificDialog}
         baseKeyword={project?.base_keyword || ''}
+      />
+
+      {/* Add Locations Dialog (New - uses keywords from Services) */}
+      <AddLocationsDialog
+        projectId={projectId}
+        open={showAddLocationsDialog}
+        onOpenChange={setShowAddLocationsDialog}
       />
 
       {/* Research Keywords Dialog */}
@@ -645,7 +683,7 @@ export function ProjectDetailPage() {
               Cancel
             </Button>
             <Button
-              style={{ backgroundColor: '#006239' }}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
               onClick={() => updateStatusMutation.mutate(newStatus)}
               disabled={updateStatusMutation.isPending}

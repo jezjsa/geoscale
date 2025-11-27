@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { createProject } from '@/api/projects'
 import { toast } from 'sonner'
@@ -99,7 +99,8 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button style={{ backgroundColor: '#006239' }} className="hover:opacity-90 text-white">
+        <Button style={{ backgroundColor: 'var(--brand-dark)' }} className="hover:opacity-90 text-white">
+          <Plus className="mr-2 h-4 w-4" />
           Create a Project
         </Button>
       </DialogTrigger>
@@ -221,7 +222,7 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
             </Button>
             <Button
               type="submit"
-              style={{ backgroundColor: '#006239' }}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
               disabled={createProjectMutation.isPending}
             >

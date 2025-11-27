@@ -2,6 +2,16 @@
 
 @layer base {
   :root {
+    /* GeoScale Brand Colors */
+    --brand-dark: #0b6074;
+    --brand-light: #1b9497;
+    --brand-off-white: #edeadb;
+    --brand-status-generated: #c2410c;
+    --link-color: #0b6074;
+    --link-hover: #0b6074;
+    --btn-secondary-bg: #e5e7eb;
+    --btn-secondary-hover: #d1d5db;
+    
     --background: oklch(0.9911 0 0);
     --foreground: oklch(0.2046 0 0);
     --card: oklch(0.9911 0 0);
@@ -19,7 +29,7 @@
     --destructive: oklch(0.5523 0.1927 32.7272);
     --destructive-foreground: oklch(0.9934 0.0032 17.2118);
     --border: oklch(0.9037 0 0);
-    --input: oklch(0.9731 0 0);
+    --input: #d1d5db;
     --ring: oklch(0.8348 0.1302 160.9080);
     --chart-1: oklch(0.8348 0.1302 160.9080);
     --chart-2: oklch(0.6231 0.1880 259.8145);
@@ -57,6 +67,12 @@
   }
 
   .dark {
+    /* GeoScale Brand Colors - Dark Mode */
+    --link-color: #ffffff;
+    --link-hover: #ffffff;
+    --btn-secondary-bg: #ffffff;
+    --btn-secondary-hover: #f3f4f6;
+    
     --background: oklch(0.1822 0 0);
     --foreground: oklch(0.9288 0.0126 255.5078);
     --card: oklch(0.2046 0 0);
@@ -143,6 +159,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* GeoScale Brand Colors */
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-brand-off-white: var(--brand-off-white);
+  --color-brand-status-generated: var(--brand-status-generated);
+  --color-link: var(--link-color);
+  --color-link-hover: var(--link-hover);
+  --color-btn-secondary-bg: var(--btn-secondary-bg);
+  --color-btn-secondary-hover: var(--btn-secondary-hover);
+  
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);

@@ -76,7 +76,8 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <img src="/icon.svg" alt="GeoScale" className="h-16 w-16 mx-auto mb-4" />
           <CardTitle className="text-2xl">Sign In</CardTitle>
           <CardDescription>Enter your credentials to access your account</CardDescription>
         </CardHeader>
@@ -113,7 +114,7 @@ export function LoginPage() {
           <CardFooter className="flex flex-col gap-4">
             <Button 
               type="submit" 
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900" 
+              className="w-full bg-[var(--brand-dark)] hover:bg-[#095663] text-white" 
               disabled={isSigningIn}
             >
               {isSigningIn ? 'Signing In...' : 'Sign In'}
@@ -129,7 +130,7 @@ export function LoginPage() {
                 </button>
             <p className="text-sm text-center text-muted-foreground">
               Don't have an account?{' '}
-                  <Link to="/signup" className="text-primary hover:underline">
+                  <Link to="/signup" className="text-[var(--brand-dark)] hover:underline">
                 Sign up
                   </Link>
                 </p>

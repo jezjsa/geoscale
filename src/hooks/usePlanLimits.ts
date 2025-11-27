@@ -13,6 +13,7 @@ interface PlanLimits {
     websiteLimit: number;
     combinationPageLimit: number;
     rankTrackingFrequency: 'weekly' | 'daily';
+    rankTrackingLimit: number;
   };
   remaining: {
     projects: number;
@@ -37,6 +38,7 @@ export function usePlanLimits(): PlanLimits {
       websiteLimit: 0,
       combinationPageLimit: 0,
       rankTrackingFrequency: 'weekly',
+      rankTrackingLimit: 0,
     },
     remaining: {
       projects: 0,
@@ -73,6 +75,7 @@ export function usePlanLimits(): PlanLimits {
               websiteLimit: plan.websiteLimit,
               combinationPageLimit: plan.combinationPageLimit,
               rankTrackingFrequency: plan.rankTrackingFrequency,
+              rankTrackingLimit: plan.rankTrackingLimit,
             },
             remaining: {
               projects: Math.max(0, remainingProjects),

@@ -171,7 +171,7 @@ Leeds,website design agency`
               <div
                 className={`
                   border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                  ${isDragging ? 'border-[#006239] bg-[#006239]/5' : 'border-border'}
+                  ${isDragging ? 'border-[var(--brand-dark)] bg-[var(--brand-dark)]/5' : 'border-border'}
                   ${selectedFile ? 'bg-accent/50' : ''}
                 `}
                 onDrop={handleDrop}
@@ -180,7 +180,7 @@ Leeds,website design agency`
               >
                 {selectedFile ? (
                   <div className="space-y-2">
-                    <FileText className="h-8 w-8 mx-auto text-[#006239]" />
+                    <FileText className="h-8 w-8 mx-auto text-[var(--brand-dark)]" />
                     <p className="text-sm font-medium">{selectedFile.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {(selectedFile.size / 1024).toFixed(2)} KB
@@ -249,7 +249,7 @@ Leeds,website design agency`
             </Button>
             <Button
               type="submit"
-              style={{ backgroundColor: '#006239' }}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
               disabled={!selectedFile || uploadMutation.isPending}
             >

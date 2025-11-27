@@ -7,6 +7,7 @@ export interface Plan {
   websiteLimit: number;
   combinationPageLimit: number;
   rankTrackingFrequency: 'weekly' | 'daily';
+  rankTrackingLimit: number;
   basePriceGbp: number;
   perSitePriceGbp: number;
   features: string[];

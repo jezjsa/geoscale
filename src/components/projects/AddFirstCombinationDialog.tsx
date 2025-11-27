@@ -129,7 +129,7 @@ export function AddFirstCombinationDialog({
             </Button>
             <Button
               type="submit"
-              style={{ backgroundColor: '#006239' }}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
               disabled={addMutation.isPending}
             >

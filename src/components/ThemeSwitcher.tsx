@@ -14,9 +14,12 @@ export function ThemeSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" style={{ color: '#e2e8f0' }} className="hover:opacity-80">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        <Button variant="ghost" size="icon" className="hover:opacity-80">
+          {theme === 'dark' ? (
+            <Moon className="h-[1.2rem] w-[1.2rem] text-white" />
+          ) : (
+            <Sun className="h-[1.2rem] w-[1.2rem] text-[var(--brand-dark)]" />
+          )}
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>

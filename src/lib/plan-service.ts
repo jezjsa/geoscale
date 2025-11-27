@@ -33,6 +33,7 @@ export const getAllPlans = async (): Promise<Plan[]> => {
     websiteLimit: plan.website_limit,
     combinationPageLimit: plan.combination_page_limit,
     rankTrackingFrequency: plan.rank_tracking_frequency,
+    rankTrackingLimit: plan.rank_tracking_limit || 10,
     basePriceGbp: parseFloat(plan.base_price_gbp),
     perSitePriceGbp: parseFloat(plan.per_site_price_gbp),
     features: plan.features || [],

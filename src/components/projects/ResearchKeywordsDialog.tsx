@@ -273,7 +273,7 @@ export function ResearchKeywordsDialog({
                   size="sm"
                   onClick={handleApplyCustomKeywords}
                   disabled={addKeywordsMutation.isPending}
-                  style={{ backgroundColor: '#006239' }}
+                  style={{ backgroundColor: 'var(--brand-dark)' }}
                   className="text-white hover:opacity-90"
                 >
                   Apply {customKeywords.filter(kw => kw.trim() !== '').length} Custom Keyword{customKeywords.filter(kw => kw.trim() !== '').length !== 1 ? 's' : ''}
@@ -391,7 +391,7 @@ export function ResearchKeywordsDialog({
               {Array.from(selectedKeywords).map(keyword => (
                 <div
                   key={keyword}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#006239] text-white text-xs"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--brand-dark)] text-white text-xs"
                 >
                   {keyword}
                   <button
@@ -437,7 +437,7 @@ export function ResearchKeywordsDialog({
               </Button>
               <Button
                 onClick={handleApplyKeywords}
-                style={{ backgroundColor: '#006239' }}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
                 className="hover:opacity-90 text-white"
                 disabled={selectedKeywords.size === 0 || addKeywordsMutation.isPending}
               >

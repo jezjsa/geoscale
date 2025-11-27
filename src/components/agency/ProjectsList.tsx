@@ -78,6 +78,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                 <TableHead>Company Name</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>WordPress URL</TableHead>
+                <TableHead className="text-center">Combinations</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Created</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -86,7 +87,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
             <TableBody>
               {filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No projects found matching "{searchTerm}"
                   </TableCell>
                 </TableRow>
@@ -95,8 +96,8 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                   <TableRow key={project.id} className="hover:bg-accent/50">
                     <TableCell className="font-medium">
                       <Link 
-                        to={`/projects/${project.id}?view=combinations`}
-                        className="hover:underline hover:text-primary transition-colors"
+                        to={`/projects/${project.id}?view=${project.service_count > 0 ? 'combinations' : 'services'}`}
+                        className="text-link hover:text-link-hover hover:underline transition-colors"
                       >
                         {project.company_name || project.project_name}
                       </Link>
@@ -117,7 +118,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                           href={project.wp_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
+                          className="text-link hover:text-link-hover hover:underline inline-flex items-center gap-1 text-sm"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {project.wp_url.replace('https://', '')}
@@ -125,14 +126,17 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                         </a>
                       )}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-medium">{project.combination_count || 0}</span>
+                    </TableCell>
                     <TableCell>
                       <Badge 
                         variant="outline" 
                         className="text-xs"
                         style={project.project_status === 'active' ? { 
-                          backgroundColor: '#006239', 
+                          backgroundColor: 'var(--brand-dark)', 
                           color: 'white',
-                          borderColor: '#006239'
+                          borderColor: 'var(--brand-dark)'
                         } : {}}
                       >
                         {project.project_status === 'active' ? 'Active' : 'Inactive'}
@@ -148,7 +152,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                         asChild
                         className="h-8 w-8"
                       >
-                        <Link to={`/projects/${project.id}?view=combinations`}>
+                        <Link to={`/projects/${project.id}?view=${project.service_count > 0 ? 'combinations' : 'services'}`}>
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>

@@ -5,6 +5,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Trash2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -159,68 +167,74 @@ export function ProjectTestimonialsManager({ projectId }: ProjectTestimonialsMan
 
   const hasTestimonials = testimonials && testimonials.length > 0
 
+  const isModalOpen = isAdding || editingId !== null
+
   return (
     <div>
-      {/* Add/Edit Form */}
-      {(isAdding || editingId) && (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="testimonial_text" className="text-sm text-muted-foreground font-normal block mb-3">
-                  Testimonial Text *
-                </Label>
-                <Textarea
-                  id="testimonial_text"
-                  value={formData.testimonial_text}
-                  onChange={(e) => setFormData({ ...formData, testimonial_text: e.target.value })}
-                  placeholder="Enter the customer testimonial..."
-                  rows={5}
-                  required
-                />
-              </div>
+      {/* Add/Edit Modal */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit' : 'Add'} Testimonial</DialogTitle>
+            <DialogDescription>
+              Add customer testimonials that will be woven into your AI-generated landing pages.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="testimonial_text" className="text-sm font-medium block mb-2">
+                Testimonial Text *
+              </Label>
+              <Textarea
+                id="testimonial_text"
+                value={formData.testimonial_text}
+                onChange={(e) => setFormData({ ...formData, testimonial_text: e.target.value })}
+                placeholder="Enter the customer testimonial..."
+                rows={4}
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="customer_name" className="text-sm text-muted-foreground font-normal block mb-3">
-                  Customer Name (optional)
-                </Label>
-                <Input
-                  id="customer_name"
-                  value={formData.customer_name}
-                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                  placeholder="e.g., John Smith"
-                />
-              </div>
+            <div>
+              <Label htmlFor="customer_name" className="text-sm font-medium block mb-2">
+                Customer Name (optional)
+              </Label>
+              <Input
+                id="customer_name"
+                value={formData.customer_name}
+                onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                placeholder="e.g., John Smith"
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="business_name" className="text-sm text-muted-foreground font-normal block mb-3">
-                  Business Name (optional)
-                </Label>
-                <Input
-                  id="business_name"
-                  value={formData.business_name}
-                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  placeholder="e.g., ABC Company Ltd"
-                />
-              </div>
+            <div>
+              <Label htmlFor="business_name" className="text-sm font-medium block mb-2">
+                Business Name (optional)
+              </Label>
+              <Input
+                id="business_name"
+                value={formData.business_name}
+                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                placeholder="e.g., ABC Company Ltd"
+              />
+            </div>
 
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  style={{ backgroundColor: '#006239' }}
-                  className="hover:opacity-90 text-white"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {editingId ? 'Update' : 'Add'} Testimonial
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingId ? 'Update' : 'Add'} Testimonial
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Empty State or Testimonials List */}
       {!hasTestimonials && !isAdding ? (
@@ -232,7 +246,7 @@ export function ProjectTestimonialsManager({ projectId }: ProjectTestimonialsMan
             </p>
             <Button
               onClick={() => setIsAdding(true)}
-              style={{ backgroundColor: '#006239' }}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />

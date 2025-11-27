@@ -173,7 +173,7 @@ export function AddSpecificCombinationsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden flex flex-col bg-[#1a1a1a]">
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Auto-Generate Combinations</DialogTitle>
           <DialogDescription>
@@ -361,7 +361,7 @@ export function AddSpecificCombinationsDialog({
               </Button>
               <Button
                 type="submit"
-                style={{ backgroundColor: '#006239' }}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
                 className="hover:opacity-90 text-white"
                 disabled={
                   selectedTowns.size === 0 || 

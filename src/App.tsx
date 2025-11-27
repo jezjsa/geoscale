@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AccountPage } from './pages/AccountPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ViewContentPage } from './pages/ViewContentPage'
 import { WordPressSitemapPage } from './pages/WordPressSitemapPage'
@@ -28,6 +29,7 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/content/:locationKeywordId" element={<ProtectedRoute><ViewContentPage /></ProtectedRoute>} />

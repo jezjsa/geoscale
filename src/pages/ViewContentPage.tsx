@@ -332,7 +332,7 @@ export function ViewContentPage() {
             disabled={isPublishing || isRegenerating}
             variant="outline"
             className="gap-2"
-            style={{ borderColor: '#006239', color: '#006239' }}
+            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
           >
             {isPublishing ? (
               <>
@@ -350,7 +350,7 @@ export function ViewContentPage() {
             onClick={handleRegenerate}
             disabled={isRegenerating || regenerateMutation.isPending}
             className="gap-2"
-            style={{ backgroundColor: '#006239' }}
+            style={{ backgroundColor: 'var(--brand-dark)' }}
           >
             {isRegenerating ? (
               <>
@@ -378,7 +378,7 @@ export function ViewContentPage() {
               </div>
               <Progress 
                 value={regenerateProgress} 
-                className="h-2 [&>div]:bg-[#006239]"
+                className="h-2 [&>div]:bg-[var(--brand-dark)]"
               />
               <p className="text-xs text-muted-foreground">
                 This may take 10-30 seconds. The page will refresh automatically when complete.
@@ -394,7 +394,7 @@ export function ViewContentPage() {
           <div className="border rounded-lg p-6 !bg-white dark:!bg-[#202124]">
             {/* Favicon and URL */}
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-[#006239] flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-6 h-6 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white text-xs font-bold">
                 G
               </div>
               <div className="flex flex-col">
@@ -545,7 +545,7 @@ export function ViewContentPage() {
                   color: #ffffff;
                 }
                 .content-preview .testimonial {
-                  border-left: 4px solid #006239;
+                  border-left: 4px solid var(--brand-dark);
                   background-color: rgba(0, 98, 57, 0.1);
                   padding: 1.5rem;
                   margin: 2rem 0;
@@ -555,7 +555,7 @@ export function ViewContentPage() {
                 .content-preview .testimonial:before {
                   content: '"';
                   font-size: 3rem;
-                  color: #006239;
+                  color: var(--brand-dark);
                   position: absolute;
                   left: 0.5rem;
                   top: -0.5rem;
@@ -583,7 +583,7 @@ export function ViewContentPage() {
                   opacity: 0.8;
                 }
                 .content-preview blockquote {
-                  border-left: 4px solid #006239;
+                  border-left: 4px solid var(--brand-dark);
                   padding-left: 1rem;
                   font-style: italic;
                   color: #e2e8f0;
