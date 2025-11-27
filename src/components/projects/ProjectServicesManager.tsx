@@ -325,8 +325,9 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Service</DialogTitle>
-            <DialogDescription>
-              Enter a service name and we'll find related keywords for you to choose from.
+            <DialogDescription className="space-y-2">
+              <span className="block">Enter a service name and we'll find related keywords for you to choose from.</span>
+              <span className="block text-orange-600 dark:text-orange-400">Don't include locations in your keyphrases – we'll combine them with your locations automatically afterwards.</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

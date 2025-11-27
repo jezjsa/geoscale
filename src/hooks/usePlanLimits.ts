@@ -8,6 +8,7 @@ interface PlanLimits {
   usage: {
     projectCount: number;
     combinationCount: number;
+    trackedCount: number;
   };
   limits: {
     websiteLimit: number;
@@ -33,6 +34,7 @@ export function usePlanLimits(): PlanLimits {
     usage: {
       projectCount: 0,
       combinationCount: 0,
+      trackedCount: 0,
     },
     limits: {
       websiteLimit: 0,

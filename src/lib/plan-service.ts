@@ -172,9 +172,17 @@ export const getUserUsageStats = async (userId?: string) => {
     .select('*, projects!inner(user_id)', { count: 'exact', head: true })
     .eq('projects.user_id', targetUserId);
 
+  // Get tracked combinations count
+  const { count: trackedCount } = await supabase
+    .from('location_keywords')
+    .select('*, projects!inner(user_id)', { count: 'exact', head: true })
+    .eq('projects.user_id', targetUserId)
+    .eq('track_position', true);
+
   return {
     projectCount: projectCount || 0,
     combinationCount: combinationCount || 0,
+    trackedCount: trackedCount || 0,
   };
 };
 

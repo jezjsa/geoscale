@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ArrowUpToLine, ExternalLink, HelpCircle, Plus, Upload } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload } from 'lucide-react'
+import { WordPressIcon } from '@/components/icons/WordPressIcon'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { publishGeneratedPageToWordPress } from '@/api/content-generator'
@@ -663,7 +664,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                   />
                 </TableHead>
               )}
-              <TableHead>Phrase</TableHead>
+              <TableHead>Combination Phrase</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Keyword</TableHead>
               <TableHead className="text-right">Volume</TableHead>
@@ -825,7 +826,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                           (combo.status !== 'generated' && combo.status !== 'pushed') || 
                           pushingIds.has(combo.id)
                         }
-                        className="h-8 w-8 p-0"
+                        className="h-9 w-9 p-0"
                         title={
                           combo.status === 'generated'
                             ? 'Push to WordPress'
@@ -836,12 +837,12 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                             : 'Content must be generated first'
                         }
                       >
-                        <ArrowUpToLine 
-                          className={`h-4 w-4 ${
+                        <WordPressIcon 
+                          className={`text-lg ${
                             pushingIds.has(combo.id)
-                              ? 'text-muted-foreground animate-pulse'
+                              ? 'text-blue-400 animate-pulse'
                               : combo.status === 'generated' || combo.status === 'pushed'
-                              ? 'text-muted-foreground hover:text-[var(--brand-dark)] cursor-pointer'
+                              ? 'text-blue-500 hover:text-blue-600 cursor-pointer'
                               : 'text-muted-foreground/30 cursor-not-allowed'
                           }`}
                         />
@@ -971,7 +972,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                 </div>
                 <div>
                   <p className="font-medium mb-1 flex items-center gap-1">
-                    <ArrowUpToLine className="h-4 w-4" /> Push to WordPress
+                    <WordPressIcon className="text-blue-500" /> Push to WordPress
                   </p>
                   <p className="text-muted-foreground">Publish generated content to your WordPress site. Only available for generated content.</p>
                 </div>

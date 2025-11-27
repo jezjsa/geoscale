@@ -49,7 +49,7 @@ export function PlanUsageCardCompact() {
             size="sm" 
             className="h-7 px-2 text-xs text-white hover:opacity-80 bg-gray-500 dark:bg-transparent dark:border dark:border-gray-500 dark:text-gray-300"
           >
-            <Link to="/plans">
+            <Link to="/account#plan">
               Upgrade
               <ArrowUpRight className="ml-1 h-3 w-3" />
             </Link>

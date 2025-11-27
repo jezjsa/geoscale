@@ -49,7 +49,7 @@ export function PlanUsageCard() {
             <CardDescription>Your current usage and limits</CardDescription>
           </div>
           <Button asChild variant="outline" size="sm" className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black dark:text-black border-gray-300">
-            <Link to="/plans">
+            <Link to="/account#plan">
               Upgrade
               <ArrowUpRight className="ml-1 h-4 w-4" />
             </Link>
