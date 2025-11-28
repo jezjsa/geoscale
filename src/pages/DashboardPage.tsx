@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { getCompanySettings } from '@/api/company-settings'
 import { getDashboardStats } from '@/api/projects'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download } from 'lucide-react'
 import { PlanUsageCardCompact } from '@/components/PlanUsageCardCompact'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
@@ -213,6 +213,27 @@ export function DashboardPage() {
             </Card>
           </div>
         )}
+
+        {/* WordPress Plugin Download */}
+        <div className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>WordPress Plugin</CardTitle>
+              <CardDescription>Download and install the GeoScale WordPress plugin to publish your content</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Download the plugin, install it on your WordPress website, then go to your project settings to generate an API key. Paste the API key into the WordPress plugin settings screen and save.
+              </p>
+              <Button asChild className="bg-gray-200 hover:bg-gray-300 text-gray-900">
+                <a href="/geoscale-plugin.zip" download="geoscale-plugin.zip">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Plugin
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
