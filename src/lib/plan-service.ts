@@ -25,23 +25,31 @@ export const getAllPlans = async (): Promise<Plan[]> => {
     throw new Error(`Failed to fetch plans: ${error.message}`);
   }
 
-  const plans: Plan[] = (data || []).map((plan: any) => ({
-    id: plan.id,
-    name: plan.name,
-    displayName: plan.display_name,
-    description: plan.description,
-    websiteLimit: plan.website_limit,
-    combinationPageLimit: plan.combination_page_limit,
-    rankTrackingFrequency: plan.rank_tracking_frequency,
-    rankTrackingLimit: plan.rank_tracking_limit || 10,
-    basePriceGbp: parseFloat(plan.base_price_gbp),
-    perSitePriceGbp: parseFloat(plan.per_site_price_gbp),
-    features: plan.features || [],
-    targetCustomer: plan.target_customer,
-    isActive: plan.is_active,
-    createdAt: plan.created_at,
-    updatedAt: plan.updated_at,
-  }));
+  const plans: Plan[] = (data || []).map((plan: any) => {
+    const websiteLimit = plan.website_limit || 1;
+    const combinationPageLimit = plan.combination_page_limit || 50;
+    const rankTrackingLimit = plan.rank_tracking_limit || 10;
+    
+    return {
+      id: plan.id,
+      name: plan.name,
+      displayName: plan.display_name,
+      description: plan.description,
+      websiteLimit,
+      combinationPageLimit,
+      // Calculate per-website limits
+      combinationsPerWebsite: plan.combinations_per_website || Math.floor(combinationPageLimit / websiteLimit),
+      rankTrackingFrequency: plan.rank_tracking_frequency,
+      rankTrackingLimit: plan.rank_tracking_per_website || Math.floor(rankTrackingLimit / websiteLimit),
+      basePriceGbp: parseFloat(plan.price_monthly || plan.base_price_gbp || 0),
+      perSitePriceGbp: parseFloat(plan.price_per_site || plan.per_site_price_gbp || 0),
+      features: plan.features || [],
+      targetCustomer: plan.target_customer,
+      isActive: plan.is_active,
+      createdAt: plan.created_at,
+      updatedAt: plan.updated_at,
+    };
+  });
 
   // Update cache
   plansCache = {

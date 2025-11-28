@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog'
 import { ArrowLeft, Plus, Upload } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
-import { getProjectCombinations } from '@/api/combinations'
+import { getProjectCombinations, getTrackedCombinationsCount } from '@/api/combinations'
 import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpress'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -74,7 +74,8 @@ export function ProjectDetailPage() {
     enabled: !!user?.id,
   })
   
-  const combinationLimit = userPlan?.combinationPageLimit || 100
+  // Use per-website limit instead of total limit
+  const combinationLimit = userPlan?.combinationsPerWebsite || userPlan?.combinationPageLimit || 100
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],
@@ -85,6 +86,15 @@ export function ProjectDetailPage() {
     queryKey: ['projectCombinations', projectId],
     queryFn: () => getProjectCombinations(projectId),
   })
+
+  // Get tracked count for this project
+  const { data: trackedCount = 0 } = useQuery({
+    queryKey: ['trackedCount', projectId],
+    queryFn: () => getTrackedCombinationsCount(projectId),
+  })
+
+  // Per-project tracking limit
+  const trackingLimit = userPlan?.rankTrackingLimit || 50
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'inactive') => {
@@ -197,10 +207,32 @@ export function ProjectDetailPage() {
         {/* Header with title and back button */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-4xl font-bold">
-              <span className="text-gray-400">Client / </span>
-              {project.company_name || project.project_name}
-            </h1>
+            <div>
+              <h1 className="text-4xl font-bold">
+                <span className="text-gray-400">Client / </span>
+                {project.company_name || project.project_name}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 flex gap-4">
+                <span>
+                  Combo Pages: <span className={`font-medium ${
+                    (combinations?.length || 0) >= combinationLimit 
+                      ? 'text-red-600' 
+                      : (combinations?.length || 0) >= combinationLimit * 0.8 
+                      ? 'text-orange-600' 
+                      : 'text-foreground'
+                  }`}>{combinations?.length || 0} / {combinationLimit}</span>
+                </span>
+                <span>
+                  Tracking: <span className={`font-medium ${
+                    trackedCount >= trackingLimit 
+                      ? 'text-red-600' 
+                      : trackedCount >= trackingLimit * 0.8 
+                      ? 'text-orange-600' 
+                      : 'text-foreground'
+                  }`}>{trackedCount} / {trackingLimit}</span>
+                </span>
+              </p>
+            </div>
             {!isIndividualUser && (
               <Button 
                 variant="outline" 

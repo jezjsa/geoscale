@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check, Globe, FileText, Target, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { PasswordStrengthMeter, isPasswordStrong } from '@/components/PasswordStrengthMeter';
 import { Progress } from '@/components/ui/progress';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { supabase } from '@/lib/supabase';
@@ -68,13 +69,15 @@ export function AccountPage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+    if (!isPasswordStrong(newPassword)) {
+      toast.error('Please create a stronger password', {
+        description: 'Your password must meet all the requirements shown below.'
+      });
       return;
     }
     
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
       return;
     }
 
@@ -186,37 +189,43 @@ export function AccountPage() {
               <CardDescription>Update your account password</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleChangePassword} className="flex flex-col md:flex-row md:items-end gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    required
-                  />
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                    />
+                    {confirmPassword && newPassword !== confirmPassword && (
+                      <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+                  <Button 
+                    type="submit" 
+                    disabled={isChangingPassword || !isPasswordStrong(newPassword) || newPassword !== confirmPassword}
+                    style={{ backgroundColor: 'var(--brand-dark)' }}
+                    className="hover:opacity-90 text-white md:w-auto md:mt-6"
+                  >
+                    {isChangingPassword ? 'Updating...' : 'Update'}
+                  </Button>
                 </div>
-                <div className="flex-1">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    required
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={isChangingPassword}
-                  style={{ backgroundColor: 'var(--brand-dark)' }}
-                  className="hover:opacity-90 text-white md:w-auto"
-                >
-                  {isChangingPassword ? 'Updating...' : 'Update'}
-                </Button>
+                <PasswordStrengthMeter password={newPassword} />
               </form>
             </CardContent>
           </Card>

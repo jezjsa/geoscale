@@ -5,9 +5,10 @@ export interface Plan {
   displayName: string;
   description: string;
   websiteLimit: number;
-  combinationPageLimit: number;
+  combinationPageLimit: number; // Total limit (for backward compat)
+  combinationsPerWebsite: number; // Per-project limit
   rankTrackingFrequency: 'weekly' | 'daily';
-  rankTrackingLimit: number;
+  rankTrackingLimit: number; // Per-project rank tracking limit
   basePriceGbp: number;
   perSitePriceGbp: number;
   features: string[];

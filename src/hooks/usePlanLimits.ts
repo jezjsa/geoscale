@@ -13,6 +13,7 @@ interface PlanLimits {
   limits: {
     websiteLimit: number;
     combinationPageLimit: number;
+    combinationsPerWebsite: number;
     rankTrackingFrequency: 'weekly' | 'daily';
     rankTrackingLimit: number;
   };
@@ -39,6 +40,7 @@ export function usePlanLimits(): PlanLimits {
     limits: {
       websiteLimit: 0,
       combinationPageLimit: 0,
+      combinationsPerWebsite: 0,
       rankTrackingFrequency: 'weekly',
       rankTrackingLimit: 0,
     },
@@ -76,6 +78,7 @@ export function usePlanLimits(): PlanLimits {
             limits: {
               websiteLimit: plan.websiteLimit,
               combinationPageLimit: plan.combinationPageLimit,
+              combinationsPerWebsite: plan.combinationsPerWebsite,
               rankTrackingFrequency: plan.rankTrackingFrequency,
               rankTrackingLimit: plan.rankTrackingLimit,
             },

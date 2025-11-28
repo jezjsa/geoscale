@@ -100,11 +100,11 @@ export function AddLocationsDialog({
   // Check for any duplicate towns (towns that already exist in the project)
   const hasDuplicateTowns = selectedTowns.some(town => isTownExisting(town))
   
-  // Calculate combinations and limits
+  // Calculate combinations and limits - use per-project limit
   const combinationCount = selectedTowns.length * keywordCount
-  const remainingLimit = limits && usage 
-    ? limits.combinationPageLimit - usage.combinationCount 
-    : Infinity
+  const existingCount = existingCombinations?.length || 0
+  const perProjectLimit = limits?.combinationsPerWebsite || limits?.combinationPageLimit || 400
+  const remainingLimit = perProjectLimit - existingCount
   const maxTownsAllowed = keywordCount > 0 ? Math.floor(remainingLimit / keywordCount) : Infinity
   const wouldExceedLimit = combinationCount > remainingLimit
   const isAtLimit = selectedTowns.length >= maxTownsAllowed

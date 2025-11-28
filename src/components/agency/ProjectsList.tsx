@@ -15,6 +15,7 @@ import {
 import { ExternalLink, Search, Eye } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { usePlanLimits } from '@/hooks/usePlanLimits'
 
 interface ProjectsListProps {
   userId: string
@@ -22,11 +23,15 @@ interface ProjectsListProps {
 
 export function ProjectsList({ userId }: ProjectsListProps) {
   const [searchTerm, setSearchTerm] = useState('')
+  const { plan } = usePlanLimits()
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ['agencyProjects', userId],
     queryFn: () => getAgencyProjects(userId),
   })
+  
+  // Get per-project combination limit
+  const combinationLimit = plan?.combinationsPerWebsite || 400
 
   const filteredProjects = useMemo(() => {
     if (!projects) return []
@@ -127,7 +132,15 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className="font-medium">{project.combination_count || 0}</span>
+                      <span className={`font-medium ${
+                        (project.combination_count || 0) >= combinationLimit 
+                          ? 'text-red-600' 
+                          : (project.combination_count || 0) >= combinationLimit * 0.8 
+                          ? 'text-orange-600' 
+                          : ''
+                      }`}>
+                        {project.combination_count || 0} / {combinationLimit}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge 
