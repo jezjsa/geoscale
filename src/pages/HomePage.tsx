@@ -5,11 +5,12 @@ import { TypewriterLocations } from '@/components/TypewriterLocations'
 
 export function HomePage() {
   return (
-    <div className="min-h-screen bg-background pt-16 md:pt-0">
+    <div className="min-h-screen bg-background pt-16">
       <Navigation />
       
       {/* Hero Section */}
-      <section className="container mx-auto px-[30px] md:px-4 py-20 text-center">
+      <section 
+        className="container mx-auto px-[30px] md:px-4 py-20 text-center bg-center bg-no-repeat">
         <div className="mb-8">
           <TypewriterLocations />
         </div>
@@ -37,13 +38,25 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Demo Video Section */}
+      <section className="container mx-auto px-4 pt-4 pb-16">
+        <div className="max-w-6xl mx-auto">
+          <div 
+            className="rounded-4xl border-8 overflow-hidden aspect-video flex items-center justify-center bg-muted"
+            style={{ borderColor: '#fff' }}
+          >
+            <span className="text-muted-foreground">Demo video coming soon</span>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
         <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+              <img src="/keywords.png" alt="Keyword Research" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">Keyword Research</h3>
             <p className="text-muted-foreground">
@@ -51,8 +64,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center">
+              <img src="/bulk.png" alt="Bulk Location Pages" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">Bulk Location Pages</h3>
             <p className="text-muted-foreground">
@@ -60,8 +73,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center">
+              <img src="/content.png" alt="Content Generation" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">Content Generation</h3>
             <p className="text-muted-foreground">
@@ -69,8 +82,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center">
+              <img src="/comments.png" alt="Testimonials & FAQs" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">Testimonials & FAQs</h3>
             <p className="text-muted-foreground">
@@ -78,8 +91,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center">
+              <img src="/ranking.png" alt="Position Tracking" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">Position Tracking*</h3>
             <p className="text-muted-foreground">
@@ -87,8 +100,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
-            <div className="w-full h-40 bg-muted rounded-lg mb-4 flex items-center justify-center">
-              <span className="text-muted-foreground text-sm">Image placeholder</span>
+            <div className="w-full bg-muted rounded-lg mb-4 flex items-center justify-center">
+              <img src="/wordpress.png" alt="WordPress Integration" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-xl font-semibold mb-4">WordPress Integration</h3>
             <p className="text-muted-foreground">

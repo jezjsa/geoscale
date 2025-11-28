@@ -64,7 +64,6 @@ export function TypewriterLocations() {
       <span className="text-zinc-300">{currentService} in&nbsp;</span>
       <span className="text-white font-medium text-left">
         {displayText}
-        <span className="animate-pulse">|</span>
       </span>
     </div>
   )

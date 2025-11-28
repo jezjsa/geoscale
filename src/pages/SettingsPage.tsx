@@ -55,7 +55,7 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Loading...</p>
@@ -72,7 +72,7 @@ export function SettingsPage() {
   const isIndividual = user.plan === 'individual'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         {isIndividual ? (

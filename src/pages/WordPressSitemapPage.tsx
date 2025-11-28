@@ -134,7 +134,7 @@ export function WordPressSitemapPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Loading project...</p>
@@ -145,7 +145,7 @@ export function WordPressSitemapPage() {
 
   if (!project.wp_api_key || (!project.wp_url && !project.blog_url)) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <Card>
@@ -165,7 +165,7 @@ export function WordPressSitemapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}

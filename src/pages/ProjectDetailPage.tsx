@@ -178,7 +178,7 @@ export function ProjectDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Loading project...</p>
@@ -189,7 +189,7 @@ export function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Project not found</p>
@@ -201,7 +201,7 @@ export function ProjectDetailPage() {
   const newStatus = project.project_status === 'active' ? 'inactive' : 'active'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         {/* Header with title and back button */}

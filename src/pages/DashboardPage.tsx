@@ -60,7 +60,7 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -74,7 +74,7 @@ export function DashboardPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p className="text-muted-foreground">Redirecting...</p>
@@ -90,7 +90,7 @@ export function DashboardPage() {
     companySettings.contact_url
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
