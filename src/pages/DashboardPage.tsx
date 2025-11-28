@@ -223,7 +223,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Download the plugin, install it on your WordPress website, then go to your project settings to generate an API key. Paste the API key into the WordPress plugin settings screen and save.
+                Download the plugin, install it on your WordPress website, then go to your GeoScale project settings to generate an API key. Paste the API key into the WordPress plugin settings screen and save.
               </p>
               <Button asChild className="bg-gray-200 hover:bg-gray-300 text-gray-900">
                 <a href="/geoscale-plugin.zip" download="geoscale-plugin.zip">
