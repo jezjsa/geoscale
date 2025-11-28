@@ -17,8 +17,7 @@ export function HomePage() {
           Generate Location-Based Landing Pages at Scale, in Minutes.
         </h1>
         <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Create dozens or hundreds of SEO-optimized geo landing pages for your WordPress site. 
-          Powered by AI and automated for scale.
+          Create fully optimised geo pages, complete with content and metadata - then publish to WordPress with one click.
         </p>
         <Button 
           asChild 
