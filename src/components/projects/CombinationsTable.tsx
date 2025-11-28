@@ -856,7 +856,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="opacity-100">
                     <div className="flex items-center gap-1">
                       {/* Generate/Regenerate Icon */}
                       <Button
