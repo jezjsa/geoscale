@@ -156,6 +156,12 @@ export function HomePage() {
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-2">Can I update content after publishing?</h3>
+              <p className="text-muted-foreground">
+                Absolutely! You can edit your content in GeoScale at any time and republish to WordPress with one click. This makes it easy to refresh your pages regularly, which can help improve your SEO rankings.
+              </p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">Does GeoScale work with any WordPress site?</h3>
               <p className="text-muted-foreground">
                 Yes! GeoScale integrates with any self-hosted WordPress site. Simply install our plugin and connect your site to start publishing pages automatically.
