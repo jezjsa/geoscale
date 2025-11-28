@@ -749,10 +749,10 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               filteredCombinations.map((combo) => (
                 <TableRow
                   key={combo.id}
-                  className={`hover:bg-accent/50 ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}
+                  className="hover:bg-accent/50"
                 >
                   {(deleteMode || generateMode) && (
-                    <TableCell>
+                    <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>
                       <input
                         type="checkbox"
                         checked={selectedIds.has(combo.id)}
@@ -770,7 +770,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-medium">
+                  <TableCell className={`font-medium ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.status === 'generated' || combo.status === 'pushed' ? (
                       <button
                         onClick={() => handleViewContent(combo.id)}
@@ -782,18 +782,18 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       <span>{combo.phrase}</span>
                     )}
                   </TableCell>
-                  <TableCell>{combo.location?.name || '-'}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>{combo.location?.name || '-'}</TableCell>
+                  <TableCell className={`text-sm text-muted-foreground ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.keyword?.keyword || '-'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className={`text-right ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.keyword?.search_volume ? combo.keyword.search_volume.toLocaleString() : '-'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className={`text-right ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.keyword?.difficulty ? combo.keyword.difficulty.toFixed(1) : '-'}
                   </TableCell>
-                  <TableCell>
-                    <Badge 
+                  <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>
+                    <Badge
                       variant={getStatusBadgeVariant(combo.status)}
                       className="text-xs"
                       style={combo.status === 'generated' ? {
@@ -812,7 +812,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       {combo.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     <Switch
                       checked={combo.track_position || false}
                       disabled={togglingTrackIds.has(combo.id) || (!combo.track_position && trackedCount >= limits.rankTrackingLimit)}
@@ -822,7 +822,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                           toast.error(`You've reached your tracking limit of ${limits.rankTrackingLimit} combinations. Upgrade to track more.`)
                           return
                         }
-                        
+
                         setTogglingTrackIds(prev => new Set(prev).add(combo.id))
                         try {
                           await togglePositionTracking(combo.id, checked)
@@ -841,7 +841,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       }}
                     />
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.position !== null ? (
                       <div className="flex items-center justify-center gap-1">
                         <span className="font-semibold text-[var(--brand-dark)]">#{combo.position}</span>
@@ -1040,6 +1040,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                     <RefreshCw className="h-4 w-4" /> Generate/Regenerate
                   </p>
                   <p className="text-muted-foreground">Click the refresh icon on any row to generate or regenerate AI content. Jobs are queued and processed in the background.</p>
+                  <p className="text-muted-foreground mt-1 text-xs italic">You can regenerate content even for combinations already pushed to WordPress - useful for SEO optimization.</p>
                 </div>
                 <div>
                   <p className="font-medium mb-1 flex items-center gap-1">
@@ -1113,7 +1114,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                     <Trash2 className="h-4 w-4" /> Delete
                   </p>
                   <p className="text-muted-foreground">Select multiple combinations to delete them. This action cannot be undone.</p>
-                  <p className="text-muted-foreground mt-1 text-xs italic">Note: Combinations that have been pushed to WordPress cannot be deleted to prevent gaming plan limits.</p>
+                  <p className="text-muted-foreground mt-1 text-xs italic">Note: Combinations that have been pushed to WordPress cannot be deleted to prevent gaming plan limits. However, you can still regenerate their content for SEO optimization.</p>
                 </div>
               </div>
             </section>
