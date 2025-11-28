@@ -24,7 +24,7 @@ export function HomePage() {
           Generate Location-Based Landing Pages at Scale, in Minutes.
         </h1>
         <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Create fully optimised geo pages, complete with content and metadata - then publish to WordPress with one click.
+          Create seo optimised geo pages, complete with content and metadata - then publish to WordPress with one click.
         </p>
         <Button 
           asChild 
@@ -75,7 +75,7 @@ export function HomePage() {
             </div>
             <h3 className="text-xl font-semibold mb-4">Bulk Location Pages</h3>
             <p className="text-muted-foreground">
-              Add your target towns and cities to create geo-targeted landing pages at scale in minutes.
+              Add your target towns to create geo-targeted landing pages in minutes.
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
@@ -84,7 +84,7 @@ export function HomePage() {
             </div>
             <h3 className="text-xl font-semibold mb-4">Content Generation</h3>
             <p className="text-muted-foreground">
-              Generate SEO-optimized landing page content using AI, tailored for each location.
+              Generate SEO-optimized landing page content, tailored for each location.
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
