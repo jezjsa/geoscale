@@ -10,8 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { calculatePasswordStrength } from '@/utils/password-strength'
 import { getPlanByName } from '@/lib/plan-service'
 import { Plan } from '@/types'
+import { usePageMeta } from '@/hooks/usePageMeta'
 
 export function SignUpPage() {
+  usePageMeta({
+    title: 'Sign Up - GeoScale',
+    description: 'Create your GeoScale account and start generating location-based landing pages. 7-day free trial, no credit card required.'
+  })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({

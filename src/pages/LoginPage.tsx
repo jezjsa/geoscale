@@ -7,8 +7,14 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { resetPassword } from '@/api/auth'
 import { toast } from 'sonner'
+import { usePageMeta } from '@/hooks/usePageMeta'
 
 export function LoginPage() {
+  usePageMeta({
+    title: 'Sign In - GeoScale',
+    description: 'Sign in to your GeoScale account to manage your location landing pages and WordPress publishing.'
+  })
+  
   const { user, loading, signIn } = useAuth()
   const navigate = useNavigate()
   

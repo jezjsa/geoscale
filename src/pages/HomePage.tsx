@@ -2,8 +2,14 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/Navigation'
 import { TypewriterLocations } from '@/components/TypewriterLocations'
+import { usePageMeta } from '@/hooks/usePageMeta'
 
 export function HomePage() {
+  usePageMeta({
+    title: 'GeoScale - Generate Location Landing Pages at Scale',
+    description: 'Create SEO-optimized geo-targeted landing pages in minutes. AI-powered content generation with one-click WordPress publishing. Start your free trial today.'
+  })
+
   return (
     <div className="min-h-screen bg-background pt-16">
       <Navigation />
