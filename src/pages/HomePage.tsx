@@ -51,7 +51,7 @@ export function HomePage() {
             className="rounded-4xl border-8 overflow-hidden aspect-video flex items-center justify-center bg-muted"
             style={{ borderColor: '#fff' }}
           >
-            <span className="text-muted-foreground">Demo video coming soon</span>
+            <img src="/app.png" alt="GeoScale App" className="w-full h-full " />
           </div>
         </div>
       </section>
