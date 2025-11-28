@@ -43,14 +43,83 @@ serve(async (req) => {
 
     console.log("🔍 Checking rankings for project:", project_id);
 
-    // Get project details including blog_url
+    // Get JWT from Authorization header to identify the user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Authorization header is required");
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      throw new Error("Invalid authorization token");
+    }
+
+    // Get project details including blog_url and user_id
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("blog_url, wp_url")
+      .select("blog_url, wp_url, user_id")
       .eq("id", project_id)
       .single();
 
     if (projectError) throw projectError;
+
+    // Get user's plan information
+    const { data: userData, error: userDataError } = await supabase
+      .from("users")
+      .select("plan_id")
+      .eq("id", project.user_id)
+      .single();
+
+    if (userDataError) throw userDataError;
+
+    const { data: plan, error: planError } = await supabase
+      .from("plans")
+      .select("name, rank_tracking_frequency")
+      .eq("id", userData.plan_id)
+      .single();
+
+    if (planError) throw planError;
+
+    // Check the last time rankings were checked for this project
+    const { data: lastCheck } = await supabase
+      .from("location_keywords")
+      .select("last_position_check")
+      .eq("project_id", project_id)
+      .not("last_position_check", "is", null)
+      .order("last_position_check", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastCheck?.last_position_check) {
+      const lastCheckTime = new Date(lastCheck.last_position_check);
+      const now = new Date();
+      const hoursSinceLastCheck = (now.getTime() - lastCheckTime.getTime()) / (1000 * 60 * 60);
+
+      // Enforce frequency limits based on plan
+      if (plan.rank_tracking_frequency === "weekly") {
+        const weekInHours = 7 * 24; // 168 hours
+        if (hoursSinceLastCheck < weekInHours) {
+          const hoursRemaining = Math.ceil(weekInHours - hoursSinceLastCheck);
+          const daysRemaining = Math.ceil(hoursRemaining / 24);
+          throw new Error(
+            `Starter plan allows weekly ranking checks. Please wait ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} before checking again. Upgrade to Pro for daily checks.`
+          );
+        }
+      } else if (plan.rank_tracking_frequency === "daily") {
+        const dayInHours = 24;
+        if (hoursSinceLastCheck < dayInHours) {
+          const hoursRemaining = Math.ceil(dayInHours - hoursSinceLastCheck);
+          throw new Error(
+            `You can check rankings once per day. Please wait ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} before checking again.`
+          );
+        }
+      }
+    }
+
+    console.log(`✅ Plan check passed: ${plan.name} (${plan.rank_tracking_frequency})`);
+
 
     if (!project.blog_url && !project.wp_url) {
       throw new Error(
