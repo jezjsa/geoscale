@@ -334,10 +334,13 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
 
   const handleSelectAll = () => {
     // In generate mode, only select pending combinations
-    const selectableCombinations = generateMode 
+    // In delete mode, only select combinations that haven't been pushed
+    const selectableCombinations = generateMode
       ? filteredCombinations.filter(c => c.status === 'pending')
+      : deleteMode
+      ? filteredCombinations.filter(c => c.status !== 'pushed')
       : filteredCombinations
-    
+
     if (selectedIds.size === selectableCombinations.length && selectableCombinations.length > 0) {
       setSelectedIds(new Set())
     } else {
@@ -350,7 +353,27 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
       toast.error('Please select at least one combination to delete')
       return
     }
-    deleteMutation.mutate(Array.from(selectedIds))
+
+    // Filter out any pushed combinations from the selection
+    const deletableIds = Array.from(selectedIds).filter(id => {
+      const combo = combinations.find(c => c.id === id)
+      return combo && combo.status !== 'pushed'
+    })
+
+    // Check if any selected items were pushed (and thus can't be deleted)
+    const pushedCount = selectedIds.size - deletableIds.length
+    if (pushedCount > 0) {
+      toast.error(`Cannot delete ${pushedCount} combination${pushedCount !== 1 ? 's' : ''} that ${pushedCount !== 1 ? 'have' : 'has'} been pushed to WordPress`, {
+        description: 'Pushed combinations are locked to prevent gaming the system',
+      })
+
+      // If there are still some deletable items, continue with those
+      if (deletableIds.length === 0) {
+        return
+      }
+    }
+
+    deleteMutation.mutate(deletableIds)
   }
 
   const handleCancelDelete = () => {
@@ -689,8 +712,10 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                   <input
                     type="checkbox"
                     checked={(() => {
-                      const selectableCombinations = generateMode 
+                      const selectableCombinations = generateMode
                         ? filteredCombinations.filter(c => c.status === 'pending')
+                        : deleteMode
+                        ? filteredCombinations.filter(c => c.status !== 'pushed')
                         : filteredCombinations
                       return selectedIds.size === selectableCombinations.length && selectableCombinations.length > 0
                     })()}
@@ -722,7 +747,10 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               </TableRow>
             ) : (
               filteredCombinations.map((combo) => (
-                <TableRow key={combo.id} className="hover:bg-accent/50">
+                <TableRow
+                  key={combo.id}
+                  className={`hover:bg-accent/50 ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}
+                >
                   {(deleteMode || generateMode) && (
                     <TableCell>
                       <input
@@ -730,7 +758,15 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                         checked={selectedIds.has(combo.id)}
                         onChange={() => handleToggleSelect(combo.id)}
                         className="w-4 h-4 cursor-pointer accent-[var(--brand-dark)]"
-                        disabled={generateMode && combo.status !== 'pending'}
+                        disabled={
+                          (generateMode && combo.status !== 'pending') ||
+                          (deleteMode && combo.status === 'pushed')
+                        }
+                        title={
+                          deleteMode && combo.status === 'pushed'
+                            ? 'Cannot delete - already pushed to WordPress'
+                            : undefined
+                        }
                       />
                     </TableCell>
                   )}
@@ -1077,6 +1113,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                     <Trash2 className="h-4 w-4" /> Delete
                   </p>
                   <p className="text-muted-foreground">Select multiple combinations to delete them. This action cannot be undone.</p>
+                  <p className="text-muted-foreground mt-1 text-xs italic">Note: Combinations that have been pushed to WordPress cannot be deleted to prevent gaming plan limits.</p>
                 </div>
               </div>
             </section>
