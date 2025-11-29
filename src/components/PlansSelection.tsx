@@ -14,6 +14,7 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [planType, setPlanType] = useState<'single-site' | 'agency'>('single-site');
 
   useEffect(() => {
     fetchPlans();
@@ -44,6 +45,15 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
     return price === 0 ? 'Free' : `£${price.toFixed(0)}`;
   };
 
+  // Filter plans based on selected plan type
+  const filteredPlans = plans.filter((plan) => {
+    if (planType === 'single-site') {
+      return plan.websiteLimit === 1;
+    } else {
+      return plan.websiteLimit > 1;
+    }
+  });
+
   return (
     <div className="w-full">
       {showHeader && (
@@ -56,6 +66,32 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </p>
         </div>
       )}
+
+      {/* Plan Type Toggle */}
+      <div className="flex justify-center mb-12">
+        <div className="inline-flex rounded-lg border-2 border-border p-1 bg-muted">
+          <button
+            onClick={() => setPlanType('single-site')}
+            className={`px-6 py-2 rounded-md font-semibold transition-all ${
+              planType === 'single-site'
+                ? 'bg-[var(--brand-dark)] text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Single Site Plans
+          </button>
+          <button
+            onClick={() => setPlanType('agency')}
+            className={`px-6 py-2 rounded-md font-semibold transition-all ${
+              planType === 'agency'
+                ? 'bg-[var(--brand-dark)] text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Agency Plans
+          </button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -72,9 +108,11 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => {
-            const isPopular = index === 1; // Middle plan (Pro) is typically "popular"
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {filteredPlans.map((plan, index) => {
+            // For single-site plans, mark Pro (index 1) as popular
+            // For agency plans, mark the first one as popular
+            const isPopular = planType === 'single-site' ? index === 1 : index === 0;
 
             return (
               <div
