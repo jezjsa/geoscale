@@ -122,7 +122,7 @@ export function ViewContentPage() {
     checks.push({
       name: 'Content Length',
       passed: wordCount >= 500,
-      message: `${wordCount} words (${wordCount >= 800 ? 'excellent' : wordCount >= 500 ? 'good' : 'too short'})`,
+      message: `${wordCount} words (${wordCount >= 800 ? 'excellent' : wordCount >= 500 ? 'good' : 'could be longer'})`,
       points: lengthPoints
     })
 
@@ -587,7 +587,7 @@ export function ViewContentPage() {
             <Button
               onClick={handleRegenerate}
               disabled={isRegenerating || regenerateMutation.isPending}
-              className="gap-2"
+              className="gap-2 text-white"
               style={{ backgroundColor: 'var(--brand-dark)' }}
             >
               {isRegenerating ? (
@@ -642,17 +642,6 @@ export function ViewContentPage() {
                 onSave={(value) => handleUpdateField('title', value)}
                 className="text-4xl font-bold tracking-tight"
               />
-              {/* Title preview with highlighting */}
-              <div 
-                className="mt-4 text-2xl font-bold tracking-tight"
-                dangerouslySetInnerHTML={{ 
-                  __html: highlightText(
-                    content.title, 
-                    content.location_keyword?.phrase,
-                    content.location_keyword?.location?.name
-                  ) 
-                }}
-              />
             </CardContent>
           </Card>
 
@@ -674,12 +663,12 @@ export function ViewContentPage() {
                     <h3 className="text-sm font-medium text-muted-foreground">Content</h3>
                     <div className="flex items-center gap-4 ml-auto text-xs">
                       <div className="flex items-center gap-1">
-                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: '#fef08a' }}></span>
+                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: 'rgba(254, 240, 138, 0.2)' }}></span>
                         <span className="text-muted-foreground">Keyword</span>
                         <span className="font-semibold text-foreground">({counts.keywordCount})</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: '#bbf7d0' }}></span>
+                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: 'rgba(187, 247, 208, 0.2)' }}></span>
                         <span className="text-muted-foreground">Location</span>
                         <span className="font-semibold text-foreground">({counts.locationCount})</span>
                       </div>
@@ -690,12 +679,12 @@ export function ViewContentPage() {
               <style>{`
                 .content-preview {
                   max-width: none;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                 }
                 .content-preview h1 {
                   font-size: 2.25rem;
                   font-weight: 700;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-top: 0;
                   margin-bottom: 1.5rem;
                   line-height: 1.2;
@@ -704,7 +693,7 @@ export function ViewContentPage() {
                 .content-preview h2 {
                   font-size: 1.875rem;
                   font-weight: 700;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-top: 3rem;
                   margin-bottom: 1rem;
                   padding-bottom: 0.5rem;
@@ -713,7 +702,7 @@ export function ViewContentPage() {
                 .content-preview h3 {
                   font-size: 1.5rem;
                   font-weight: 600;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-top: 2rem;
                   margin-bottom: 0.75rem;
                   line-height: 1.4;
@@ -721,7 +710,7 @@ export function ViewContentPage() {
                 .content-preview h4 {
                   font-size: 1.25rem;
                   font-weight: 600;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-top: 1.5rem;
                   margin-bottom: 0.5rem;
                 }
@@ -729,7 +718,7 @@ export function ViewContentPage() {
                   font-size: 1rem;
                   line-height: 1.75;
                   margin-bottom: 1.5rem;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                 }
                 .content-preview ul,
                 .content-preview ol {
@@ -745,27 +734,27 @@ export function ViewContentPage() {
                 .content-preview li {
                   margin-bottom: 0.5rem;
                   line-height: 1.75;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                 }
                 .content-preview strong {
                   font-weight: 600;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                 }
                 .content-preview em {
                   font-style: italic;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                 }
                 .content-preview a {
-                  color: #e2e8f0;
+                  color: var(--brand-dark);
                   text-decoration: underline;
                   transition: color 0.2s;
                 }
                 .content-preview a:hover {
-                  color: #ffffff;
+                  color: var(--brand-light);
                 }
                 .content-preview .testimonial {
                   border-left: 4px solid var(--brand-dark);
-                  background-color: rgba(0, 98, 57, 0.1);
+                  background-color: hsl(var(--muted));
                   padding: 1.5rem;
                   margin: 2rem 0;
                   border-radius: 0.5rem;
@@ -787,7 +776,7 @@ export function ViewContentPage() {
                   padding: 0;
                   padding-left: 1rem;
                   font-style: italic;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin: 0;
                   font-size: 1.125rem;
                   line-height: 1.75;
@@ -798,14 +787,13 @@ export function ViewContentPage() {
                   margin-top: 1rem;
                   margin-bottom: 0;
                   font-size: 0.875rem;
-                  color: #e2e8f0;
-                  opacity: 0.8;
+                  color: hsl(var(--muted-foreground));
                 }
                 .content-preview blockquote {
                   border-left: 4px solid var(--brand-dark);
                   padding-left: 1rem;
                   font-style: italic;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin: 1.5rem 0;
                 }
                 .content-preview section {
@@ -816,24 +804,24 @@ export function ViewContentPage() {
                 }
                 .content-preview dt {
                   font-weight: 600;
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-top: 1rem;
                 }
                 .content-preview dd {
-                  color: #e2e8f0;
+                  color: hsl(var(--foreground));
                   margin-bottom: 0.5rem;
                   margin-left: 0;
                 }
                 .content-preview code {
-                  background-color: #f3f4f6;
+                  background-color: hsl(var(--muted));
                   padding: 0.125rem 0.25rem;
                   border-radius: 0.25rem;
                   font-size: 0.875rem;
                   font-family: monospace;
                 }
                 .content-preview pre {
-                  background-color: #1f2937;
-                  color: #f9fafb;
+                  background-color: hsl(var(--muted));
+                  color: hsl(var(--foreground));
                   padding: 1rem;
                   border-radius: 0.5rem;
                   overflow-x: auto;
@@ -845,15 +833,15 @@ export function ViewContentPage() {
                   color: inherit;
                 }
                 .highlight-phrase {
-                  background-color: #fef08a;
-                  color: #1a1a1a;
+                  background-color: rgba(254, 240, 138, 0.3);
+                  color: inherit;
                   padding: 0.1em 0.2em;
                   border-radius: 0.2em;
                   font-weight: inherit;
                 }
                 .highlight-location {
-                  background-color: #bbf7d0;
-                  color: #1a1a1a;
+                  background-color: rgba(187, 247, 208, 0.3);
+                  color: inherit;
                   padding: 0.1em 0.2em;
                   border-radius: 0.2em;
                   font-weight: inherit;
@@ -916,14 +904,13 @@ export function ViewContentPage() {
             )
             // Calculate the stroke color based on score
             const getScoreColor = (score: number) => {
-              if (score >= 80) return '#22c55e' // green
-              if (score >= 60) return '#3b82f6' // blue
-              if (score >= 40) return '#f97316' // orange
+              if (score >= 70) return '#22c55e' // green - matches passed checks
+              if (score >= 50) return '#f97316' // orange
               return '#ef4444' // red
             }
             
             const scoreColor = getScoreColor(seoScore.score)
-            const circumference = 2 * Math.PI * 45 // radius = 45
+            const circumference = 2 * Math.PI * 42 // radius = 42 (smaller to accommodate thicker stroke)
             const strokeDashoffset = circumference - (seoScore.score / 100) * circumference
             
             return (
@@ -940,20 +927,20 @@ export function ViewContentPage() {
                         <circle
                           cx="50"
                           cy="50"
-                          r="45"
+                          r="42"
                           fill="none"
                           stroke="#e5e7eb"
-                          strokeWidth="8"
+                          strokeWidth="12"
                           className="dark:stroke-gray-700"
                         />
                         {/* Score arc */}
                         <circle
                           cx="50"
                           cy="50"
-                          r="45"
+                          r="42"
                           fill="none"
                           stroke={scoreColor}
-                          strokeWidth="8"
+                          strokeWidth="12"
                           strokeLinecap="round"
                           strokeDasharray={circumference}
                           strokeDashoffset={strokeDashoffset}
@@ -996,13 +983,13 @@ export function ViewContentPage() {
                     {seoScore.checks.map((check, index) => (
                       <div 
                         key={index} 
-                        className={`p-2 rounded-lg border ${check.passed ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950'}`}
+                        className={`p-2 rounded-lg ${check.passed ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-900/30'}`}
                       >
                         <div className="flex items-center gap-2">
                           {check.passed ? (
                             <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                           ) : (
-                            <AlertCircle className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
                           )}
                           <div className="min-w-0">
                             <span className="text-xs font-medium block">{check.name}</span>
