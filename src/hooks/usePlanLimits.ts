@@ -14,7 +14,7 @@ interface PlanLimits {
     websiteLimit: number;
     combinationPageLimit: number;
     combinationsPerWebsite: number;
-    rankTrackingFrequency: 'weekly' | 'daily';
+    rankTrackingFrequency: 'weekly' | 'every_other_day' | 'daily' | null;
     rankTrackingLimit: number;
   };
   remaining: {
