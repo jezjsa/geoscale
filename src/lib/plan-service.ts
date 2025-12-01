@@ -28,7 +28,7 @@ export const getAllPlans = async (): Promise<Plan[]> => {
   const plans: Plan[] = (data || []).map((plan: any) => {
     const websiteLimit = plan.website_limit || 1;
     const combinationPageLimit = plan.combination_page_limit || 50;
-    const rankTrackingLimit = plan.rank_tracking_limit || 10;
+    const rankTrackingLimit = plan.rank_tracking_limit || 0;
     
     return {
       id: plan.id,
@@ -39,10 +39,11 @@ export const getAllPlans = async (): Promise<Plan[]> => {
       combinationPageLimit,
       // Calculate per-website limits
       combinationsPerWebsite: plan.combinations_per_website || Math.floor(combinationPageLimit / websiteLimit),
-      rankTrackingFrequency: plan.rank_tracking_frequency,
-      rankTrackingLimit: plan.rank_tracking_per_website || Math.floor(rankTrackingLimit / websiteLimit),
+      rankTrackingFrequency: plan.rank_tracking_frequency || null,
+      rankTrackingLimit: plan.rank_tracking_per_website || (rankTrackingLimit > 0 ? Math.floor(rankTrackingLimit / websiteLimit) : 0),
       basePriceGbp: parseFloat(plan.price_monthly || plan.base_price_gbp || 0),
       perSitePriceGbp: parseFloat(plan.price_per_site || plan.per_site_price_gbp || 0),
+      isOneOff: plan.is_one_off || false,
       features: plan.features || [],
       targetCustomer: plan.target_customer,
       isActive: plan.is_active,
@@ -123,19 +124,19 @@ export const getCurrentUserPlan = async (userId?: string): Promise<Plan | null> 
 };
 
 /**
- * Check if user is on agency plan
+ * Check if user is on agency plan (agency or agency_plus)
  */
 export const isAgencyUser = async (): Promise<boolean> => {
   const plan = await getCurrentUserPlan();
-  return plan?.name === 'agency';
+  return plan?.name === 'agency' || plan?.name === 'agency_plus';
 };
 
 /**
- * Check if user can manage multiple projects (agency plan)
+ * Check if user can manage multiple projects (agency plans)
  */
 export const canManageMultipleProjects = async (): Promise<boolean> => {
   const plan = await getCurrentUserPlan();
-  return plan?.name === 'agency';
+  return plan?.name === 'agency' || plan?.name === 'agency_plus';
 };
 
 /**

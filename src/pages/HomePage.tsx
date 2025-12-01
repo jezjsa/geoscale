@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/Navigation'
+import { Footer } from '@/components/Footer'
 import { TypewriterLocations } from '@/components/TypewriterLocations'
 import { usePageMeta } from '@/hooks/usePageMeta'
 
@@ -52,6 +53,49 @@ export function HomePage() {
             style={{ borderColor: '#fff' }}
           >
             <img src="/app.png" alt="GeoScale App" className="w-full h-full " />
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="container mx-auto px-4 py-20">
+        <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+        <div className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+          <div className="bg-muted/50 rounded-lg p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              1
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Input</h3>
+            <p className="text-muted-foreground">
+              Add your locations and keywords - combinations are automatically created.
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              2
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Generate</h3>
+            <p className="text-muted-foreground">
+              GeoScale creates unique, SEO friendly content automatically.
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              3
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Publish</h3>
+            <p className="text-muted-foreground">
+              Push the content directly into your WordPress site with one click.
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              4
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Track</h3>
+            <p className="text-muted-foreground">
+              Monitor Google rankings, changes and improvements over time.
+            </p>
           </div>
         </div>
       </section>
@@ -125,7 +169,7 @@ export function HomePage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Built for Agencies</h2>
           <p className="text-xl text-muted-foreground mb-6 max-w-3xl mx-auto">
-            Manage multiple client websites from one powerful dashboard. Create location pages for all your clients and track their search positions with ease — all from a single system.
+            Manage multiple client websites from one powerful dashboard. Create location pages for all your clients and track their search positions with ease — all from a single system, with instant push to WordPress.
           </p>
           <Button 
             asChild 
@@ -135,6 +179,9 @@ export function HomePage() {
           >
             <Link to="/plans">View Agency Plan</Link>
           </Button>
+          <p className="mt-6 text-white font-bold">
+            Input → Generate → Publish → Track
+          </p>
         </div>
       </section>
 
@@ -209,25 +256,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t mt-20 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2 md:flex-1">
-              <img src="/icon.svg" alt="GeoScale" className="h-8 w-8" />
-              <span className="text-lg font-bold">GeoScale</span>
-            </div>
-            <div className="flex gap-6 text-sm text-muted-foreground md:flex-1 md:justify-center">
-              <Link to="/plans" className="hover:text-foreground transition-colors">Plans</Link>
-              <Link to="/login" className="hover:text-foreground transition-colors">Sign In</Link>
-              <a href="mailto:support@geoscale.app" className="hover:text-foreground transition-colors">Contact</a>
-            </div>
-            <p className="text-sm text-muted-foreground md:flex-1 md:text-right">
-              © {new Date().getFullYear()} GeoScale. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

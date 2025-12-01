@@ -63,8 +63,11 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { limits } = usePlanLimits()
+  const { limits, plan } = usePlanLimits()
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // Check if user can use rank tracking (not Starter plan)
+  const canUseRankTracking = plan?.rankTrackingFrequency !== null
   const [selectedTown, setSelectedTown] = useState<string>('all')
   const [deleteMode, setDeleteMode] = useState(false)
   const [generateMode, setGenerateMode] = useState(false)
@@ -611,26 +614,36 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               </Button> */}
               <Button
                 size="sm"
-                onClick={() => setGenerateMode(true)}
+                onClick={() => {
+                  setGenerateMode(true)
+                  // Auto-select all pending combinations
+                  const pendingIds = combinations
+                    .filter(c => c.status === 'pending')
+                    .map(c => c.id)
+                  setSelectedIds(new Set(pendingIds))
+                }}
                 style={{ backgroundColor: 'var(--brand-dark)' }}
                 className="text-white hover:opacity-90"
               >
                 <Wand2 className="mr-2 h-4 w-4" />
                 Generate Content
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => checkRankingsMutation.mutate()}
-                disabled={checkRankingsMutation.isPending || !nextRankingCheckInfo.canCheck}
-                title={nextRankingCheckInfo.message || "Check Google rankings for pushed pages"}
-              >
-                {checkRankingsMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <GoogleIcon className="h-4 w-4" />
-                )}
-              </Button>
+              {/* Hide Check Rankings button for Starter plan */}
+              {canUseRankTracking && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => checkRankingsMutation.mutate()}
+                  disabled={checkRankingsMutation.isPending || !nextRankingCheckInfo.canCheck}
+                  title={nextRankingCheckInfo.message || "Check Google rankings for pushed pages"}
+                >
+                  {checkRankingsMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <GoogleIcon className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -730,8 +743,12 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               <TableHead className="text-right">Volume</TableHead>
               <TableHead className="text-right">Difficulty</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-center">Track</TableHead>
-              <TableHead className="text-center">Position</TableHead>
+              {canUseRankTracking && (
+                <>
+                  <TableHead className="text-center">Track</TableHead>
+                  <TableHead className="text-center">Position</TableHead>
+                </>
+              )}
               <TableHead className="w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -739,7 +756,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
             {filteredCombinations.length === 0 ? (
               <TableRow>
                 <TableCell 
-                  colSpan={(deleteMode || generateMode) ? 10 : 9} 
+                  colSpan={(deleteMode || generateMode) ? (canUseRankTracking ? 10 : 8) : (canUseRankTracking ? 9 : 7)} 
                   className="text-center py-8 text-muted-foreground"
                 >
                   No combinations found
@@ -804,6 +821,14 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                         backgroundColor: 'var(--brand-dark)',
                         color: 'white',
                         borderColor: 'var(--brand-dark)'
+                      } : combo.status === 'generating' ? {
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        borderColor: '#2563eb'
+                      } : combo.status === 'queued' ? {
+                        backgroundColor: '#7c3aed',
+                        color: 'white',
+                        borderColor: '#7c3aed'
                       } : undefined}
                     >
                       {(combo.status === 'generating' || combo.status === 'queued') && (
@@ -812,50 +837,54 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       {combo.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
-                    <Switch
-                      checked={combo.track_position || false}
-                      disabled={togglingTrackIds.has(combo.id) || (!combo.track_position && trackedCount >= limits.rankTrackingLimit)}
-                      onCheckedChange={async (checked) => {
-                        // Check if trying to enable and at limit
-                        if (checked && trackedCount >= limits.rankTrackingLimit) {
-                          toast.error(`You've reached your tracking limit of ${limits.rankTrackingLimit} combinations. Upgrade to track more.`)
-                          return
-                        }
+                  {canUseRankTracking && (
+                    <>
+                      <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
+                        <Switch
+                          checked={combo.track_position || false}
+                          disabled={togglingTrackIds.has(combo.id) || (!combo.track_position && trackedCount >= limits.rankTrackingLimit)}
+                          onCheckedChange={async (checked) => {
+                            // Check if trying to enable and at limit
+                            if (checked && trackedCount >= limits.rankTrackingLimit) {
+                              toast.error(`You've reached your tracking limit of ${limits.rankTrackingLimit} combinations. Upgrade to track more.`)
+                              return
+                            }
 
-                        setTogglingTrackIds(prev => new Set(prev).add(combo.id))
-                        try {
-                          await togglePositionTracking(combo.id, checked)
-                          setTrackedCount(prev => checked ? prev + 1 : prev - 1)
-                          queryClient.invalidateQueries({ queryKey: ['combinations', projectId] })
-                          toast.success(checked ? 'Position tracking enabled' : 'Position tracking disabled')
-                        } catch (error) {
-                          toast.error('Failed to update tracking')
-                        } finally {
-                          setTogglingTrackIds(prev => {
-                            const next = new Set(prev)
-                            next.delete(combo.id)
-                            return next
-                          })
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
-                    {combo.position !== null ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="font-semibold text-[var(--brand-dark)]">#{combo.position}</span>
-                        {combo.previous_position !== null && combo.previous_position !== combo.position && (
-                          <span className={combo.position < combo.previous_position ? 'text-green-600 text-xs' : 'text-red-600 text-xs'}>
-                            {combo.position < combo.previous_position ? '↑' : '↓'}
-                            {Math.abs(combo.position - combo.previous_position)}
-                          </span>
+                            setTogglingTrackIds(prev => new Set(prev).add(combo.id))
+                            try {
+                              await togglePositionTracking(combo.id, checked)
+                              setTrackedCount(prev => checked ? prev + 1 : prev - 1)
+                              queryClient.invalidateQueries({ queryKey: ['combinations', projectId] })
+                              toast.success(checked ? 'Position tracking enabled' : 'Position tracking disabled')
+                            } catch (error) {
+                              toast.error('Failed to update tracking')
+                            } finally {
+                              setTogglingTrackIds(prev => {
+                                const next = new Set(prev)
+                                next.delete(combo.id)
+                                return next
+                              })
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
+                        {combo.position !== null ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="font-semibold text-[var(--brand-dark)]">#{combo.position}</span>
+                            {combo.previous_position !== null && combo.previous_position !== combo.position && (
+                              <span className={combo.position < combo.previous_position ? 'text-green-600 text-xs' : 'text-red-600 text-xs'}>
+                                {combo.position < combo.previous_position ? '↑' : '↓'}
+                                {Math.abs(combo.position - combo.previous_position)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell className="opacity-100">
                     <div className="flex items-center gap-1">
                       {/* Generate/Regenerate Icon */}

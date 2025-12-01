@@ -14,7 +14,6 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [planType, setPlanType] = useState<'single-site' | 'agency'>('single-site');
 
   useEffect(() => {
     fetchPlans();
@@ -41,18 +40,15 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
     }
   };
 
-  const formatPrice = (price: number) => {
-    return price === 0 ? 'Free' : `£${price.toFixed(0)}`;
+  const formatPrice = (plan: Plan) => {
+    if (plan.basePriceGbp === 0) return 'Free';
+    return `£${plan.basePriceGbp.toFixed(0)}`;
   };
 
-  // Filter plans based on selected plan type
-  const filteredPlans = plans.filter((plan) => {
-    if (planType === 'single-site') {
-      return plan.websiteLimit === 1;
-    } else {
-      return plan.websiteLimit > 1;
-    }
-  });
+  const formatPriceSuffix = (plan: Plan) => {
+    if (plan.basePriceGbp === 0) return '';
+    return plan.isOneOff ? ' one-off' : '/mth';
+  };
 
   return (
     <div className="w-full">
@@ -66,32 +62,6 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </p>
         </div>
       )}
-
-      {/* Plan Type Toggle */}
-      <div className="flex justify-center mb-12">
-        <div className="inline-flex rounded-lg border-2 border-border p-1 bg-muted">
-          <button
-            onClick={() => setPlanType('single-site')}
-            className={`px-6 py-2 rounded-md font-semibold transition-all ${
-              planType === 'single-site'
-                ? 'bg-[var(--brand-dark)] text-white shadow-md'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Single Site Plans
-          </button>
-          <button
-            onClick={() => setPlanType('agency')}
-            className={`px-6 py-2 rounded-md font-semibold transition-all ${
-              planType === 'agency'
-                ? 'bg-[var(--brand-dark)] text-white shadow-md'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Agency Plans
-          </button>
-        </div>
-      </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -108,11 +78,10 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {filteredPlans.map((plan, index) => {
-            // For single-site plans, mark Pro (index 1) as popular
-            // For agency plans, mark the first one as popular
-            const isPopular = planType === 'single-site' ? index === 1 : index === 0;
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {plans.map((plan: Plan, index: number) => {
+            // Mark Pro (index 1) as popular
+            const isPopular = index === 1;
 
             return (
               <div
@@ -135,8 +104,10 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                   </h3>
                   <div className="mb-3">
                     <span className="text-4xl sm:text-5xl font-black text-foreground">
-                      {formatPrice(plan.basePriceGbp)}
-                      {plan.basePriceGbp > 0 && '/mth'}
+                      {formatPrice(plan)}
+                    </span>
+                    <span className="text-lg font-medium text-muted-foreground">
+                      {formatPriceSuffix(plan)}
                     </span>
                   </div>
                   {plan.perSitePriceGbp > 0 ? (
@@ -157,7 +128,7 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-grow">
-                  {plan.features.map((feature, featureIndex) => (
+                  {plan.features.map((feature: string, featureIndex: number) => (
                     <li key={featureIndex} className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 bg-[var(--brand-dark)]/20">
                         <Check className="w-3 h-3 text-[var(--brand-dark)]" />
@@ -178,11 +149,9 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                   >
                     Get Started
                   </button>
-                  {plan.targetCustomer && (
-                    <p className="text-sm text-muted-foreground text-center mt-3">
-                      {plan.targetCustomer}
-                    </p>
-                  )}
+                  <p className="text-sm text-muted-foreground text-center mt-3">
+                    Start your 7-day free trial
+                  </p>
                 </div>
               </div>
             );
@@ -191,17 +160,31 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
       )}
 
       {!loading && !error && (
-        <div className="mt-16 text-center">
-          <p className="text-muted-foreground mb-4">
-            All plans include a 7-day free trial. No credit card required.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Need a custom plan or have questions?{' '}
-            <a href="mailto:support@geoscale.app" className="font-semibold text-[var(--brand-dark)] hover:underline">
-              Contact us
-            </a>
-          </p>
-        </div>
+        <>
+          {/* Agency Info Card */}
+          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="bg-muted/50 rounded-2xl p-8 text-center">
+              <h3 className="text-xl font-bold text-foreground mb-3">
+                Designed for Agencies to Scale Confidently
+              </h3>
+              <p className="text-muted-foreground">
+                We built the Agency plan to give SEO teams a larger tracked-keyword allowance and predictable fixed costs. This lets agencies onboard more clients, grow their local SEO offering, and keep monthly expenses stable – even as their portfolio increases.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center">
+            <p className="text-muted-foreground mb-4">
+              All plans include a 7-day free trial. No credit card required.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Need a custom plan or have questions?{' '}
+              <a href="mailto:support@geoscale.app" className="font-semibold text-[var(--brand-dark)] hover:underline">
+                Contact us
+              </a>
+            </p>
+          </div>
+        </>
       )}
     </div>
   );

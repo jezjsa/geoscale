@@ -6,15 +6,18 @@ import { InlineEdit } from '@/components/InlineEdit'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine } from 'lucide-react'
+import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
+import { getCurrentUserPlan } from '@/lib/plan-service'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
 export function ViewContentPage() {
   const { projectId, locationKeywordId } = useParams<{ projectId: string; locationKeywordId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   
   if (!projectId || !locationKeywordId) {
     return <div>Project or content not found</div>
@@ -24,6 +27,175 @@ export function ViewContentPage() {
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerateProgress, setRegenerateProgress] = useState(0)
   const [isPublishing, setIsPublishing] = useState(false)
+
+  // Get user's plan to check if they can regenerate content
+  const { data: userPlan } = useQuery({
+    queryKey: ['userPlan', user?.id],
+    queryFn: () => getCurrentUserPlan(user?.id),
+    enabled: !!user?.id,
+  })
+
+  // Starter plan users cannot regenerate content
+  const canRegenerateContent = userPlan?.name !== 'starter'
+
+  // Function to highlight keyword phrase and location in text
+  const highlightText = (text: string, phrase: string | undefined, location: string | undefined): string => {
+    if (!text) return text
+    let result = text
+    
+    // Highlight location first (so phrase highlighting doesn't break location spans)
+    if (location) {
+      const locationRegex = new RegExp(`(${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+      result = result.replace(locationRegex, '<mark class="highlight-location">$1</mark>')
+    }
+    
+    // Highlight the full phrase (but avoid double-highlighting location within phrase)
+    if (phrase) {
+      // Remove location from phrase to get just the keyword part
+      const keywordPart = location ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() : phrase
+      if (keywordPart && keywordPart !== location) {
+        const phraseRegex = new RegExp(`(${keywordPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+        result = result.replace(phraseRegex, '<mark class="highlight-phrase">$1</mark>')
+      }
+    }
+    
+    return result
+  }
+
+  // Function to count occurrences of keyword and location
+  const countOccurrences = (text: string, phrase: string | undefined, location: string | undefined): { keywordCount: number; locationCount: number } => {
+    if (!text) return { keywordCount: 0, locationCount: 0 }
+    
+    let keywordCount = 0
+    let locationCount = 0
+    
+    // Strip HTML tags for accurate counting
+    const plainText = text.replace(/<[^>]*>/g, ' ')
+    
+    if (location) {
+      const locationRegex = new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+      const matches = plainText.match(locationRegex)
+      locationCount = matches ? matches.length : 0
+    }
+    
+    if (phrase) {
+      const keywordPart = location ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() : phrase
+      if (keywordPart && keywordPart !== location) {
+        const phraseRegex = new RegExp(keywordPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+        const matches = plainText.match(phraseRegex)
+        keywordCount = matches ? matches.length : 0
+      }
+    }
+    
+    return { keywordCount, locationCount }
+  }
+
+  // SEO Score calculation
+  interface SEOScore {
+    score: number
+    grade: 'excellent' | 'good' | 'needs-work' | 'poor'
+    checks: {
+      name: string
+      passed: boolean
+      message: string
+      points: number
+    }[]
+  }
+
+  const calculateSEOScore = (
+    content: string,
+    title: string,
+    phrase: string | undefined,
+    location: string | undefined
+  ): SEOScore => {
+    const checks: SEOScore['checks'] = []
+    const plainText = content.replace(/<[^>]*>/g, ' ')
+    const wordCount = plainText.split(/\s+/).filter(w => w.length > 0).length
+    
+    // Extract keyword part
+    const keywordPart = location && phrase 
+      ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() 
+      : phrase || ''
+
+    // 1. Content length (max 15 points)
+    const lengthPoints = wordCount >= 800 ? 15 : wordCount >= 500 ? 10 : wordCount >= 300 ? 5 : 0
+    checks.push({
+      name: 'Content Length',
+      passed: wordCount >= 500,
+      message: `${wordCount} words (${wordCount >= 800 ? 'excellent' : wordCount >= 500 ? 'good' : 'too short'})`,
+      points: lengthPoints
+    })
+
+    // 2. Keyword in title (max 15 points)
+    const keywordInTitle = keywordPart && title.toLowerCase().includes(keywordPart.toLowerCase())
+    checks.push({
+      name: 'Keyword in Title',
+      passed: !!keywordInTitle,
+      message: keywordInTitle ? 'Keyword found in title' : 'Keyword missing from title',
+      points: keywordInTitle ? 15 : 0
+    })
+
+    // 3. Location in title (max 10 points)
+    const locationInTitle = location && title.toLowerCase().includes(location.toLowerCase())
+    checks.push({
+      name: 'Location in Title',
+      passed: !!locationInTitle,
+      message: locationInTitle ? 'Location found in title' : 'Location missing from title',
+      points: locationInTitle ? 10 : 0
+    })
+
+    // 4. Keyword density (max 20 points) - aim for 3-6 mentions
+    const keywordCount = keywordPart ? (plainText.toLowerCase().match(new RegExp(keywordPart.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0
+    const keywordDensityPoints = keywordCount >= 5 ? 20 : keywordCount >= 3 ? 15 : keywordCount >= 1 ? 5 : 0
+    checks.push({
+      name: 'Keyword Frequency',
+      passed: keywordCount >= 3,
+      message: `Keyword appears ${keywordCount} times (aim for 3-6)`,
+      points: keywordDensityPoints
+    })
+
+    // 5. Location density (max 15 points) - aim for 4-8 mentions
+    const locationCount = location ? (plainText.toLowerCase().match(new RegExp(location.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0
+    const locationDensityPoints = locationCount >= 6 ? 15 : locationCount >= 4 ? 12 : locationCount >= 2 ? 6 : 0
+    checks.push({
+      name: 'Location Frequency',
+      passed: locationCount >= 4,
+      message: `Location appears ${locationCount} times (aim for 4-8)`,
+      points: locationDensityPoints
+    })
+
+    // 6. Keyword in first paragraph (max 10 points)
+    const firstPara = content.match(/<p[^>]*>(.*?)<\/p>/i)?.[1] || ''
+    const keywordInFirstPara = keywordPart && firstPara.toLowerCase().includes(keywordPart.toLowerCase())
+    checks.push({
+      name: 'Keyword in First Paragraph',
+      passed: !!keywordInFirstPara,
+      message: keywordInFirstPara ? 'Keyword in opening paragraph' : 'Add keyword to first paragraph',
+      points: keywordInFirstPara ? 10 : 0
+    })
+
+    // 7. Keyword in headings (max 15 points)
+    const headings = content.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || []
+    const headingsWithKeyword = headings.filter(h => keywordPart && h.toLowerCase().includes(keywordPart.toLowerCase())).length
+    const headingPoints = headingsWithKeyword >= 2 ? 15 : headingsWithKeyword >= 1 ? 10 : 0
+    checks.push({
+      name: 'Keyword in Headings',
+      passed: headingsWithKeyword >= 1,
+      message: `${headingsWithKeyword} heading(s) contain keyword`,
+      points: headingPoints
+    })
+
+    const totalScore = checks.reduce((sum, check) => sum + check.points, 0)
+    const grade: SEOScore['grade'] = 
+      totalScore >= 80 ? 'excellent' : 
+      totalScore >= 60 ? 'good' : 
+      totalScore >= 40 ? 'needs-work' : 'poor'
+
+    return { score: totalScore, grade, checks }
+  }
+
+  // State for enhancing content
+  const [isEnhancing, setIsEnhancing] = useState(false)
 
   // Fetch project details
   useEffect(() => {
@@ -259,6 +431,70 @@ export function ViewContentPage() {
     }
   }
 
+  // Handle enhance keywords - calls OpenAI to add more keyword mentions
+  const handleEnhanceKeywords = async () => {
+    if (!content) return
+    
+    setIsEnhancing(true)
+    toast.info('Enhancing content with more keywords...')
+    
+    try {
+      const phrase = content.location_keyword?.phrase
+      const location = content.location_keyword?.location?.name
+      const keywordPart = location && phrase 
+        ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() 
+        : phrase || ''
+
+      const { keywordCount, locationCount } = countOccurrences(content.content, phrase, location)
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enhance-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          content: content.content,
+          keyword: keywordPart,
+          location: location,
+          currentKeywordCount: keywordCount,
+          currentLocationCount: locationCount,
+          targetKeywordCount: Math.max(5, keywordCount + 2),
+          targetLocationCount: Math.max(6, locationCount + 2),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to enhance content')
+      }
+
+      const result = await response.json()
+      
+      if (result.enhancedContent) {
+        // Update the content in the database
+        const { error } = await supabase
+          .from('generated_pages')
+          .update({ 
+            content: result.enhancedContent, 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('location_keyword_id', locationKeywordId)
+
+        if (error) throw error
+
+        queryClient.invalidateQueries({ queryKey: ['generatedContent', locationKeywordId] })
+        toast.success('Content enhanced with more keywords!')
+      }
+    } catch (error) {
+      console.error('Enhance error:', error)
+      toast.error('Failed to enhance content', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    } finally {
+      setIsEnhancing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pt-16">
@@ -346,24 +582,27 @@ export function ViewContentPage() {
               </>
             )}
           </Button>
-          <Button
-            onClick={handleRegenerate}
-            disabled={isRegenerating || regenerateMutation.isPending}
-            className="gap-2"
-            style={{ backgroundColor: 'var(--brand-dark)' }}
-          >
-            {isRegenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Regenerating...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4" />
-                Regenerate Content
-              </>
-            )}
-          </Button>
+          {/* Hide Regenerate button for Starter plan users */}
+          {canRegenerateContent && (
+            <Button
+              onClick={handleRegenerate}
+              disabled={isRegenerating || regenerateMutation.isPending}
+              className="gap-2"
+              style={{ backgroundColor: 'var(--brand-dark)' }}
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Regenerate Content
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -388,86 +627,66 @@ export function ViewContentPage() {
         </Card>
       )}
 
-      {/* Google Search Preview */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="border rounded-lg p-6 !bg-white dark:!bg-[#202124]">
-            {/* Favicon and URL */}
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white text-xs font-bold">
-                G
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm !text-gray-700 dark:!text-gray-300">{projectUrl || 'yoursite.com'}</span>
-                <div className="flex items-center text-xs !text-gray-600 dark:!text-gray-400 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
-                  <span>{projectUrl || 'yoursite.com'}/</span>
-                  <InlineEdit
-                    value={content.slug || ''}
-                    onSave={(value) => handleUpdateField('slug', value)}
-                    className="text-xs !text-gray-600 dark:!text-gray-400 font-normal"
-                    placeholder="page-slug"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {/* Title (clickable in Google) */}
-            <div className="mb-1 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+      {/* Main Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Column - H1 Title + Content (wider) */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Page Title (H1) */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Page Title (H1)</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
               <InlineEdit
-                value={content.meta_title || content.title}
-                onSave={(value) => handleUpdateField('meta_title', value)}
-                className="text-xl leading-7 !text-[#1a0dab] dark:!text-[#8ab4f8] cursor-pointer font-normal"
+                value={content.title}
+                onSave={(value) => handleUpdateField('title', value)}
+                className="text-4xl font-bold tracking-tight"
               />
-            </div>
-            
-            {/* Date line */}
-            <div className="flex items-center gap-2 mb-3 text-sm !text-gray-600 dark:!text-gray-400">
-              <span>{new Date(content.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-              <span className="!text-gray-500 dark:!text-gray-500">—</span>
-            </div>
-            
-            {/* Meta Description */}
-            <div className="[&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
-              <InlineEdit
-                value={content.meta_description || ''}
-                onSave={(value) => handleUpdateField('meta_description', value)}
-                multiline
-                className="text-sm !text-gray-700 dark:!text-gray-300 leading-relaxed"
-                placeholder="Add meta description..."
+              {/* Title preview with highlighting */}
+              <div 
+                className="mt-4 text-2xl font-bold tracking-tight"
+                dangerouslySetInnerHTML={{ 
+                  __html: highlightText(
+                    content.title, 
+                    content.location_keyword?.phrase,
+                    content.location_keyword?.location?.name
+                  ) 
+                }}
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                {content.meta_description?.length || 0}/155 characters
-                {content.meta_description && content.meta_description.length > 155 && (
-                  <span className="text-orange-500 ml-2">⚠️ Too long</span>
-                )}
-              </p>
-            </div>
-          </div>
-          
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Page Title (H1) */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Page Title (H1)</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <InlineEdit
-            value={content.title}
-            onSave={(value) => handleUpdateField('title', value)}
-            className="text-4xl font-bold tracking-tight"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Page Content */}
-      <Card>
-        <CardContent>
+          {/* Page Content */}
+          <Card>
+            <CardContent>
           {/* Preview Section */}
           <div className="space-y-4">
             <div className="border rounded-lg p-8 mt-8">
-              <h3 className="text-sm font-medium mb-6 text-muted-foreground">Content</h3>
+              {/* Highlight Legend with Counts */}
+              {(() => {
+                const counts = countOccurrences(
+                  content.content,
+                  content.location_keyword?.phrase,
+                  content.location_keyword?.location?.name
+                )
+                return (
+                  <div className="flex items-center gap-4 mb-6">
+                    <h3 className="text-sm font-medium text-muted-foreground">Content</h3>
+                    <div className="flex items-center gap-4 ml-auto text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: '#fef08a' }}></span>
+                        <span className="text-muted-foreground">Keyword</span>
+                        <span className="font-semibold text-foreground">({counts.keywordCount})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: '#bbf7d0' }}></span>
+                        <span className="text-muted-foreground">Location</span>
+                        <span className="font-semibold text-foreground">({counts.locationCount})</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
               <style>{`
                 .content-preview {
                   max-width: none;
@@ -625,10 +844,30 @@ export function ViewContentPage() {
                   padding: 0;
                   color: inherit;
                 }
+                .highlight-phrase {
+                  background-color: #fef08a;
+                  color: #1a1a1a;
+                  padding: 0.1em 0.2em;
+                  border-radius: 0.2em;
+                  font-weight: inherit;
+                }
+                .highlight-location {
+                  background-color: #bbf7d0;
+                  color: #1a1a1a;
+                  padding: 0.1em 0.2em;
+                  border-radius: 0.2em;
+                  font-weight: inherit;
+                }
               `}</style>
               <div 
                 className="content-preview"
-                dangerouslySetInnerHTML={{ __html: content.content }}
+                dangerouslySetInnerHTML={{ 
+                  __html: highlightText(
+                    content.content, 
+                    content.location_keyword?.phrase,
+                    content.location_keyword?.location?.name
+                  ) 
+                }}
               />
             </div>
 
@@ -642,27 +881,204 @@ export function ViewContentPage() {
               </pre>
             </details>
           </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Metadata */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Metadata</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="font-medium text-muted-foreground">Created</dt>
-              <dd>{new Date(content.created_at).toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-muted-foreground">Last Updated</dt>
-              <dd>{new Date(content.updated_at).toLocaleString()}</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+          {/* Metadata */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Metadata</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="font-medium text-muted-foreground">Created</dt>
+                  <dd>{new Date(content.created_at).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Last Updated</dt>
+                  <dd>{new Date(content.updated_at).toLocaleString()}</dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - SEO Score + Google Preview (narrower) */}
+        <div className="space-y-6">
+          {/* SEO Score Card */}
+          {(() => {
+            const seoScore = calculateSEOScore(
+              content.content,
+              content.title,
+              content.location_keyword?.phrase,
+              content.location_keyword?.location?.name
+            )
+            // Calculate the stroke color based on score
+            const getScoreColor = (score: number) => {
+              if (score >= 80) return '#22c55e' // green
+              if (score >= 60) return '#3b82f6' // blue
+              if (score >= 40) return '#f97316' // orange
+              return '#ef4444' // red
+            }
+            
+            const scoreColor = getScoreColor(seoScore.score)
+            const circumference = 2 * Math.PI * 45 // radius = 45
+            const strokeDashoffset = circumference - (seoScore.score / 100) * circumference
+            
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-center">SEO Score</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Circular Score Chart */}
+                  <div className="flex justify-center">
+                    <div className="relative w-32 h-32">
+                      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                        {/* Background circle */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="8"
+                          className="dark:stroke-gray-700"
+                        />
+                        {/* Score arc */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke={scoreColor}
+                          strokeWidth="8"
+                          strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                        />
+                      </svg>
+                      {/* Score text in center */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold">{seoScore.score}</span>
+                        <span className="text-xs text-muted-foreground">/ 100</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enhance Button */}
+                  {seoScore.score < 70 && (
+                    <Button
+                      onClick={handleEnhanceKeywords}
+                      disabled={isEnhancing}
+                      size="sm"
+                      className="w-full gap-2"
+                      style={{ backgroundColor: 'var(--brand-dark)' }}
+                    >
+                      {isEnhancing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Enhancing...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Enhance Keywords
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {/* Checks List */}
+                  <div className="space-y-2">
+                    {seoScore.checks.map((check, index) => (
+                      <div 
+                        key={index} 
+                        className={`p-2 rounded-lg border ${check.passed ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {check.passed ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <span className="text-xs font-medium block">{check.name}</span>
+                            <p className="text-xs text-muted-foreground truncate">{check.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })()}
+
+          {/* Google Search Preview */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Google Search Preview</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg p-4 !bg-white dark:!bg-[#202124]">
+                {/* Favicon and URL */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-5 h-5 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white text-xs font-bold">
+                    G
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs !text-gray-700 dark:!text-gray-300">{projectUrl || 'yoursite.com'}</span>
+                    <div className="flex items-center text-xs !text-gray-600 dark:!text-gray-400 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+                      <span className="truncate max-w-[100px]">{projectUrl || 'yoursite.com'}/</span>
+                      <InlineEdit
+                        value={content.slug || ''}
+                        onSave={(value) => handleUpdateField('slug', value)}
+                        className="text-xs !text-gray-600 dark:!text-gray-400 font-normal"
+                        placeholder="page-slug"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Title (clickable in Google) */}
+                <div className="mb-1 [&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+                  <InlineEdit
+                    value={content.meta_title || content.title}
+                    onSave={(value) => handleUpdateField('meta_title', value)}
+                    className="text-sm leading-5 !text-[#1a0dab] dark:!text-[#8ab4f8] cursor-pointer font-normal"
+                  />
+                </div>
+                
+                {/* Date line */}
+                <div className="flex items-center gap-2 mb-2 text-xs !text-gray-600 dark:!text-gray-400">
+                  <span>{new Date(content.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <span className="!text-gray-500 dark:!text-gray-500">—</span>
+                </div>
+                
+                {/* Meta Description */}
+                <div className="[&_.cursor-pointer:hover]:!bg-gray-100 [&_.cursor-pointer:hover]:dark:!bg-gray-700">
+                  <InlineEdit
+                    value={content.meta_description || ''}
+                    onSave={(value) => handleUpdateField('meta_description', value)}
+                    multiline
+                    className="text-xs !text-gray-700 dark:!text-gray-300 leading-relaxed"
+                    placeholder="Add meta description..."
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {content.meta_description?.length || 0}/155
+                    {content.meta_description && content.meta_description.length > 155 && (
+                      <span className="text-orange-500 ml-1">⚠️</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
       </div>
     </div>
   )

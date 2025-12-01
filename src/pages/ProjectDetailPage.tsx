@@ -308,13 +308,16 @@ export function ProjectDetailPage() {
             >
               Project Settings
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/projects/${projectId}/sitemap`)}
-              className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
-            >
-              WordPress Sitemap
-            </Button>
+            {/* Hide Sitemap for Starter plan (no rank tracking) */}
+            {userPlan?.rankTrackingFrequency && (
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/projects/${projectId}/sitemap`)}
+                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
+              >
+                WordPress Sitemap
+              </Button>
+            )}
           </div>
         </div>
 
