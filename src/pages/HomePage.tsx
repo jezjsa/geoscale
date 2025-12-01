@@ -47,7 +47,7 @@ export function HomePage() {
 
       {/* Demo Video Section */}
       <section className="container mx-auto px-4 pt-4 pb-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-10xl mx-auto">
           <div 
             className="rounded-4xl border-8 overflow-hidden aspect-video flex items-center justify-center bg-muted"
             style={{ borderColor: '#fff' }}
