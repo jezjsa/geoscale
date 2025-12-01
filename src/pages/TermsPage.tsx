@@ -9,7 +9,7 @@ export function TermsPage() {
       <main className="container mx-auto px-4 pt-24 pb-12">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold mb-8">Terms and Conditions</h1>
-          <p className="text-muted-foreground mb-8">Last updated: 01/12/2024</p>
+          <p className="text-muted-foreground mb-8">Last updated: 01/12/2025</p>
 
           <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
             <section>

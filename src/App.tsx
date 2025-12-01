@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ScrollToTop } from './components/ScrollToTop'
 import { HomePage } from './pages/HomePage'
 import { PlansPage } from './pages/PlansPage'
 import { PrivacyPage } from './pages/PrivacyPage'
@@ -18,6 +19,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Root redirects to home */}
         <Route path="/" element={<HomePage />} />
