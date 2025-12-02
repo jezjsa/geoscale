@@ -278,8 +278,9 @@ Instructions:
    - Close with </div>
 
 7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq">:
-   - If service-specific FAQs are provided above, use those questions and answers exactly as given, adapting only to include the location name where appropriate.
-   - If no service-specific FAQs are provided, generate 4 common questions related to the service and location.
+   - ONLY include this section if service-specific FAQs are provided above.
+   - If service-specific FAQs are provided, use those questions and answers exactly as given, adapting only to include the location name where appropriate.
+   - If NO service-specific FAQs are provided, DO NOT include any FAQ section at all - skip this section entirely.
    - Format each FAQ as an H3 for the question and a paragraph for the answer.
    - Close with </div>
 

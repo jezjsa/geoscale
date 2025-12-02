@@ -24,6 +24,7 @@ export function ViewContentPage() {
   }
   const [projectName, setProjectName] = useState<string>('')
   const [projectUrl, setProjectUrl] = useState<string>('')
+  const [hasWordPressConnection, setHasWordPressConnection] = useState<boolean>(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerateProgress, setRegenerateProgress] = useState(0)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -202,7 +203,7 @@ export function ViewContentPage() {
     if (projectId) {
       supabase
         .from('projects')
-        .select('project_name, blog_url, wp_url')
+        .select('project_name, blog_url, wp_url, wp_api_key')
         .eq('id', projectId)
         .single()
         .then(({ data }) => {
@@ -219,6 +220,8 @@ export function ViewContentPage() {
                 setProjectUrl(url)
               }
             }
+            // Check if WordPress is connected (has URL and API key)
+            setHasWordPressConnection(!!(url && data.wp_api_key))
           }
         })
     }
@@ -622,13 +625,17 @@ export function ViewContentPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
           <Button
             onClick={handlePublishToWordPress}
-            disabled={isPublishing || isRegenerating}
+            disabled={isPublishing || isRegenerating || !hasWordPressConnection}
             variant="outline"
             className="gap-2"
-            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+            style={hasWordPressConnection 
+              ? { borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }
+              : { borderColor: '#9ca3af', color: '#9ca3af' }
+            }
           >
             {isPublishing ? (
               <>
@@ -638,7 +645,7 @@ export function ViewContentPage() {
             ) : (
               <>
                 <ArrowUpToLine className="h-4 w-4" />
-                Republish to WordPress
+                {content?.location_keyword?.status === 'pushed' ? 'Republish to WordPress' : 'Publish to WordPress'}
               </>
             )}
           </Button>
@@ -662,6 +669,12 @@ export function ViewContentPage() {
                 </>
               )}
             </Button>
+          )}
+          </div>
+          {!hasWordPressConnection && (
+            <p className="text-xs text-gray-400">
+              WordPress not connected. <button onClick={() => navigate(`/projects/${projectId}?view=settings`)} className="underline hover:text-[var(--brand-dark)]">Configure in Project Settings</button>
+            </p>
           )}
         </div>
       </div>
