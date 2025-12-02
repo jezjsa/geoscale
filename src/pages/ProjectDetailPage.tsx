@@ -341,6 +341,7 @@ export function ProjectDetailPage() {
         {/* Main content area - full width */}
         <div>
             {currentView === 'combinations' ? (
+              <>
               <Card>
                 <CardHeader>
                   <CardTitle>Location & Keyword Combinations</CardTitle>
@@ -508,6 +509,13 @@ export function ProjectDetailPage() {
                 )}
                 </CardContent>
               </Card>
+              {/* Starter plan upsell message */}
+              {userPlan?.name === 'starter' && (
+                <p className="text-sm text-gray-400 dark:text-gray-600 mt-3 text-center">
+                  Volume and difficulty scores show within the Pro and Agency plans.
+                </p>
+              )}
+            </>
             ) : currentView === 'services' ? (
               <ProjectServicesManager 
                 projectId={projectId} 
