@@ -193,7 +193,7 @@ export function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
-              <CardDescription>{isSingleProjectPlan ? 'Create and manage your WordPress project' : 'Create and manage your WordPress projects'}</CardDescription>
+              <CardDescription>{isSingleProjectPlan ? 'Manage your WordPress project' : 'Create and manage your WordPress projects'}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button 
