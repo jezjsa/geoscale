@@ -15,9 +15,9 @@
     --btn-secondary-hover: #d1d5db;
     --progress-track: #e5e7eb;
     
-    --background: oklch(0.9911 0 0);
+    --background: #fcfcfc;
     --foreground: oklch(0.2046 0 0);
-    --card: oklch(0.9911 0 0);
+    --card: #ffffff;
     --card-foreground: oklch(0.2046 0 0);
     --popover: oklch(0.9911 0 0);
     --popover-foreground: oklch(0.4386 0 0);

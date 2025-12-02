@@ -84,6 +84,7 @@ export function DashboardPage() {
   }
 
   const isIndividual = user.plan === 'individual'
+  const isSingleProjectPlan = user.plan === 'starter' || user.plan === 'pro'
   const hasCompanySettings = companySettings && 
     companySettings.business_name && 
     companySettings.phone_number && 
@@ -122,7 +123,7 @@ export function DashboardPage() {
           </Card>
         )}
 
-        {isIndividual && hasCompanySettings && (
+        {isIndividual && hasCompanySettings && !isSingleProjectPlan && (
           <Card className="mb-6 border-green-200 bg-green-50">
             <CardHeader>
               <div className="flex items-start gap-3">
@@ -142,12 +143,12 @@ export function DashboardPage() {
           <Link to="/settings">
             <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Projects</CardTitle>
+                <CardTitle className="text-sm font-medium">{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.projects_count || 0}</div>
                 {stats?.projects_count === 0 && (
-                  <p className="text-xs text-muted-foreground">No projects yet</p>
+                  <p className="text-xs text-muted-foreground">{isSingleProjectPlan ? 'No project yet' : 'No projects yet'}</p>
                 )}
               </CardContent>
             </Card>
@@ -182,8 +183,8 @@ export function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Projects</CardTitle>
-              <CardDescription>Create and manage your WordPress projects</CardDescription>
+              <CardTitle>{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
+              <CardDescription>{isSingleProjectPlan ? 'Create and manage your WordPress project' : 'Create and manage your WordPress projects'}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button 
@@ -191,7 +192,7 @@ export function DashboardPage() {
                 onClick={handleManageProjects}
                 className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a] dark:hover:text-white"
               >
-                Manage Projects
+                {isSingleProjectPlan ? 'Manage Project' : 'Manage Projects'}
               </Button>
             </CardContent>
           </Card>

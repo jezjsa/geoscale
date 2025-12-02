@@ -1,6 +1,6 @@
 // Database types for GeoScale
 
-export type PlanName = 'individual' | 'agency' | 'agency_plus'
+export type PlanName = 'starter' | 'pro' | 'agency' | 'individual' | 'agency_plus'
 
 export interface Plan {
   id: string

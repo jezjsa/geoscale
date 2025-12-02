@@ -6,7 +6,7 @@ import { InlineEdit } from '@/components/InlineEdit'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine, Sparkles, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { getCurrentUserPlan } from '@/lib/plan-service'
@@ -223,6 +223,40 @@ export function ViewContentPage() {
         })
     }
   }, [projectId])
+
+  // Fetch all generated pages for this project (for navigation)
+  const { data: allGeneratedPages } = useQuery({
+    queryKey: ['allGeneratedPages', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('generated_pages')
+        .select('id, location_keyword_id, title')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      return data
+    },
+    enabled: !!projectId,
+  })
+
+  // Calculate current index and navigation
+  const currentIndex = allGeneratedPages?.findIndex(p => p.location_keyword_id === locationKeywordId) ?? -1
+  const prevPage = currentIndex > 0 ? allGeneratedPages?.[currentIndex - 1] : null
+  const nextPage = currentIndex >= 0 && currentIndex < (allGeneratedPages?.length ?? 0) - 1 ? allGeneratedPages?.[currentIndex + 1] : null
+  const totalPages = allGeneratedPages?.length ?? 0
+
+  const navigateToPrev = () => {
+    if (prevPage) {
+      navigate(`/projects/${projectId}/content/${prevPage.location_keyword_id}`)
+    }
+  }
+
+  const navigateToNext = () => {
+    if (nextPage) {
+      navigate(`/projects/${projectId}/content/${nextPage.location_keyword_id}`)
+    }
+  }
 
   // Fetch generated content
   const { data: content, isLoading, error } = useQuery({
@@ -538,7 +572,7 @@ export function ViewContentPage() {
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="relative flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Button
@@ -562,6 +596,32 @@ export function ViewContentPage() {
             </p>
           )}
         </div>
+
+        {/* Navigation Arrows - Absolutely positioned to stay centered */}
+        {totalPages > 1 && (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
+            <button
+              onClick={navigateToPrev}
+              disabled={!prevPage}
+              className={`p-2 rounded-full transition-opacity ${prevPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
+              title={prevPage ? `Previous: ${prevPage.title}` : 'No previous page'}
+            >
+              <ChevronLeft className="h-6 w-6 text-foreground" />
+            </button>
+            <span className="text-foreground text-sm font-medium">
+              {currentIndex + 1} / {totalPages}
+            </span>
+            <button
+              onClick={navigateToNext}
+              disabled={!nextPage}
+              className={`p-2 rounded-full transition-opacity ${nextPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
+              title={nextPage ? `Next: ${nextPage.title}` : 'No next page'}
+            >
+              <ChevronRight className="h-6 w-6 text-foreground" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <Button
             onClick={handlePublishToWordPress}
@@ -633,10 +693,10 @@ export function ViewContentPage() {
         <div className="lg:col-span-3 space-y-6">
           {/* Page Title (H1) */}
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-0">
               <CardDescription>Page Title (H1)</CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
+            <CardContent className="pt-0">
               <InlineEdit
                 value={content.title}
                 onSave={(value) => handleUpdateField('title', value)}
@@ -647,10 +707,10 @@ export function ViewContentPage() {
 
           {/* Page Content */}
           <Card>
-            <CardContent>
+            <CardContent className="pt-6">
           {/* Preview Section */}
           <div className="space-y-4">
-            <div className="border rounded-lg p-8 mt-8">
+            <div className="p-2">
               {/* Highlight Legend with Counts */}
               {(() => {
                 const counts = countOccurrences(
@@ -660,7 +720,7 @@ export function ViewContentPage() {
                 )
                 return (
                   <div className="flex items-center gap-4 mb-6">
-                    <h3 className="text-sm font-medium text-muted-foreground">Content</h3>
+                    <h3 className="text-sm font-bold text-muted-foreground">Page Content</h3>
                     <div className="flex items-center gap-4 ml-auto text-xs">
                       <div className="flex items-center gap-1">
                         <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: 'rgba(254, 240, 138, 0.2)' }}></span>
@@ -872,27 +932,9 @@ export function ViewContentPage() {
             </CardContent>
           </Card>
 
-          {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Metadata</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <dt className="font-medium text-muted-foreground">Created</dt>
-                  <dd>{new Date(content.created_at).toLocaleString()}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-muted-foreground">Last Updated</dt>
-                  <dd>{new Date(content.updated_at).toLocaleString()}</dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Right Column - SEO Score + Google Preview (narrower) */}
+        {/* Right Column - SEO Score + Metadata + Google Preview (narrower) */}
         <div className="space-y-6">
           {/* SEO Score Card */}
           {(() => {
@@ -1004,13 +1046,28 @@ export function ViewContentPage() {
             )
           })()}
 
+          {/* Metadata */}
+          <Card>
+            <CardContent className="pt-6">
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="font-medium text-muted-foreground">Created</dt>
+                  <dd>{new Date(content.created_at).toLocaleDateString('en-GB')}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Updated</dt>
+                  <dd>{new Date(content.updated_at).toLocaleDateString('en-GB')}</dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+
           {/* Google Search Preview */}
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Google Search Preview</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 !bg-white dark:!bg-[#202124]">
+            <CardContent className="!bg-white dark:!bg-[#202124] rounded-b-lg">
                 {/* Favicon and URL */}
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white text-xs font-bold">
@@ -1061,7 +1118,6 @@ export function ViewContentPage() {
                     )}
                   </p>
                 </div>
-              </div>
             </CardContent>
           </Card>
         </div>

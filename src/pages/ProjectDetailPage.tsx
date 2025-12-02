@@ -238,7 +238,7 @@ export function ProjectDetailPage() {
                 variant="outline" 
                 size="sm"
                 asChild
-                className="bg-transparent hover:bg-gray-100 text-black border-gray-300 dark:bg-transparent dark:hover:bg-gray-700 dark:text-white dark:hover:text-white dark:border-gray-600"
+                className="bg-transparent hover:bg-gray-100 text-black border-0 dark:bg-transparent dark:hover:bg-gray-700 dark:text-white dark:hover:text-white"
               >
                 <Link to="/settings">
                   <ArrowLeft className="mr-1 h-3 w-3" />
@@ -251,7 +251,7 @@ export function ProjectDetailPage() {
                 variant="outline" 
                 size="sm"
                 asChild
-                className="bg-transparent hover:bg-gray-100 text-black border-gray-300 dark:bg-transparent dark:hover:bg-gray-700 dark:text-white dark:hover:text-white dark:border-gray-600"
+                className="bg-transparent hover:bg-gray-100 text-black border-0 dark:bg-transparent dark:hover:bg-gray-700 dark:text-white dark:hover:text-white"
               >
                 <Link to="/dashboard">
                   <ArrowLeft className="mr-1 h-3 w-3" />
@@ -267,8 +267,8 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('combinations')}
               className={currentView === 'combinations' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100 dark:hover:text-black' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Keyword Combinations
             </Button>
@@ -276,8 +276,8 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('services')}
               className={currentView === 'services' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100 dark:hover:text-black' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Services
             </Button>
@@ -285,8 +285,8 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('faqs')}
               className={currentView === 'faqs' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100 dark:hover:text-black' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               FAQs
             </Button>
@@ -294,8 +294,8 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('testimonials')}
               className={currentView === 'testimonials' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100 dark:hover:text-black' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Testimonials
             </Button>
@@ -303,8 +303,8 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('settings')}
               className={currentView === 'settings' 
-                ? 'bg-[#3a3a3a] text-white border-[#3a3a3a] hover:bg-[#4a4a4a] hover:text-white dark:bg-white dark:text-black dark:border-white dark:hover:bg-gray-100 dark:hover:text-black' 
-                : 'bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Project Settings
             </Button>
@@ -313,7 +313,7 @@ export function ProjectDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => navigate(`/projects/${projectId}/sitemap`)}
-                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
+                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
               >
                 WordPress Sitemap
               </Button>
