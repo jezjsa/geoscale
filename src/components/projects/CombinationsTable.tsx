@@ -787,7 +787,7 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                       />
                     </TableCell>
                   )}
-                  <TableCell className={`font-medium ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
+                  <TableCell className={`font-bold ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.status === 'generated' || combo.status === 'pushed' ? (
                       <button
                         onClick={() => handleViewContent(combo.id)}

@@ -21,7 +21,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Trash2, Loader2, Settings, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, Loader2, Settings, AlertTriangle, Search, HelpCircle, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   getProjectServices,
@@ -31,6 +31,7 @@ import {
   toggleKeywordSelection,
   bulkToggleKeywords,
   getProjectCombinationStats,
+  createServiceFaq,
   type ProjectService,
   type ServiceKeyword,
 } from '@/api/services'
@@ -81,6 +82,17 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
   // Store the service name/description for creating after keyword selection
   const [pendingServiceName, setPendingServiceName] = useState('')
   const [pendingServiceDescription, setPendingServiceDescription] = useState('')
+  
+  // For finding keywords for an existing service
+  const [serviceToAddKeywords, setServiceToAddKeywords] = useState<ProjectService | null>(null)
+  const [showFindKeywordsDialog, setShowFindKeywordsDialog] = useState(false)
+  const [findKeywordsSearchTerm, setFindKeywordsSearchTerm] = useState('')
+  
+  // For adding FAQ to a service
+  const [serviceToAddFaq, setServiceToAddFaq] = useState<ProjectService | null>(null)
+  const [showAddFaqDialog, setShowAddFaqDialog] = useState(false)
+  const [newFaqQuestion, setNewFaqQuestion] = useState('')
+  const [newFaqAnswer, setNewFaqAnswer] = useState('')
 
   // Step 1: Fetch keywords first, DON'T create service yet
   const handleCreateService = async () => {
@@ -164,6 +176,30 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     toast.info('Service creation cancelled')
   }
 
+  // Add service without fetching keywords - auto-add service name as a keyword
+  const handleAddServiceOnly = async () => {
+    if (!newServiceName.trim()) return
+    
+    const serviceName = newServiceName.trim()
+    const serviceDescription = newServiceDescription.trim()
+    
+    try {
+      // Create the service
+      const service = await createProjectService(projectId, serviceName, serviceDescription)
+      
+      // Auto-add the service name as a keyword (selected by default)
+      await addServiceKeywords(service.id, [{ keyword: serviceName, search_volume: 0 }])
+      
+      toast.success(`Created "${serviceName}" with keyword`)
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+      setNewServiceName('')
+      setNewServiceDescription('')
+      setShowAddDialog(false)
+    } catch (error: any) {
+      toast.error('Failed to create service', { description: error.message })
+    }
+  }
+
   const toggleKeywordIndex = (index: number) => {
     setSelectedKeywordIndexes(prev => {
       const newSet = new Set(prev)
@@ -182,6 +218,90 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
 
   const deselectAllKeywords = () => {
     setSelectedKeywordIndexes(new Set())
+  }
+
+  // Handle finding keywords for an existing service
+  const handleFindKeywordsForService = (service: ProjectService) => {
+    setServiceToAddKeywords(service)
+    setFindKeywordsSearchTerm(service.name)
+    setFetchedKeywords([])
+    setSelectedKeywordIndexes(new Set())
+    setShowFindKeywordsDialog(true)
+  }
+
+  // Search for keywords for existing service
+  const handleSearchKeywordsForService = async () => {
+    if (!findKeywordsSearchTerm.trim() || !serviceToAddKeywords) return
+    
+    setIsFetchingKeywords(true)
+    try {
+      const keywords = await getKeywordVariations({
+        project_id: projectId,
+        base_keyword: findKeywordsSearchTerm.trim(),
+        location: 'GB',
+        limit: 20,
+      })
+      
+      setFetchedKeywords(keywords)
+      setSelectedKeywordIndexes(new Set(keywords.map((_, i) => i)))
+    } catch (error: any) {
+      console.error('Failed to fetch keywords:', error)
+      toast.error('Failed to fetch keywords', { description: error.message })
+    } finally {
+      setIsFetchingKeywords(false)
+    }
+  }
+
+  // Add selected keywords to existing service
+  const handleAddKeywordsToService = async () => {
+    if (selectedKeywordIndexes.size === 0 || !serviceToAddKeywords) return
+    
+    setIsAddingKeywords(true)
+    try {
+      const selectedKeywords = fetchedKeywords.filter((_, i) => selectedKeywordIndexes.has(i))
+      await addServiceKeywords(serviceToAddKeywords.id, selectedKeywords)
+      
+      toast.success(`Added ${selectedKeywords.length} keywords to "${serviceToAddKeywords.name}"`)
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['serviceKeywords', serviceToAddKeywords.id] })
+      queryClient.invalidateQueries({ queryKey: ['projectCombinationStats', projectId] })
+      
+      setShowFindKeywordsDialog(false)
+      setServiceToAddKeywords(null)
+      setFetchedKeywords([])
+      setSelectedKeywordIndexes(new Set())
+      setFindKeywordsSearchTerm('')
+    } catch (error: any) {
+      toast.error('Failed to add keywords', { description: error.message })
+    } finally {
+      setIsAddingKeywords(false)
+    }
+  }
+
+  // Handle adding FAQ to a service
+  const handleAddFaqForService = (service: ProjectService) => {
+    setServiceToAddFaq(service)
+    setNewFaqQuestion('')
+    setNewFaqAnswer('')
+    setShowAddFaqDialog(true)
+  }
+
+  // Create FAQ for service
+  const handleCreateFaq = async () => {
+    if (!newFaqQuestion.trim() || !newFaqAnswer.trim() || !serviceToAddFaq) return
+    
+    try {
+      await createServiceFaq(serviceToAddFaq.id, newFaqQuestion.trim(), newFaqAnswer.trim())
+      toast.success(`FAQ added to "${serviceToAddFaq.name}"`)
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['serviceFaqs', serviceToAddFaq.id] })
+      setShowAddFaqDialog(false)
+      setServiceToAddFaq(null)
+      setNewFaqQuestion('')
+      setNewFaqAnswer('')
+    } catch (error: any) {
+      toast.error('Failed to add FAQ', { description: error.message })
+    }
   }
 
   // Delete service mutation
@@ -294,6 +414,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                 <AccordionItem key={service.id} value={service.id}>
                   <AccordionTrigger className="hover:no-underline [&>svg]:pointer-events-none">
                     <div className="flex items-center gap-3 pointer-events-none">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{service.name}</span>
                       <Badge variant="secondary" className="text-xs">
                         {service.selected_keyword_count}/{service.keyword_count} keywords
@@ -311,6 +432,8 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                       currentTotal={stats?.totalCombinations || 0}
                       locationCount={stats?.locationCount || 0}
                       onDelete={() => handleDeleteClick(service)}
+                      onFindKeywords={() => handleFindKeywordsForService(service)}
+                      onAddFaq={() => handleAddFaqForService(service)}
                     />
                   </AccordionContent>
                 </AccordionItem>
@@ -357,7 +480,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setShowAddDialog(false)}
@@ -365,12 +488,19 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
               Cancel
             </Button>
             <Button
+              variant="outline"
+              onClick={handleAddServiceOnly}
+              disabled={!newServiceName.trim()}
+            >
+              Add Service Only
+            </Button>
+            <Button
               onClick={handleCreateService}
               disabled={!newServiceName.trim()}
               style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >
-              Find Related Keyphrases
+              Find Related Keywords
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -494,6 +624,186 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Find Keywords for Existing Service Dialog */}
+      <Dialog open={showFindKeywordsDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowFindKeywordsDialog(false)
+          setServiceToAddKeywords(null)
+          setFetchedKeywords([])
+          setSelectedKeywordIndexes(new Set())
+          setFindKeywordsSearchTerm('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Find Keywords for {serviceToAddKeywords?.name}</DialogTitle>
+            <DialogDescription>
+              Search for related keywords to add to this service.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex gap-2 py-4">
+            <Input
+              placeholder="Enter search term (e.g., web design)"
+              value={findKeywordsSearchTerm}
+              onChange={(e) => setFindKeywordsSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleSearchKeywordsForService()
+                }
+              }}
+              disabled={isFetchingKeywords}
+            />
+            <Button
+              onClick={handleSearchKeywordsForService}
+              disabled={!findKeywordsSearchTerm.trim() || isFetchingKeywords}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
+              className="hover:opacity-90 text-white"
+            >
+              {isFetchingKeywords ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {isFetchingKeywords ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : fetchedKeywords.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm text-muted-foreground">
+                  {selectedKeywordIndexes.size} of {fetchedKeywords.length} selected
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={selectAllKeywords}>
+                    Select All
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={deselectAllKeywords}>
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto min-h-0 py-2">
+                <div className="space-y-1">
+                  {fetchedKeywords.map((kw, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-muted/50 ${
+                        selectedKeywordIndexes.has(index) ? 'bg-muted' : ''
+                      }`}
+                      onClick={() => toggleKeywordIndex(index)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedKeywordIndexes.has(index)}
+                          onCheckedChange={() => toggleKeywordIndex(index)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="text-sm">{kw.keyword}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {kw.search_volume?.toLocaleString() || 0} searches/mo
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <p className="text-sm">Enter a search term to find related keywords</p>
+            </div>
+          )}
+          
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowFindKeywordsDialog(false)}
+              disabled={isAddingKeywords}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddKeywordsToService}
+              disabled={isAddingKeywords || selectedKeywordIndexes.size === 0}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
+              className="hover:opacity-90 text-white"
+            >
+              {isAddingKeywords ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                `Add ${selectedKeywordIndexes.size} Keywords`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add FAQ Dialog */}
+      <Dialog open={showAddFaqDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowAddFaqDialog(false)
+          setServiceToAddFaq(null)
+          setNewFaqQuestion('')
+          setNewFaqAnswer('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add FAQ for {serviceToAddFaq?.name}</DialogTitle>
+            <DialogDescription>
+              Add a frequently asked question for this service.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="faqQuestion">Question</Label>
+              <Input
+                id="faqQuestion"
+                placeholder="e.g., How long does a website take to build?"
+                value={newFaqQuestion}
+                onChange={(e) => setNewFaqQuestion(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="faqAnswer">Answer</Label>
+              <Textarea
+                id="faqAnswer"
+                placeholder="Enter the answer to this question..."
+                value={newFaqAnswer}
+                onChange={(e) => setNewFaqAnswer(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddFaqDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateFaq}
+              disabled={!newFaqQuestion.trim() || !newFaqAnswer.trim()}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
+              className="hover:opacity-90 text-white"
+            >
+              Add FAQ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -506,6 +816,8 @@ function ServiceKeywordsPanel({
   currentTotal,
   locationCount,
   onDelete,
+  onFindKeywords,
+  onAddFaq,
 }: {
   service: ProjectService
   projectId: string
@@ -513,6 +825,8 @@ function ServiceKeywordsPanel({
   currentTotal: number
   locationCount: number
   onDelete: () => void
+  onFindKeywords: () => void
+  onAddFaq: () => void
 }) {
   const queryClient = useQueryClient()
 
@@ -599,6 +913,24 @@ function ServiceKeywordsPanel({
           </Button>
           <Button size="sm" variant="outline" onClick={handleDeselectAll}>
             Deselect All
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={onFindKeywords}
+            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+          >
+            <Search className="h-4 w-4 mr-1" />
+            Find Keywords
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={onAddFaq}
+            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+          >
+            <HelpCircle className="h-4 w-4 mr-1" />
+            Add FAQ
           </Button>
         </div>
         <Button

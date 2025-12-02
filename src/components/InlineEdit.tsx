@@ -109,7 +109,7 @@ export function InlineEdit({
       title="Click to edit"
     >
       <div className="flex items-start gap-2">
-        <span className={`break-words flex-1 min-w-0 ${className}`}>{value || placeholder}</span>
+        <span className={`break-words flex-1 min-w-0 ${className} ${!value ? 'text-orange-500' : ''}`}>{value || placeholder}</span>
         <div className="flex-shrink-0 flex items-center gap-1">
           {showSuccess && (
             <Check className="h-4 w-4 text-green-600" />

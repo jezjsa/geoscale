@@ -247,7 +247,7 @@ export function ResearchKeywordsDialog({
                     disabled={addKeywordsMutation.isPending}
                     className="flex-shrink-0"
                   >
-                    <Plus className="h-4 w-4 text-white" />
+                    <Plus className="h-4 w-4" />
                   </Button>
                   {customKeywords.length > 1 && (
                     <Button
@@ -306,7 +306,7 @@ export function ResearchKeywordsDialog({
                 {isSearching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Search className="h-4 w-4 text-white" />
+                  <Search className="h-4 w-4" />
                 )}
               </Button>
             </div>

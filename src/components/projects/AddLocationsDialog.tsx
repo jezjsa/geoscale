@@ -36,11 +36,13 @@ export function AddLocationsDialog({
     queryKey: ['projectServices', projectId],
     queryFn: () => getProjectServices(projectId),
     enabled: open,
+    staleTime: 0, // Always refetch when dialog opens
   })
 
   // Fetch all selected keywords from all services
+  const serviceIds = services?.map(s => s.id) || []
   const { data: allKeywords, isLoading: keywordsLoading } = useQuery({
-    queryKey: ['allServiceKeywords', projectId],
+    queryKey: ['allServiceKeywords', projectId, serviceIds],
     queryFn: async () => {
       if (!services || services.length === 0) return []
       
@@ -57,6 +59,7 @@ export function AddLocationsDialog({
       return [...new Set(selectedKeywords)]
     },
     enabled: open && !!services && services.length > 0,
+    staleTime: 0, // Always refetch when dialog opens
   })
 
   // Fetch existing locations for this project

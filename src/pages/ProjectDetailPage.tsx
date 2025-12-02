@@ -7,6 +7,7 @@ import { InlineEdit } from '@/components/InlineEdit'
 import { AddFirstCombinationDialog } from '@/components/projects/AddFirstCombinationDialog'
 import { AddSpecificCombinationsDialog } from '@/components/projects/AddSpecificCombinationsDialog'
 import { AddLocationsDialog } from '@/components/projects/AddLocationsDialog'
+import { AddServiceDialog } from '@/components/projects/AddServiceDialog'
 import { ResearchKeywordsDialog } from '@/components/projects/ResearchKeywordsDialog'
 import { UploadCsvDialog } from '@/components/projects/UploadCsvDialog'
 import { CombinationsTable } from '@/components/projects/CombinationsTable'
@@ -32,6 +33,7 @@ import {
 import { ArrowLeft, Plus, Upload } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import { getProjectCombinations, getTrackedCombinationsCount } from '@/api/combinations'
+import { getProjectServices } from '@/api/services'
 import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpress'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -56,6 +58,7 @@ export function ProjectDetailPage() {
   const [showAddFirstDialog, setShowAddFirstDialog] = useState(false)
   const [showAddSpecificDialog, setShowAddSpecificDialog] = useState(false)
   const [showAddLocationsDialog, setShowAddLocationsDialog] = useState(false)
+  const [showAddServiceDialog, setShowAddServiceDialog] = useState(false)
   const [showResearchKeywordsDialog, setShowResearchKeywordsDialog] = useState(false)
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
   const [wpTemplates, setWpTemplates] = useState<Array<{ value: string; label: string }>>([])
@@ -86,6 +89,20 @@ export function ProjectDetailPage() {
     queryKey: ['projectCombinations', projectId],
     queryFn: () => getProjectCombinations(projectId),
   })
+
+  // Get services for this project (to check if onboarding is needed)
+  const { data: services = [] } = useQuery({
+    queryKey: ['projectServices', projectId],
+    queryFn: () => getProjectServices(projectId),
+  })
+
+  // Check if any services exist (keywords are optional - user can add locations once services exist)
+  const hasServices = services.length > 0
+  
+  // Check if any services have selected keywords (for display purposes)
+  const hasSelectedKeywords = services.some(service => 
+    (service.selected_keyword_count || 0) > 0
+  )
 
   // Get tracked count for this project
   const { data: trackedCount = 0 } = useQuery({
@@ -337,24 +354,87 @@ export function ProjectDetailPage() {
                     <p>Loading combinations...</p>
                   </div>
                 ) : !combinations || combinations.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <div className="max-w-md mx-auto space-y-4">
-                      <h3 className="text-lg font-medium">Add your first combination</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Start by entering your base location and keyword. We'll automatically find nearby towns 
-                        and generate keyword variations to create your location-based landing pages.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                          style={{ backgroundColor: 'var(--brand-dark)' }}
-                          className="hover:opacity-90 text-white"
-                          onClick={() => setShowAddLocationsDialog(true)}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Locations
-                        </Button>
+                  <div className="py-8">
+                    <div className="max-w-3xl mx-auto">
+                      <h3 className="text-lg font-medium text-center mb-6">Get Started</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Step 1 - Services */}
+                        <div className={`rounded-lg border p-5 flex flex-col ${services.length > 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${services.length > 0 ? 'bg-green-600 text-white' : 'bg-[var(--brand-dark)] text-white'}`}>
+                              {services.length > 0 ? '✓' : '1'}
+                            </span>
+                            <h4 className="font-medium">Add Services</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3 flex-1">
+                            Add your services (e.g., "Web Design"). We'll find related keywords with search volume data.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant={services.length > 0 ? "outline" : "default"}
+                            style={services.length === 0 ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                            className={services.length === 0 ? "hover:opacity-90 text-white w-full" : "w-full"}
+                            onClick={() => setShowAddServiceDialog(true)}
+                          >
+                            {services.length > 0 ? 'Add More Services' : 'Add Services'}
+                          </Button>
+                        </div>
+
+                        {/* Step 2 - Locations */}
+                        <div className={`rounded-lg border p-5 flex flex-col ${combinations && combinations.length > 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : hasServices ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-gray-100 dark:bg-gray-800/30 opacity-60'}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${combinations && combinations.length > 0 ? 'bg-green-600 text-white' : hasServices ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-400 text-white'}`}>
+                              {combinations && combinations.length > 0 ? '✓' : '2'}
+                            </span>
+                            <h4 className="font-medium">Add Locations</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground flex-1">
+                            Enter towns/cities you want to target. Each location combines with your services.
+                          </p>
+                          {!hasServices && (
+                            <p className="text-xs text-orange-500 mb-3">Add services first</p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant={!hasServices ? "outline" : "default"}
+                            style={hasServices ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                            className={hasServices ? "hover:opacity-90 text-white w-full mt-3" : "w-full mt-auto"}
+                            onClick={() => setShowAddLocationsDialog(true)}
+                            disabled={!hasServices}
+                          >
+                            Add Locations
+                          </Button>
+                        </div>
+
+                        {/* Step 3 - Generate */}
+                        <div className="rounded-lg border p-5 flex flex-col bg-gray-100 dark:bg-gray-800/30 opacity-60">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium bg-gray-400 text-white">
+                              3
+                            </span>
+                            <h4 className="font-medium">Generate Content</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground flex-1">
+                            Generate AI-powered landing pages for each keyword + location combination.
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-3">Complete steps 1 & 2 first</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            disabled
+                          >
+                            Generate Pages
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Alternative: CSV Upload */}
+                      <div className="mt-6 text-center">
+                        <p className="text-sm text-muted-foreground mb-2">Or import existing data:</p>
                         <Button
                           variant="outline"
+                          size="sm"
                           onClick={() => setShowUploadCsvDialog(true)}
                         >
                           <Upload className="mr-2 h-4 w-4" />
@@ -381,12 +461,12 @@ export function ProjectDetailPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setShowAddLocationsDialog(true)}
+                          onClick={() => setShowAddServiceDialog(true)}
                           style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
                           className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
-                          Add Locations
+                          Services
                         </Button>
                         <Button
                           size="sm"
@@ -395,8 +475,18 @@ export function ProjectDetailPage() {
                           style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
                           className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
                         >
-                                <Plus className="mr-0 h-4 w-4" />
+                          <Plus className="mr-0 h-4 w-4" />
                           Keywords
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowAddLocationsDialog(true)}
+                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
+                        >
+                          <Plus className="mr-0 h-4 w-4" />
+                          Locations
                         </Button>
                         <Button
                           size="sm"
@@ -454,7 +544,12 @@ export function ProjectDetailPage() {
                   <div className="grid grid-cols-2 gap-6">
                     {/* Left Column - Project Details */}
                     <div className="space-y-6 border rounded-lg p-6">
-                      <h3 className="text-lg font-semibold mb-4">Project Details</h3>
+                      <h3 className="text-lg font-semibold mb-2">Project Details</h3>
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3 mb-4">
+                        <p className="text-sm text-muted-foreground">
+                          These details are used in your AI-generated content to personalise pages with your business information and contact details.
+                        </p>
+                      </div>
                       
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
@@ -541,7 +636,12 @@ export function ProjectDetailPage() {
 
                     {/* Right Column - WordPress Settings */}
                     <div className="space-y-6 border rounded-lg p-6">
-                      <h3 className="text-lg font-semibold mb-4">WordPress Settings</h3>
+                      <h3 className="text-lg font-semibold mb-2">WordPress Settings</h3>
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3 mb-4">
+                        <p className="text-sm text-muted-foreground">
+                          Configure your WordPress connection to publish generated pages directly to your website.
+                        </p>
+                      </div>
 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">WordPress URL</p>
@@ -679,6 +779,13 @@ export function ProjectDetailPage() {
         open={showAddSpecificDialog}
         onOpenChange={setShowAddSpecificDialog}
         baseKeyword={project?.base_keyword || ''}
+      />
+
+      {/* Add Service Dialog (for onboarding flow) */}
+      <AddServiceDialog
+        projectId={projectId}
+        open={showAddServiceDialog}
+        onOpenChange={setShowAddServiceDialog}
       />
 
       {/* Add Locations Dialog (New - uses keywords from Services) */}

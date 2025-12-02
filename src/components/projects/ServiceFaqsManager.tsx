@@ -20,6 +20,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus, Trash2, Loader2, HelpCircle, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -153,11 +160,22 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Service FAQs</CardTitle>
-          <CardDescription>
-            Add frequently asked questions for each service. These will be included in generated content.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle>Service FAQs</CardTitle>
+            <CardDescription>
+              Add frequently asked questions for each service. These will be included in generated content.
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            style={{ backgroundColor: 'var(--brand-dark)' }}
+            className="hover:opacity-90 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add FAQ
+          </Button>
         </CardHeader>
         <CardContent>
           <Accordion type="multiple" className="w-full">
@@ -186,15 +204,41 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
       </Card>
 
       {/* Add FAQ Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open)
+        if (!open) {
+          setSelectedServiceId(null)
+          setNewQuestion('')
+          setNewAnswer('')
+        }
+      }}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add FAQ</DialogTitle>
             <DialogDescription>
-              Add a frequently asked question for this service.
+              Add a frequently asked question for a service.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="service">Service</Label>
+              <Select
+                value={selectedServiceId || ''}
+                onValueChange={(value) => setSelectedServiceId(value)}
+                disabled={createFaqMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services?.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="question">Question</Label>
               <Input
@@ -227,7 +271,7 @@ export function ServiceFaqsManager({ projectId }: ServiceFaqsManagerProps) {
             </Button>
             <Button
               onClick={() => createFaqMutation.mutate()}
-              disabled={!newQuestion.trim() || !newAnswer.trim() || createFaqMutation.isPending}
+              disabled={!selectedServiceId || !newQuestion.trim() || !newAnswer.trim() || createFaqMutation.isPending}
               style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >

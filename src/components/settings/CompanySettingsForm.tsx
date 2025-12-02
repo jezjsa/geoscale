@@ -57,33 +57,57 @@ export function CompanySettingsForm({ userId }: CompanySettingsFormProps) {
       queryClient.invalidateQueries({ queryKey: ['companySettings', userId] })
       toast.success('Settings saved successfully!')
       
-      // Auto-create project for individual users (starter/pro plans) if they don't have one
-      // Agency users manage multiple projects, so we don't auto-create for them
+      // For single-project users (starter/pro), sync company settings to their project
+      // Agency users manage multiple projects with separate settings
       const isAgencyUser = user?.plan === 'agency'
       
-      if (!isAgencyUser && !userProject) {
+      if (!isAgencyUser) {
         try {
-          const { data: newProject, error } = await supabase
-            .from('projects')
-            .insert({
-              user_id: userId,
-              project_name: formData.business_name || user?.name || 'My Project',
-              wp_url: '', // Required field, will be filled in later
-              wp_api_key: '', // Required field, will be filled in later
-            })
-            .select()
-            .single()
-          
-          if (newProject && !error) {
-            setUserProject(newProject)
-            toast.success('Project created successfully!')
-          } else if (error) {
-            console.error('Error creating project:', error)
-            toast.error('Failed to create project')
+          if (userProject) {
+            // Update existing project with company settings data
+            const { error } = await supabase
+              .from('projects')
+              .update({
+                company_name: formData.business_name || '',
+                phone_number: formData.phone_number || '',
+                contact_url: formData.contact_url || '',
+                service_description: formData.service_description || '',
+              })
+              .eq('id', userProject.id)
+            
+            if (error) {
+              console.error('Error updating project:', error)
+            } else {
+              // Invalidate project query so Project Settings page shows updated data
+              queryClient.invalidateQueries({ queryKey: ['project', userProject.id] })
+            }
+          } else {
+            // Create project with company settings data pre-filled
+            const { data: newProject, error } = await supabase
+              .from('projects')
+              .insert({
+                user_id: userId,
+                project_name: formData.business_name || user?.name || 'My Project',
+                company_name: formData.business_name || '',
+                phone_number: formData.phone_number || '',
+                contact_url: formData.contact_url || '',
+                service_description: formData.service_description || '',
+                wp_url: '', // Required field, will be filled in later
+                wp_api_key: '', // Required field, will be filled in later
+              })
+              .select()
+              .single()
+            
+            if (newProject && !error) {
+              setUserProject(newProject)
+              toast.success('Project created successfully!')
+            } else if (error) {
+              console.error('Error creating project:', error)
+              toast.error('Failed to create project')
+            }
           }
         } catch (err) {
-          console.error('Error creating project:', err)
-          toast.error('Failed to create project')
+          console.error('Error syncing project:', err)
         }
       }
     },

@@ -39,11 +39,24 @@ export function WordPressApiKeyDisplay({
           value={apiKey}
           readOnly
           className="font-mono text-sm"
+          placeholder="Click generate to create an API key"
         />
+        {onRegenerate && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            title={apiKey ? "Regenerate API key" : "Generate API key"}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
         <Button
           variant="outline"
           size="icon"
           onClick={handleCopy}
+          disabled={!apiKey}
           title="Copy API key"
         >
           <Copy className="h-4 w-4" />
@@ -54,20 +67,9 @@ export function WordPressApiKeyDisplay({
             size="icon"
             onClick={onTestConnection}
             disabled={isTesting || !canTest}
-            title={canTest ? "Test WordPress connection" : "Enter WordPress URL first"}
+            title={canTest ? "Test WordPress connection" : "Enter WordPress URL and generate API key first"}
           >
             <TestTube2 className={`h-4 w-4 ${isTesting ? 'animate-pulse' : ''}`} />
-          </Button>
-        )}
-        {onRegenerate && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onRegenerate}
-            disabled={isRegenerating}
-            title="Regenerate API key"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
           </Button>
         )}
       </div>

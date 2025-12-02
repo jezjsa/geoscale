@@ -88,7 +88,7 @@ export function PlanUsageCardCompact() {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm">Combinations Generated</span>
+              <span className="text-sm">Combinations Created</span>
             </div>
             <span className={`text-sm ${
               isAtLimit(percentUsed.combinations) ? 'text-red-600' : 
