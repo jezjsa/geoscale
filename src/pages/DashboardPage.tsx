@@ -208,8 +208,9 @@ export function DashboardPage() {
           <PlanUsageCardCompact />
         </div>
 
-        {isIndividual && (
-          <div className="mt-4">
+        {/* Company Settings & WordPress Plugin - side by side */}
+        <div className="grid gap-4 md:grid-cols-2 mt-4">
+          {isIndividual && (
             <Card>
               <CardHeader>
                 <CardTitle>Company Settings</CardTitle>
@@ -221,11 +222,9 @@ export function DashboardPage() {
                 </Button>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
 
-        {/* WordPress Plugin Download */}
-        <div className="mt-4">
+          {/* WordPress Plugin Download */}
           <Card>
             <CardHeader>
               <CardTitle>WordPress Plugin</CardTitle>
