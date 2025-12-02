@@ -57,36 +57,38 @@ export function PlanUsageCardCompact() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Websites Usage */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm">Websites</span>
+        {/* Websites Usage - only show for multi-project plans */}
+        {limits.websiteLimit > 1 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Websites</span>
+              </div>
+              <span className={`text-sm ${
+                isAtLimit(percentUsed.projects) ? 'text-red-600' : 
+                isNearLimit(percentUsed.projects) ? 'text-orange-600' : 
+                'text-muted-foreground'
+              }`}>
+                {usage.projectCount} / {limits.websiteLimit}
+              </span>
             </div>
-            <span className={`text-sm ${
-              isAtLimit(percentUsed.projects) ? 'text-red-600' : 
-              isNearLimit(percentUsed.projects) ? 'text-orange-600' : 
-              'text-muted-foreground'
-            }`}>
-              {usage.projectCount} / {limits.websiteLimit}
-            </span>
+            <Progress 
+              value={percentUsed.projects} 
+              className={`h-1.5 ${
+                isAtLimit(percentUsed.projects) ? '[&>div]:bg-red-600' : 
+                isNearLimit(percentUsed.projects) ? '[&>div]:bg-orange-600' : '[&>div]:bg-[var(--brand-dark)]'
+              }`}
+            />
           </div>
-          <Progress 
-            value={percentUsed.projects} 
-            className={`h-1.5 ${
-              isAtLimit(percentUsed.projects) ? '[&>div]:bg-red-600' : 
-              isNearLimit(percentUsed.projects) ? '[&>div]:bg-orange-600' : '[&>div]:bg-[var(--brand-dark)]'
-            }`}
-          />
-        </div>
+        )}
 
         {/* Combination Pages Usage */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm">Pages</span>
+              <span className="text-sm">Combinations Generated</span>
             </div>
             <span className={`text-sm ${
               isAtLimit(percentUsed.combinations) ? 'text-red-600' : 
