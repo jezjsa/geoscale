@@ -10,6 +10,7 @@ import { AlertCircle, CheckCircle2, Download } from 'lucide-react'
 import { PlanUsageCardCompact } from '@/components/PlanUsageCardCompact'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
+import { getCurrentUserPlan } from '@/lib/plan-service'
 
 export function DashboardPage() {
   const { user, loading } = useAuth()
@@ -28,6 +29,13 @@ export function DashboardPage() {
     queryKey: ['dashboardStats', user?.id],
     queryFn: () => user ? getDashboardStats(user.id) : null,
     enabled: !!user,
+  })
+
+  // Get user's actual plan from plan_id
+  const { data: userPlan } = useQuery({
+    queryKey: ['userPlan', user?.id],
+    queryFn: () => getCurrentUserPlan(user?.id),
+    enabled: !!user?.id,
   })
 
   // Fetch user's project for individual users
@@ -84,7 +92,8 @@ export function DashboardPage() {
   }
 
   const isIndividual = user.plan === 'individual'
-  const isSingleProjectPlan = user.plan === 'starter' || user.plan === 'pro'
+  // Single project plans have websiteLimit of 1 (Starter, Pro)
+  const isSingleProjectPlan = userPlan?.websiteLimit === 1
   const hasCompanySettings = companySettings && 
     companySettings.business_name && 
     companySettings.phone_number && 
