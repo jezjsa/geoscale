@@ -163,11 +163,14 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                       &nbsp;
                     </p>
                   )}
-                  {perSiteSavings && (
-                    <div className="mt-2 inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded">
-                      Save £{perSiteSavings}/site
-                    </div>
-                  )}
+                  {/* Fixed height container for savings badge to maintain alignment */}
+                  <div className="h-8 flex items-center justify-center">
+                    {perSiteSavings && (
+                      <div className="inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded">
+                        Save £{perSiteSavings}/site
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="text-center mb-6">
