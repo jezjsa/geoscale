@@ -284,7 +284,7 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('combinations')}
               className={currentView === 'combinations' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Keyword Combinations
@@ -293,7 +293,7 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('services')}
               className={currentView === 'services' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Services
@@ -302,7 +302,7 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('faqs')}
               className={currentView === 'faqs' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               FAQs
@@ -311,7 +311,7 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('testimonials')}
               className={currentView === 'testimonials' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Testimonials
@@ -320,7 +320,7 @@ export function ProjectDetailPage() {
               variant="outline"
               onClick={() => setCurrentView('settings')}
               className={currentView === 'settings' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-gray-100' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Project Settings
