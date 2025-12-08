@@ -21,11 +21,12 @@ export function HomePage() {
         <div className="mb-8">
           <TypewriterLocations />
         </div>
-        <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-5xl mx-auto">
-          Generate Location-Based Landing Pages at Scale, in Minutes.
+        <p className="text-sm font-semibold uppercase tracking-wider text-[var(--brand-dark)] mb-4">SEO Agencies</p>
+        <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto">
+          Create, Manage and Track <br /> Geo-Landing Pages at Scale for multiple websites.
         </h1>
-        <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Create seo optimised geo pages, complete with content and metadata - then publish to WordPress with one click.
+        <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+          Produce optimised location pages in minutes, refresh content whenever needed, and publish to any connected WordPress site without switching logins.
         </p>
         <Button 
           asChild 
@@ -40,7 +41,7 @@ export function HomePage() {
             to="/plans" 
             className="text-[var(--brand-dark)] hover:underline font-medium"
           >
-            View Plans
+            Each plan comes with keyword rank tracking
           </Link>
         </div>
       </section>
@@ -193,37 +194,43 @@ export function HomePage() {
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">How does the 7-day free trial work?</h3>
               <p className="text-muted-foreground">
-                Start using GeoScale immediately with full access to all features. No credit card required. After 7 days, choose a plan that fits your needs.
+                Start using GeoScale immediately with full access to all features. Enter your card details at signup – you won't be charged for 7 days and can cancel anytime during the trial.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-2">Do I need technical knowledge to use GeoScale?</h3>
+              <h3 className="text-lg font-semibold mb-2">How many client websites can I manage?</h3>
               <p className="text-muted-foreground">
-                No technical skills required. Simply add your services and locations, and our AI generates SEO-optimized content that publishes directly to your WordPress site.
+                Our Agency plan supports up to 10 client websites, while Agency Pro supports up to 25. Each website gets 400 geo-landing pages and 100 tracked keywords. Need more? Additional websites can be added for £20/site/month.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-2">How many landing pages can I create?</h3>
+              <h3 className="text-lg font-semibold mb-2">Do my clients need GeoScale accounts?</h3>
               <p className="text-muted-foreground">
-                It depends on your plan. Starter includes 50 pages, Pro includes 400 pages, and Agency includes up to 4,000 pages across multiple websites.
+                No. You manage everything from your single agency dashboard. Connect each client's WordPress site, generate their pages, and publish directly – all without your clients needing to log in anywhere.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">Can I update content after publishing?</h3>
               <p className="text-muted-foreground">
-                Absolutely! You can edit your content in GeoScale at any time and republish to WordPress with one click. This makes it easy to refresh your pages regularly, which can help improve your SEO rankings.
+                Absolutely! Edit content in GeoScale at any time and republish to WordPress with one click. This makes it easy to refresh pages regularly across all your client sites, which can help improve SEO rankings.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">Does GeoScale work with any WordPress site?</h3>
               <p className="text-muted-foreground">
-                Yes! GeoScale integrates with any self-hosted WordPress site. Simply install our plugin and connect your site to start publishing pages automatically.
+                Yes! GeoScale integrates with any self-hosted WordPress site. Install our plugin, generate a unique API key in your project settings, and enter it in WordPress to connect. Once linked, you can publish pages automatically.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-2">How does position tracking work?</h3>
+              <h3 className="text-lg font-semibold mb-2">Can I manage meta titles and descriptions for existing pages?</h3>
               <p className="text-muted-foreground">
-                GeoScale monitors your Google search rankings for your location pages. You choose which keyword/location combinations to track. Starter plans include 10 tracked combinations, Pro includes 50, and Agency includes 500. Tracking frequency is weekly for Starter and daily for Pro and Agency plans.
+                Yes! Once connected, GeoScale pulls in all pages from your client's WordPress site. You can then edit meta titles and descriptions for every page – not just the geo-landing pages you create with GeoScale. It's a complete on-page SEO management tool.
+              </p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-2">How does keyword rank tracking work?</h3>
+              <p className="text-muted-foreground">
+                GeoScale monitors Google search rankings for your clients' location pages. Each website gets up to 100 tracked keyword/location combinations with every-other-day updates, so you can report on performance without additional rank tracking tools.
               </p>
             </div>
           </div>

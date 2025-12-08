@@ -64,7 +64,7 @@ export const getAllPlans = async (): Promise<Plan[]> => {
 /**
  * Get a specific plan by name
  */
-export const getPlanByName = async (name: 'starter' | 'pro' | 'agency'): Promise<Plan | null> => {
+export const getPlanByName = async (name: 'starter' | 'pro' | 'agency' | 'agency_pro' | 'agency_plus'): Promise<Plan | null> => {
   const plans = await getAllPlans();
   return plans.find(p => p.name === name) || null;
 };
@@ -128,7 +128,7 @@ export const getCurrentUserPlan = async (userId?: string): Promise<Plan | null> 
  */
 export const isAgencyUser = async (): Promise<boolean> => {
   const plan = await getCurrentUserPlan();
-  return plan?.name === 'agency' || plan?.name === 'agency_plus';
+  return plan?.name === 'agency' || plan?.name === 'agency_pro' || plan?.name === 'agency_plus';
 };
 
 /**
@@ -136,7 +136,7 @@ export const isAgencyUser = async (): Promise<boolean> => {
  */
 export const canManageMultipleProjects = async (): Promise<boolean> => {
   const plan = await getCurrentUserPlan();
-  return plan?.name === 'agency' || plan?.name === 'agency_plus';
+  return plan?.name === 'agency' || plan?.name === 'agency_pro' || plan?.name === 'agency_plus';
 };
 
 /**

@@ -15,7 +15,7 @@ import { usePageMeta } from '@/hooks/usePageMeta'
 export function SignUpPage() {
   usePageMeta({
     title: 'Sign Up - GeoScale',
-    description: 'Create your GeoScale account and start generating location-based landing pages. 7-day free trial, no credit card required.'
+    description: 'Create your GeoScale account and start generating location-based landing pages. 7-day free trial included.'
   })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -96,7 +96,7 @@ export function SignUpPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <img src="/icon.svg" alt="GeoScale" className="h-16 w-16 mx-auto mb-4" />
-          <h1 className="text-4xl font-bold mb-2 text-[var(--brand-off-white)]">Start Your Free Trial</h1>
+          <h1 className="text-4xl font-bold mb-2 text-foreground">Start Your Free Trial</h1>
           <p className="text-muted-foreground">7 days free, then billed monthly</p>
         </div>
 

@@ -9,11 +9,14 @@ interface PlansSelectionProps {
   showHeader?: boolean;
 }
 
+type PlanCategory = 'agency' | 'single';
+
 export default function PlansSelection({ onSelectPlan, showHeader = true }: PlansSelectionProps) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<PlanCategory>('agency');
 
   useEffect(() => {
     fetchPlans();
@@ -53,7 +56,7 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
   return (
     <div className="w-full">
       {showHeader && (
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <h1 className="text-3xl sm:text-5xl font-black text-foreground mb-4">
             Choose Your Plan
           </h1>
@@ -62,6 +65,32 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </p>
         </div>
       )}
+
+      {/* Plan Category Toggle */}
+      <div className="flex justify-center mb-10">
+        <div className="inline-flex rounded-full p-1 bg-muted">
+          <button
+            onClick={() => setActiveCategory('agency')}
+            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+              activeCategory === 'agency'
+                ? 'bg-[var(--brand-dark)] text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Agency Plans
+          </button>
+          <button
+            onClick={() => setActiveCategory('single')}
+            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+              activeCategory === 'single'
+                ? 'bg-[var(--brand-dark)] text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Single Site
+          </button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -78,10 +107,19 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {plans.map((plan: Plan, index: number) => {
-            // Mark Pro (index 1) as popular
-            const isPopular = index === 1;
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {plans
+            .filter((plan: Plan) => {
+              if (activeCategory === 'agency') {
+                return plan.name === 'agency' || plan.name === 'agency_pro';
+              } else {
+                return plan.name === 'starter' || plan.name === 'pro';
+              }
+            })
+            .map((plan: Plan) => {
+            // Mark Agency and Pro as popular in their respective categories
+            const isPopular = (activeCategory === 'agency' && plan.name === 'agency') || 
+                              (activeCategory === 'single' && plan.name === 'pro');
 
             return (
               <div
@@ -161,21 +199,34 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
 
       {!loading && !error && (
         <>
-          {/* Agency Info Card */}
+          {/* Info Card */}
           <div className="mt-12 max-w-4xl mx-auto">
             <div className="bg-muted/50 rounded-2xl p-8 text-center">
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                Designed for Agencies to Scale Confidently
-              </h3>
-              <p className="text-muted-foreground">
-                We built the Agency plan to give SEO teams a larger tracked-keyword allowance and predictable fixed costs. This lets agencies onboard more clients, grow their local SEO offering, and keep monthly expenses stable – even as their portfolio increases.
-              </p>
+              {activeCategory === 'agency' ? (
+                <>
+                  <h3 className="text-xl font-bold text-foreground mb-3">
+                    Designed for Agencies to Scale Confidently
+                  </h3>
+                  <p className="text-muted-foreground">
+                    We built the Agency plans to give SEO teams a larger tracked-keyword allowance and predictable fixed costs. This lets agencies onboard more clients, grow their local SEO offering, and keep monthly expenses stable – even as their portfolio increases.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-foreground mb-3">
+                    Perfect for Individual Websites
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Our Single Site plans are ideal for business owners and freelancers managing one website. Get all the power of GeoScale's AI-driven geo pages without the complexity of multi-site management.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
           <div className="mt-16 text-center">
             <p className="text-muted-foreground mb-4">
-              All plans include a 7-day free trial. No credit card required.
+              All plans include a 7-day free trial. Cancel anytime during the trial period.
             </p>
             <p className="text-sm text-muted-foreground">
               Need a custom plan or have questions?{' '}

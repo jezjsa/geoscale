@@ -1,7 +1,7 @@
 // Plan types for subscription management
 export interface Plan {
   id: string;
-  name: 'starter' | 'pro' | 'agency' | 'agency_plus';
+  name: 'starter' | 'pro' | 'agency' | 'agency_pro' | 'agency_plus';
   displayName: string;
   description: string;
   websiteLimit: number;
