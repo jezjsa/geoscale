@@ -99,11 +99,6 @@ export function ProjectDetailPage() {
   // Check if any services exist (keywords are optional - user can add locations once services exist)
   const hasServices = services.length > 0
   
-  // Check if any services have selected keywords (for display purposes)
-  const hasSelectedKeywords = services.some(service => 
-    (service.selected_keyword_count || 0) > 0
-  )
-
   // Get tracked count for this project
   const { data: trackedCount = 0 } = useQuery({
     queryKey: ['trackedCount', projectId],
