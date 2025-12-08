@@ -15,7 +15,7 @@ import { usePageMeta } from '@/hooks/usePageMeta'
 export function SignUpPage() {
   usePageMeta({
     title: 'Sign Up - GeoScale',
-    description: 'Create your GeoScale account and start generating location-based landing pages. 7-day free trial included.'
+    description: 'Create your GeoScale account and start generating location-based landing pages. 14-day free trial included.'
   })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -81,9 +81,9 @@ export function SignUpPage() {
     })
   }
 
-  // Calculate trial end date (7 days from now)
+  // Calculate trial end date (14 days from now)
   const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 7)
+  trialEndDate.setDate(trialEndDate.getDate() + 14)
   const formattedTrialEndDate = trialEndDate.toLocaleDateString('en-GB', { 
     day: '2-digit', 
     month: '2-digit', 
@@ -97,7 +97,7 @@ export function SignUpPage() {
         <div className="text-center mb-8">
           <img src="/icon.svg" alt="GeoScale" className="h-16 w-16 mx-auto mb-4" />
           <h1 className="text-4xl font-bold mb-2 text-foreground">Start Your Free Trial</h1>
-          <p className="text-muted-foreground">7 days free, then billed monthly</p>
+          <p className="text-muted-foreground">14 days free, then billed monthly</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -245,7 +245,7 @@ export function SignUpPage() {
                 className="w-full bg-[var(--brand-dark)] hover:bg-[#005030] text-white h-12 text-base font-semibold" 
                 disabled={signUpMutation.isPending}
               >
-                {signUpMutation.isPending ? 'Creating Account...' : 'Start 7-Day Free Trial'}
+                {signUpMutation.isPending ? 'Creating Account...' : 'Start 14-Day Free Trial'}
               </Button>
               
               <div className="mt-4 text-center space-y-1">
@@ -253,7 +253,7 @@ export function SignUpPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span><strong>7 days free</strong>, then billed monthly</span>
+                  <span><strong>14 days free</strong>, then billed monthly</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   No charge until {formattedTrialEndDate}

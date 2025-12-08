@@ -41,7 +41,7 @@ export function TermsPage() {
             <section>
               <h2 className="text-2xl font-semibold mb-4">4. Subscription and Payment</h2>
               <p className="text-muted-foreground mb-4">
-                <strong>Free Trial:</strong> New users receive a 7-day free trial with full access to features. No credit card is required to start the trial.
+                <strong>Free Trial:</strong> New users receive a 14-day free trial with full access to features. No credit card is required to start the trial.
               </p>
               <p className="text-muted-foreground mb-4">
                 <strong>Billing:</strong> Paid subscriptions are billed monthly or as a one-off payment depending on the plan selected. Payments are processed securely through Stripe.

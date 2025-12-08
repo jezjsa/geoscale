@@ -120,6 +120,12 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
             // Mark Agency and Pro as popular in their respective categories
             const isPopular = (activeCategory === 'agency' && plan.name === 'agency') || 
                               (activeCategory === 'single' && plan.name === 'pro');
+            
+            // Calculate per-site savings for Agency Pro
+            const agencyPlan = plans.find((p: Plan) => p.name === 'agency');
+            const perSiteSavings = plan.name === 'agency_pro' && agencyPlan 
+              ? ((agencyPlan.basePriceGbp / agencyPlan.websiteLimit) - (plan.basePriceGbp / plan.websiteLimit)).toFixed(2)
+              : null;
 
             return (
               <div
@@ -157,6 +163,11 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                       &nbsp;
                     </p>
                   )}
+                  {perSiteSavings && (
+                    <div className="mt-2 inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded">
+                      Save £{perSiteSavings}/site
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-center mb-6">
@@ -187,9 +198,11 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
                   >
                     Get Started
                   </button>
-                  <p className="text-sm text-muted-foreground text-center mt-3">
-                    Start your 7-day free trial
-                  </p>
+                  {plan.name !== 'starter' && (
+                    <p className="text-sm text-muted-foreground text-center mt-3">
+                      Start your 14-day free trial
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -226,7 +239,7 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
 
           <div className="mt-16 text-center">
             <p className="text-muted-foreground mb-4">
-              All plans include a 7-day free trial. Cancel anytime during the trial period.
+              Monthly plans include a 14-day free trial. Cancel anytime during the trial period.
             </p>
             <p className="text-sm text-muted-foreground">
               Need a custom plan or have questions?{' '}

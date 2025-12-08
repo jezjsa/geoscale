@@ -21,7 +21,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Trash2, Loader2, Settings, AlertTriangle, Search, HelpCircle, Briefcase } from 'lucide-react'
+import { Plus, Trash2, Loader2, Settings, AlertTriangle, Search, Briefcase, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   getProjectServices,
@@ -32,8 +32,12 @@ import {
   bulkToggleKeywords,
   getProjectCombinationStats,
   createServiceFaq,
+  getServiceFaqs,
+  updateServiceFaq,
+  deleteServiceFaq,
   type ProjectService,
   type ServiceKeyword,
+  type ServiceFaq,
 } from '@/api/services'
 import { getKeywordVariations } from '@/api/dataforseo'
 import { addServiceKeywords } from '@/api/services'
@@ -93,6 +97,16 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
   const [showAddFaqDialog, setShowAddFaqDialog] = useState(false)
   const [newFaqQuestion, setNewFaqQuestion] = useState('')
   const [newFaqAnswer, setNewFaqAnswer] = useState('')
+  
+  // For editing FAQ
+  const [faqToEdit, setFaqToEdit] = useState<ServiceFaq | null>(null)
+  const [showEditFaqDialog, setShowEditFaqDialog] = useState(false)
+  const [editFaqQuestion, setEditFaqQuestion] = useState('')
+  const [editFaqAnswer, setEditFaqAnswer] = useState('')
+  
+  // For deleting FAQ
+  const [faqToDelete, setFaqToDelete] = useState<ServiceFaq | null>(null)
+  const [showDeleteFaqDialog, setShowDeleteFaqDialog] = useState(false)
 
   // Step 1: Fetch keywords first, DON'T create service yet
   const handleCreateService = async () => {
@@ -295,12 +309,61 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
       toast.success(`FAQ added to "${serviceToAddFaq.name}"`)
       queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
       queryClient.invalidateQueries({ queryKey: ['serviceFaqs', serviceToAddFaq.id] })
+      queryClient.invalidateQueries({ queryKey: ['serviceFaqs'] })
       setShowAddFaqDialog(false)
       setServiceToAddFaq(null)
       setNewFaqQuestion('')
       setNewFaqAnswer('')
     } catch (error: any) {
       toast.error('Failed to add FAQ', { description: error.message })
+    }
+  }
+
+  // Handle editing FAQ
+  const handleEditFaqClick = (faq: ServiceFaq) => {
+    setFaqToEdit(faq)
+    setEditFaqQuestion(faq.question)
+    setEditFaqAnswer(faq.answer)
+    setShowEditFaqDialog(true)
+  }
+
+  // Update FAQ
+  const handleUpdateFaq = async () => {
+    if (!editFaqQuestion.trim() || !editFaqAnswer.trim() || !faqToEdit) return
+    
+    try {
+      await updateServiceFaq(faqToEdit.id, { question: editFaqQuestion.trim(), answer: editFaqAnswer.trim() })
+      toast.success('FAQ updated')
+      queryClient.invalidateQueries({ queryKey: ['serviceFaqs'] })
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+      setShowEditFaqDialog(false)
+      setFaqToEdit(null)
+      setEditFaqQuestion('')
+      setEditFaqAnswer('')
+    } catch (error: any) {
+      toast.error('Failed to update FAQ', { description: error.message })
+    }
+  }
+
+  // Handle deleting FAQ
+  const handleDeleteFaqClick = (faq: ServiceFaq) => {
+    setFaqToDelete(faq)
+    setShowDeleteFaqDialog(true)
+  }
+
+  // Delete FAQ
+  const handleDeleteFaq = async () => {
+    if (!faqToDelete) return
+    
+    try {
+      await deleteServiceFaq(faqToDelete.id)
+      toast.success('FAQ deleted')
+      queryClient.invalidateQueries({ queryKey: ['serviceFaqs'] })
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+      setShowDeleteFaqDialog(false)
+      setFaqToDelete(null)
+    } catch (error: any) {
+      toast.error('Failed to delete FAQ', { description: error.message })
     }
   }
 
@@ -425,7 +488,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <ServiceKeywordsPanel
+                    <ServiceContentPanel
                       service={service}
                       projectId={projectId}
                       combinationLimit={combinationLimit}
@@ -434,6 +497,8 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                       onDelete={() => handleDeleteClick(service)}
                       onFindKeywords={() => handleFindKeywordsForService(service)}
                       onAddFaq={() => handleAddFaqForService(service)}
+                      onEditFaq={handleEditFaqClick}
+                      onDeleteFaq={handleDeleteFaqClick}
                     />
                   </AccordionContent>
                 </AccordionItem>
@@ -625,7 +690,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
         </DialogContent>
       </Dialog>
 
-      {/* Find Keywords for Existing Service Dialog */}
+      {/* Find Related Keywords for Existing Service Dialog */}
       <Dialog open={showFindKeywordsDialog} onOpenChange={(open) => {
         if (!open) {
           setShowFindKeywordsDialog(false)
@@ -637,7 +702,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
       }}>
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Find Keywords for {serviceToAddKeywords?.name}</DialogTitle>
+            <DialogTitle>Find Related Keywords for {serviceToAddKeywords?.name}</DialogTitle>
             <DialogDescription>
               Search for related keywords to add to this service.
             </DialogDescription>
@@ -804,12 +869,100 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit FAQ Dialog */}
+      <Dialog open={showEditFaqDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowEditFaqDialog(false)
+          setFaqToEdit(null)
+          setEditFaqQuestion('')
+          setEditFaqAnswer('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit FAQ</DialogTitle>
+            <DialogDescription>
+              Update this frequently asked question.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editQuestion">Question</Label>
+              <Input
+                id="editQuestion"
+                placeholder="e.g., How long does a website take to build?"
+                value={editFaqQuestion}
+                onChange={(e) => setEditFaqQuestion(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAnswer">Answer</Label>
+              <Textarea
+                id="editAnswer"
+                placeholder="Provide a helpful answer..."
+                value={editFaqAnswer}
+                onChange={(e) => setEditFaqAnswer(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditFaqDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateFaq}
+              disabled={!editFaqQuestion.trim() || !editFaqAnswer.trim()}
+              style={{ backgroundColor: 'var(--brand-dark)' }}
+              className="hover:opacity-90 text-white"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete FAQ Confirmation Dialog */}
+      <Dialog open={showDeleteFaqDialog} onOpenChange={setShowDeleteFaqDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete FAQ</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this FAQ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {faqToDelete && (
+            <div className="py-4">
+              <p className="font-medium text-sm">{faqToDelete.question}</p>
+              <p className="text-sm text-muted-foreground mt-1">{faqToDelete.answer}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteFaqDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteFaq}
+            >
+              Delete FAQ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// Sub-component for managing keywords within a service
-function ServiceKeywordsPanel({
+// Sub-component for managing service content (keywords and FAQs) with inline tabs
+function ServiceContentPanel({
   service,
   projectId,
   combinationLimit,
@@ -818,6 +971,8 @@ function ServiceKeywordsPanel({
   onDelete,
   onFindKeywords,
   onAddFaq,
+  onEditFaq,
+  onDeleteFaq,
 }: {
   service: ProjectService
   projectId: string
@@ -827,12 +982,22 @@ function ServiceKeywordsPanel({
   onDelete: () => void
   onFindKeywords: () => void
   onAddFaq: () => void
+  onEditFaq: (faq: ServiceFaq) => void
+  onDeleteFaq: (faq: ServiceFaq) => void
 }) {
+  const [activeTab, setActiveTab] = useState<'keywords' | 'faqs'>('keywords')
   const queryClient = useQueryClient()
 
-  const { data: keywords, isLoading } = useQuery({
+  // Keywords query
+  const { data: keywords, isLoading: keywordsLoading } = useQuery({
     queryKey: ['serviceKeywords', service.id],
     queryFn: () => getServiceKeywords(service.id),
+  })
+
+  // FAQs query
+  const { data: faqs, isLoading: faqsLoading } = useQuery({
+    queryKey: ['serviceFaqs', service.id],
+    queryFn: () => getServiceFaqs(service.id),
   })
 
   const toggleMutation = useMutation({
@@ -856,7 +1021,6 @@ function ServiceKeywordsPanel({
   })
 
   const handleToggle = (keyword: ServiceKeyword) => {
-    // Check if selecting would exceed limit
     if (!keyword.is_selected) {
       const newTotal = currentTotal + locationCount
       if (newTotal > combinationLimit) {
@@ -892,46 +1056,34 @@ function ServiceKeywordsPanel({
     bulkToggleMutation.mutate({ keywordIds: selectedIds, isSelected: false })
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   const selectedCount = keywords?.filter(k => k.is_selected).length || 0
   const totalCount = keywords?.length || 0
 
   return (
     <div className="space-y-4 pt-2">
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleSelectAll}>
-            Select All
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleDeselectAll}>
-            Deselect All
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={onFindKeywords}
-            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+      {/* Inline Tab Switcher */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveTab('keywords')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'keywords'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <Search className="h-4 w-4 mr-1" />
-            Find Keywords
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={onAddFaq}
-            style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+            Keywords ({service.selected_keyword_count || 0}/{service.keyword_count || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('faqs')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'faqs'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <HelpCircle className="h-4 w-4 mr-1" />
-            Add FAQ
-          </Button>
+            FAQs ({service.faq_count || 0})
+          </button>
         </div>
         <Button
           size="sm"
@@ -944,42 +1096,143 @@ function ServiceKeywordsPanel({
         </Button>
       </div>
 
-      {/* Keywords Grid */}
-      {!keywords || keywords.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4">
-          No keywords found for this service.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {keywords.map((keyword) => (
-            <div
-              key={keyword.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border ${
-                keyword.is_selected ? 'bg-accent/50 border-accent' : 'bg-background'
-              }`}
-            >
-              <Checkbox
-                checked={keyword.is_selected}
-                onCheckedChange={() => handleToggle(keyword)}
-                disabled={toggleMutation.isPending}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{keyword.keyword}</p>
-                {keyword.search_volume && (
-                  <p className="text-xs text-muted-foreground">
-                    {keyword.search_volume.toLocaleString()} searches/mo
-                  </p>
-                )}
-              </div>
+      {/* Keywords Tab Content */}
+      {activeTab === 'keywords' && (
+        <div className="space-y-4">
+          {keywordsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ))}
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={handleSelectAll}>
+                  Select All
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleDeselectAll}>
+                  Deselect All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={onFindKeywords}
+                  style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+                >
+                  <Search className="h-4 w-4 mr-1" />
+                  Find Related Keywords
+                </Button>
+              </div>
+
+              {!keywords || keywords.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No keywords found for this service.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {keywords.map((keyword) => (
+                    <div
+                      key={keyword.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        keyword.is_selected ? 'bg-accent/50 border-accent' : 'bg-background'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={keyword.is_selected}
+                        onCheckedChange={() => handleToggle(keyword)}
+                        disabled={toggleMutation.isPending}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{keyword.keyword}</p>
+                        {keyword.search_volume && (
+                          <p className="text-xs text-muted-foreground">
+                            {keyword.search_volume.toLocaleString()} searches/mo
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                {selectedCount} of {totalCount} keywords selected
+                {locationCount > 0 && ` = ${selectedCount * locationCount} combinations`}
+              </p>
+            </>
+          )}
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {selectedCount} of {totalCount} keywords selected
-        {locationCount > 0 && ` = ${selectedCount * locationCount} combinations`}
-      </p>
+      {/* FAQs Tab Content */}
+      {activeTab === 'faqs' && (
+        <div className="space-y-4">
+          {faqsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !faqs || faqs.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground mb-3">
+                No FAQs for this service yet.
+              </p>
+              <Button
+                size="sm"
+                onClick={onAddFaq}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add First FAQ
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onAddFaq}
+                style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add FAQ
+              </Button>
+              <div className="space-y-3">
+                {faqs.map((faq) => (
+                  <div
+                    key={faq.id}
+                    className="p-4 rounded-lg border bg-background"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{faq.question}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{faq.answer}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => onEditFaq(faq)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          onClick={() => onDeleteFaq(faq)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

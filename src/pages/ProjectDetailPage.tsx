@@ -15,7 +15,6 @@ import { ProjectTestimonialsManager } from '@/components/projects/ProjectTestimo
 import { ProjectTestimonialsAddButton } from '@/components/projects/ProjectTestimonialsAddButton'
 import { WordPressApiKeyDisplay } from '@/components/projects/WordPressApiKeyDisplay'
 import { ProjectServicesManager } from '@/components/projects/ProjectServicesManager'
-import { ServiceFaqsManager } from '@/components/projects/ServiceFaqsManager'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Upload } from 'lucide-react'
+import { ArrowLeft, Plus, Upload, AlertTriangle } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import { getProjectCombinations, getTrackedCombinationsCount } from '@/api/combinations'
 import { getProjectServices } from '@/api/services'
@@ -45,7 +44,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentView = (searchParams.get('view') as 'combinations' | 'services' | 'testimonials' | 'faqs' | 'settings') || 'combinations'
+  const currentView = (searchParams.get('view') as 'combinations' | 'services' | 'testimonials' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
   
   // Check if user is on individual plan (not agency)
@@ -63,10 +62,11 @@ export function ProjectDetailPage() {
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
   const [wpTemplates, setWpTemplates] = useState<Array<{ value: string; label: string }>>([])
   const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [wpConnectionVerified, setWpConnectionVerified] = useState(false)
   const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   
-  const setCurrentView = (view: 'combinations' | 'services' | 'testimonials' | 'faqs' | 'settings') => {
+  const setCurrentView = (view: 'combinations' | 'services' | 'testimonials' | 'settings') => {
     setSearchParams({ view })
   }
 
@@ -176,6 +176,7 @@ export function ProjectDetailPage() {
     try {
       const templates = await fetchWordPressTemplates(wpUrl, project.wp_api_key)
       setWpTemplates(templates)
+      setWpConnectionVerified(true) // Successfully loaded templates = connection works
     } catch (error) {
       console.error('Failed to load WordPress templates:', error)
       // Silently fail - user can still use default template
@@ -183,6 +184,7 @@ export function ProjectDetailPage() {
       setWpTemplates([
         { value: '', label: 'Default Template' }
       ])
+      setWpConnectionVerified(false) // Failed to load = connection not verified
     } finally {
       setLoadingTemplates(false)
     }
@@ -292,15 +294,6 @@ export function ProjectDetailPage() {
                 : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
             >
               Services
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentView('faqs')}
-              className={currentView === 'faqs' 
-                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
-                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
-            >
-              FAQs
             </Button>
             <Button
               variant="outline"
@@ -533,8 +526,6 @@ export function ProjectDetailPage() {
                   <ProjectTestimonialsManager projectId={projectId} />
                 </CardContent>
               </Card>
-            ) : currentView === 'faqs' ? (
-              <ServiceFaqsManager projectId={projectId} />
             ) : currentView === 'settings' ? (
             <Card>
               <CardHeader>
@@ -676,6 +667,7 @@ export function ProjectDetailPage() {
                     wordpressUrl={project.blog_url || project.wp_url}
                     isRegenerating={isRegeneratingApiKey}
                     isTesting={isTestingConnection}
+                    connectionVerified={wpConnectionVerified}
                     onTestConnection={async () => {
                       try {
                         setIsTestingConnection(true)
@@ -683,11 +675,16 @@ export function ProjectDetailPage() {
                         const result = await testWordPressConnection(testUrl, project.wp_api_key)
                         if (result.success) {
                           toast.success(result.message)
+                          setWpConnectionVerified(true)
+                          // Reload templates now that connection is verified
+                          loadWpTemplates()
                         } else {
                           toast.error(result.message)
+                          setWpConnectionVerified(false)
                         }
                       } catch (error) {
                         toast.error('Failed to test connection')
+                        setWpConnectionVerified(false)
                       } finally {
                         setIsTestingConnection(false)
                       }
@@ -707,12 +704,31 @@ export function ProjectDetailPage() {
                   />
                 </div>
 
+                {/* WordPress Connection Warning */}
+                {(!(project.blog_url || project.wp_url) || !project.wp_api_key || (!wpConnectionVerified && !loadingTemplates)) && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-amber-800 dark:text-amber-400">WordPress connection required</p>
+                        <p className="text-amber-700 dark:text-amber-500 text-xs mt-1">
+                          {!(project.blog_url || project.wp_url) 
+                            ? 'Enter your WordPress URL above to connect.'
+                            : !project.wp_api_key
+                            ? 'Generate an API key and add it to your WordPress plugin settings.'
+                            : 'Install the GeoScale plugin on your WordPress site and paste the API key into the plugin settings. Then click the test button above to verify the connection.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                         <p className="text-sm font-medium text-muted-foreground mb-2">Page Template</p>
                         <Select
                           value={project.wp_page_template || undefined}
                           onValueChange={handlePageTemplateUpdate}
-                          disabled={loadingTemplates || !(project.blog_url || project.wp_url) || !project.wp_api_key}
+                          disabled={loadingTemplates || !(project.blog_url || project.wp_url) || !project.wp_api_key || !wpConnectionVerified}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder={loadingTemplates ? 'Loading templates...' : 'Select template'} />
@@ -737,7 +753,7 @@ export function ProjectDetailPage() {
                           {!(project.blog_url || project.wp_url) || !project.wp_api_key 
                             ? 'Configure WordPress URL and API key to load templates'
                             : wpTemplates.length === 0 && !loadingTemplates
-                            ? 'Install the GeoScale WordPress plugin to see available templates'
+                            ? 'Test your connection above to load available templates'
                             : 'WordPress page template for generated pages'}
                         </p>
                 </div>

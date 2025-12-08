@@ -143,12 +143,13 @@ export function AccountPage() {
   const isNearLimit = (percent: number) => percent >= 80;
   const isAtLimit = (percent: number) => percent >= 100;
 
-  // Calculate agency plan pricing
+  // Calculate agency plan pricing (use current plan's price if on agency/agency_pro)
   const agencyPlan = allPlans.find(p => p.name === 'agency');
-  const perProjectPrice = agencyPlan?.perSitePriceGbp || 25;
+  const perProjectPrice = plan?.perSitePriceGbp || agencyPlan?.perSitePriceGbp || 25;
   const agencyBasePrice = agencyPlan?.basePriceGbp || 99;
+  const currentPlanBasePrice = plan?.basePriceGbp || agencyBasePrice;
   const additionalProjectsCost = additionalProjects * perProjectPrice;
-  const newMonthlyTotal = agencyBasePrice + additionalProjectsCost;
+  const newMonthlyTotal = currentPlanBasePrice + additionalProjectsCost;
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -318,12 +319,16 @@ export function AccountPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--brand-dark)]"></div>
             </div>
           ) : (
-            <div className={`grid gap-6 max-w-3xl mx-auto ${plan?.name === 'agency' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+            <div className={`grid gap-6 max-w-3xl mx-auto ${(plan?.name === 'agency' || plan?.name === 'agency_pro') ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
               {allPlans
                 .filter((p) => {
-                  // If user is on agency plan, only show agency plan
+                  // If user is on agency plan, show agency and agency_pro
                   if (plan?.name === 'agency') {
-                    return p.name === 'agency';
+                    return p.name === 'agency' || p.name === 'agency_pro';
+                  }
+                  // If user is on agency_pro plan, show agency_pro only
+                  if (plan?.name === 'agency_pro') {
+                    return p.name === 'agency_pro';
                   }
                   return true;
                 })
@@ -359,6 +364,12 @@ export function AccountPage() {
                           + £{p.perSitePriceGbp}/site/mth
                         </p>
                       )}
+                      {/* Show per-site savings for Agency Pro */}
+                      {p.name === 'agency_pro' && plan?.name === 'agency' && (
+                        <div className="mt-2 inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded">
+                          Save £{((plan.basePriceGbp / plan.websiteLimit) - (p.basePriceGbp / p.websiteLimit)).toFixed(2)}/site
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent className="pt-2">
                       <ul className="space-y-2 text-sm">
@@ -385,7 +396,7 @@ export function AccountPage() {
               })}
 
               {/* Additional Projects Card - Only show for Agency plan users */}
-              {plan?.name === 'agency' && (
+              {(plan?.name === 'agency' || plan?.name === 'agency_pro') && (
                 <Card className="border-dashed border-2 border-gray-300 dark:border-gray-600">
                   <CardHeader className="text-center pb-2">
                     <CardTitle className="text-lg">Add Projects</CardTitle>
@@ -430,8 +441,8 @@ export function AccountPage() {
                     {additionalProjects > 0 && (
                       <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
                         <div className="flex justify-between">
-                          <span>Agency Plan</span>
-                          <span>£{agencyBasePrice}/mth</span>
+                          <span>{plan?.displayName || 'Agency Plan'}</span>
+                          <span>£{plan?.basePriceGbp || agencyBasePrice}/mth</span>
                         </div>
                         <div className="flex justify-between">
                           <span>{additionalProjects} extra project{additionalProjects !== 1 ? 's' : ''}</span>

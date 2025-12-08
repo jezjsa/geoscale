@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus, Copy, CheckCircle2 } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { createProject } from '@/api/projects'
 import { toast } from 'sonner'
+import { copyApiKeyToClipboard } from '@/utils/api-key-generator'
 
 interface CreateClientDialogProps {
   userId: string
@@ -23,6 +24,9 @@ interface CreateClientDialogProps {
 
 export function CreateClientDialog({ userId }: CreateClientDialogProps) {
   const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<1 | 2>(1)
+  const [createdApiKey, setCreatedApiKey] = useState('')
+  const [createdProjectName, setCreatedProjectName] = useState('')
   const [formData, setFormData] = useState({
     companyName: '',
     contactName: '',
@@ -68,21 +72,10 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['agencyProjects', userId] })
-      toast.success('Project created successfully', {
-        description: `${formData.companyName} has been added. WordPress API Key: ${result.wpApiKey}`,
-        duration: 10000,
-      })
-      setOpen(false)
-      setFormData({ 
-        companyName: '', 
-        contactName: '', 
-        contactEmail: '', 
-        phoneNumber: '', 
-        contactUrl: 'https://', 
-        serviceDescription: '', 
-        wpUrl: 'https://',
-        blogUrl: 'https://' 
-      })
+      // Store the API key and project name, then move to step 2
+      setCreatedApiKey(result.wpApiKey)
+      setCreatedProjectName(formData.companyName)
+      setStep(2)
     },
     onError: (error: Error) => {
       toast.error('Error creating project', {
@@ -96,6 +89,35 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
     createProjectMutation.mutate(formData)
   }
 
+  const handleClose = () => {
+    setOpen(false)
+    // Reset after dialog closes
+    setTimeout(() => {
+      setStep(1)
+      setCreatedApiKey('')
+      setCreatedProjectName('')
+      setFormData({ 
+        companyName: '', 
+        contactName: '', 
+        contactEmail: '', 
+        phoneNumber: '', 
+        contactUrl: 'https://', 
+        serviceDescription: '', 
+        wpUrl: 'https://',
+        blogUrl: 'https://' 
+      })
+    }, 200)
+  }
+
+  const handleCopyApiKey = async () => {
+    const success = await copyApiKeyToClipboard(createdApiKey)
+    if (success) {
+      toast.success('API key copied to clipboard')
+    } else {
+      toast.error('Failed to copy API key')
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -105,13 +127,15 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[900px]">
-        <DialogHeader>
-          <DialogTitle>Create New Client Project</DialogTitle>
-          <DialogDescription>
-            Add a new client project. You'll manage their WordPress site and generate location pages for them.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        {step === 1 ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Create New Client Project</DialogTitle>
+              <DialogDescription>
+                Add a new client project. You'll manage their WordPress site and generate location pages for them.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-12 py-4">
             {/* Left Column */}
             <div className="space-y-6">
@@ -217,26 +241,85 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              style={{ backgroundColor: 'var(--brand-dark)' }}
-              className="hover:opacity-90 text-white"
-              disabled={createProjectMutation.isPending}
-            >
-              {createProjectMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Project'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white"
+                disabled={createProjectMutation.isPending}
+              >
+                {createProjectMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Project'
+                )}
+              </Button>
+            </DialogFooter>
+            </form>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-8 w-8 text-green-500" />
+                <div>
+                  <DialogTitle>Project Created Successfully</DialogTitle>
+                  <DialogDescription>
+                    {createdProjectName} has been added to your projects.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            <div className="py-6">
+              <div className="bg-muted rounded-lg p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Step 2: Connect WordPress</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Copy this API key and paste it into the GeoScale WordPress plugin settings on your client's website.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground font-normal">WordPress API Key</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={createdApiKey}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyApiKey}
+                      title="Copy API key"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Keep this key secure - it provides access to create and update pages on this WordPress site.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={handleClose}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white"
+              >
+                Done
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

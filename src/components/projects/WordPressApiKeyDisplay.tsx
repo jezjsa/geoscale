@@ -11,6 +11,7 @@ interface WordPressApiKeyDisplayProps {
   onTestConnection?: () => void
   isRegenerating?: boolean
   isTesting?: boolean
+  connectionVerified?: boolean
 }
 
 export function WordPressApiKeyDisplay({ 
@@ -19,7 +20,8 @@ export function WordPressApiKeyDisplay({
   onRegenerate,
   onTestConnection,
   isRegenerating = false,
-  isTesting = false
+  isTesting = false,
+  connectionVerified = false
 }: WordPressApiKeyDisplayProps) {
   const handleCopy = async () => {
     const success = await copyApiKeyToClipboard(apiKey)
@@ -68,8 +70,11 @@ export function WordPressApiKeyDisplay({
             onClick={onTestConnection}
             disabled={isTesting || !canTest}
             title={canTest ? "Test WordPress connection" : "Enter WordPress URL and generate API key first"}
+            className={canTest && !connectionVerified && !isTesting 
+              ? 'border-amber-500 bg-amber-500 hover:bg-amber-600 hover:border-amber-600 text-white animate-pulse' 
+              : ''}
           >
-            <TestTube2 className={`h-4 w-4 ${isTesting ? 'animate-pulse' : ''}`} />
+            <TestTube2 className={`h-4 w-4 ${isTesting ? 'animate-spin' : ''}`} />
           </Button>
         )}
       </div>

@@ -34,7 +34,7 @@ export function HomePage() {
           style={{ backgroundColor: 'var(--brand-dark)' }}
           className="hover:opacity-90 text-white"
         >
-          <Link to="/plans">Start Your 7-Day Free Trial</Link>
+          <Link to="/plans">Start Your 14-Day Free Trial</Link>
         </Button>
         <div className="mt-4">
           <Link 
@@ -192,9 +192,9 @@ export function HomePage() {
           <h2 className="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
           <div className="space-y-6">
             <div className="bg-muted/50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-2">How does the 7-day free trial work?</h3>
+              <h3 className="text-lg font-semibold mb-2">How does the 14-day free trial work?</h3>
               <p className="text-muted-foreground">
-                Start using GeoScale immediately with full access to all features. Enter your card details at signup – you won't be charged for 7 days and can cancel anytime during the trial.
+                Start using GeoScale immediately with full access to all features. Enter your card details at signup – you won't be charged for 14 days and can cancel anytime during the trial.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
@@ -250,7 +250,7 @@ export function HomePage() {
             style={{ backgroundColor: 'var(--brand-dark)' }}
             className="hover:opacity-90 text-white"
           >
-            <Link to="/plans">Start Your 7-Day Free Trial</Link>
+            <Link to="/plans">Start Your 14-Day Free Trial</Link>
           </Button>
           <Button 
             asChild 

@@ -6,7 +6,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 export function PlansPage() {
   usePageMeta({
     title: 'Pricing & Plans - GeoScale',
-    description: 'Choose the perfect GeoScale plan for your business. From Starter to Agency, find the right fit for generating location-based landing pages. 7-day free trial included.'
+    description: 'Choose the perfect GeoScale plan for your business. From Starter to Agency, find the right fit for generating location-based landing pages. 14-day free trial included.'
   });
 
   return (
