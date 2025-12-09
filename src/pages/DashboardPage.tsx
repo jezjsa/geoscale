@@ -239,7 +239,7 @@ export function DashboardPage() {
               <Button 
                 variant="outline"
                 onClick={handleManageProjects}
-                className="bg-btn-secondary-bg hover:bg-btn-secondary-hover text-black border-0 dark:bg-[#3a3a3a] dark:text-white dark:border dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a] dark:hover:text-white"
+                className="bg-[#1b9497] hover:bg-[#178a8d] text-white border-0"
               >
                 {isSingleProjectPlan 
                   ? (userProject ? 'Manage Project' : 'Create Project') 

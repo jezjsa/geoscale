@@ -247,6 +247,23 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
     }
   }, [projectId, queryClient, currentGeneratingId, generatingIds])
 
+  // Listen for external trigger to enter generate mode (from header button)
+  useEffect(() => {
+    const handleTriggerGenerateMode = () => {
+      setGenerateMode(true)
+      // Auto-select all pending combinations
+      const pendingIds = combinations
+        .filter(c => c.status === 'pending')
+        .map(c => c.id)
+      setSelectedIds(new Set(pendingIds))
+    }
+
+    window.addEventListener('triggerGenerateMode', handleTriggerGenerateMode)
+    return () => {
+      window.removeEventListener('triggerGenerateMode', handleTriggerGenerateMode)
+    }
+  }, [combinations])
+
   // Get unique towns for filter
   const uniqueTowns = useMemo(() => {
     const towns = new Set<string>()
@@ -612,22 +629,6 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                 )}
                 Generate Next
               </Button> */}
-              <Button
-                size="sm"
-                onClick={() => {
-                  setGenerateMode(true)
-                  // Auto-select all pending combinations
-                  const pendingIds = combinations
-                    .filter(c => c.status === 'pending')
-                    .map(c => c.id)
-                  setSelectedIds(new Set(pendingIds))
-                }}
-                style={{ backgroundColor: 'var(--brand-dark)' }}
-                className="text-white hover:opacity-90"
-              >
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate Content
-              </Button>
               {/* Hide Check Rankings button for Starter plan */}
               {canUseRankTracking && (
                 <Button

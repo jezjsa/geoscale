@@ -334,9 +334,15 @@ export async function getProjectCombinationStats(projectId: string): Promise<{
     selectedKeywordCount = count || 0
   }
 
+  // Get ACTUAL combination count from location_keywords table
+  const { count: actualCombinations } = await supabase
+    .from('location_keywords')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+
   return {
     locationCount: locationCount || 0,
     selectedKeywordCount,
-    totalCombinations: (locationCount || 0) * selectedKeywordCount,
+    totalCombinations: actualCombinations || 0,
   }
 }

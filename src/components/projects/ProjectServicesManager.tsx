@@ -21,7 +21,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Trash2, Loader2, Settings, AlertTriangle, Search, Briefcase, Pencil } from 'lucide-react'
+import { Plus, Trash2, Loader2, Settings, Search, Briefcase, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   getProjectServices,
@@ -74,14 +74,11 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     queryFn: () => getProjectServices(projectId),
   })
 
-  // Fetch combination stats
+  // Fetch combination stats (needed for limit checking when toggling keywords)
   const { data: stats } = useQuery({
     queryKey: ['projectCombinationStats', projectId],
     queryFn: () => getProjectCombinationStats(projectId),
   })
-
-  const isOverLimit = (stats?.totalCombinations || 0) > combinationLimit
-  const isNearLimit = (stats?.totalCombinations || 0) > combinationLimit * 0.8
 
   // Store the service name/description for creating after keyword selection
   const [pendingServiceName, setPendingServiceName] = useState('')
@@ -397,40 +394,6 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
 
   return (
     <div className="space-y-6">
-      {/* Combination Counter */}
-      <Card className={isOverLimit ? 'border-red-500' : isNearLimit ? 'border-yellow-500' : ''}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Combination Usage</p>
-              <p className="text-2xl font-bold">
-                {stats?.totalCombinations || 0} / {combinationLimit}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats?.selectedKeywordCount || 0} keywords × {stats?.locationCount || 0} locations
-              </p>
-            </div>
-            {isOverLimit && (
-              <div className="flex items-center gap-2 text-red-500">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="text-sm font-medium">Over limit</span>
-              </div>
-            )}
-            {isNearLimit && !isOverLimit && (
-              <div className="flex items-center gap-2 text-yellow-500">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="text-sm font-medium">Approaching limit</span>
-              </div>
-            )}
-          </div>
-          {isOverLimit && (
-            <p className="text-sm text-red-500 mt-2">
-              Deselect some keywords or upgrade your plan to generate all combinations.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Services List */}
       <Card>
         <CardHeader>
@@ -985,7 +948,7 @@ function ServiceContentPanel({
   onEditFaq: (faq: ServiceFaq) => void
   onDeleteFaq: (faq: ServiceFaq) => void
 }) {
-  const [activeTab, setActiveTab] = useState<'keywords' | 'faqs'>('keywords')
+  const [activeTab, setActiveTab] = useState<'overview' | 'keywords' | 'faqs'>('overview')
   const queryClient = useQueryClient()
 
   // Keywords query
@@ -1065,6 +1028,16 @@ function ServiceContentPanel({
       <div className="flex items-center justify-between border-b pb-2">
         <div className="flex gap-1">
           <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'overview'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Overview
+          </button>
+          <button
             onClick={() => setActiveTab('keywords')}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
               activeTab === 'keywords'
@@ -1095,6 +1068,67 @@ function ServiceContentPanel({
           Delete Service
         </Button>
       </div>
+
+      {/* Overview Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="py-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Keywords Card */}
+            <div className="rounded-lg border p-5 flex flex-col bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium bg-[var(--brand-dark)] text-white">1</span>
+                <h4 className="font-medium">Add Related Keywords</h4>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3 flex-1">
+                Find keywords related to "{service.name}" that your customers search for.
+              </p>
+              <p className="text-sm text-muted-foreground mb-3">
+                Each keyword combines with your locations to create targeted landing pages.
+              </p>
+              {(service.keyword_count || 0) > 0 && (
+                <p className="text-sm font-medium mb-3">You have {service.keyword_count} keyword{service.keyword_count !== 1 ? 's' : ''} ({service.selected_keyword_count || 0} selected).</p>
+              )}
+              <Button
+                size="sm"
+                variant={(service.keyword_count || 0) > 0 ? "outline" : "default"}
+                style={(service.keyword_count || 0) === 0 ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                className={(service.keyword_count || 0) === 0 ? "hover:opacity-90 text-white w-full" : "w-full"}
+                onClick={() => setActiveTab('keywords')}
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {(service.keyword_count || 0) > 0 ? 'Manage Keywords' : 'Add Keywords'}
+              </Button>
+            </div>
+
+            {/* FAQs Card */}
+            <div className="rounded-lg border p-5 flex flex-col bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium bg-[var(--brand-dark)] text-white">2</span>
+                <h4 className="font-medium">Add FAQs</h4>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3 flex-1">
+                Add frequently asked questions specific to this service.
+              </p>
+              <p className="text-sm text-muted-foreground mb-3">
+                These will be woven into your AI-generated content for better SEO.
+              </p>
+              {(service.faq_count || 0) > 0 && (
+                <p className="text-sm font-medium mb-3">You have {service.faq_count} FAQ{service.faq_count !== 1 ? 's' : ''}.</p>
+              )}
+              <Button
+                size="sm"
+                variant={(service.faq_count || 0) > 0 ? "outline" : "default"}
+                style={(service.faq_count || 0) === 0 ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                className={(service.faq_count || 0) === 0 ? "hover:opacity-90 text-white w-full" : "w-full"}
+                onClick={() => setActiveTab('faqs')}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {(service.faq_count || 0) > 0 ? 'Manage FAQs' : 'Add FAQs'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Keywords Tab Content */}
       {activeTab === 'keywords' && (

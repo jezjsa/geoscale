@@ -348,8 +348,9 @@ export function AddLocationsDialog({
                   {selectedTowns.length} location{selectedTowns.length !== 1 ? 's' : ''} × {keywordCount} keyword{keywordCount !== 1 ? 's' : ''} = <span className="text-[var(--brand-dark)]">{combinationCount} combination{combinationCount !== 1 ? 's' : ''}</span>
                 </p>
                 {limits && usage && (
-                  <>
-                    <p className="text-xs text-muted-foreground mt-1">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Plan Limits</p>
+                    <p className="text-xs text-muted-foreground">
                       Your plan allows {limits.combinationPageLimit} total combinations ({usage.combinationCount} currently used)
                     </p>
                     {wouldExceedLimit && (
@@ -357,7 +358,7 @@ export function AddLocationsDialog({
                         ⚠️ This would exceed your plan limit. Please upgrade or remove some towns.
                       </p>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 

@@ -15,6 +15,7 @@ import { ProjectTestimonialsManager } from '@/components/projects/ProjectTestimo
 import { ProjectTestimonialsAddButton } from '@/components/projects/ProjectTestimonialsAddButton'
 import { WordPressApiKeyDisplay } from '@/components/projects/WordPressApiKeyDisplay'
 import { ProjectServicesManager } from '@/components/projects/ProjectServicesManager'
+import { ProjectLocationsManager } from '@/components/projects/ProjectLocationsManager'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,10 +30,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Upload, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Plus, Upload, AlertTriangle, Wand2 } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import { getProjectCombinations, getTrackedCombinationsCount } from '@/api/combinations'
-import { getProjectServices } from '@/api/services'
+import { getProjectServices, getProjectCombinationStats } from '@/api/services'
 import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpress'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -44,7 +45,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentView = (searchParams.get('view') as 'combinations' | 'services' | 'testimonials' | 'settings') || 'combinations'
+  const currentView = (searchParams.get('view') as 'combinations' | 'services' | 'locations' | 'testimonials' | 'settings') || 'combinations'
   const queryClient = useQueryClient()
   
   // Check if user is on individual plan (not agency)
@@ -66,7 +67,7 @@ export function ProjectDetailPage() {
   const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   
-  const setCurrentView = (view: 'combinations' | 'services' | 'testimonials' | 'settings') => {
+  const setCurrentView = (view: 'combinations' | 'services' | 'locations' | 'testimonials' | 'settings') => {
     setSearchParams({ view })
   }
 
@@ -98,6 +99,26 @@ export function ProjectDetailPage() {
 
   // Check if any services exist (keywords are optional - user can add locations once services exist)
   const hasServices = services.length > 0
+
+  // Get location count for this project
+  const { data: locationCount = 0 } = useQuery({
+    queryKey: ['projectLocationCount', projectId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('project_locations')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+      if (error) throw error
+      return count || 0
+    },
+  })
+
+  // Get combination stats (includes selected keyword count)
+  const { data: combinationStats } = useQuery({
+    queryKey: ['projectCombinationStats', projectId],
+    queryFn: () => getProjectCombinationStats(projectId),
+  })
+  const selectedKeywordCount = combinationStats?.selectedKeywordCount || 0
   
   // Get tracked count for this project
   const { data: trackedCount = 0 } = useQuery({
@@ -297,6 +318,15 @@ export function ProjectDetailPage() {
             </Button>
             <Button
               variant="outline"
+              onClick={() => setCurrentView('locations')}
+              className={currentView === 'locations' 
+                ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
+                : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]'}
+            >
+              Locations
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setCurrentView('testimonials')}
               className={currentView === 'testimonials' 
                 ? 'bg-white text-[#0b6074] font-bold border-gray-800 hover:bg-white hover:text-[#0b6074] dark:bg-white dark:text-[#0b6074] dark:font-bold dark:border-white dark:hover:bg-white dark:hover:text-[#0b6074]' 
@@ -315,13 +345,15 @@ export function ProjectDetailPage() {
             </Button>
             {/* Hide Sitemap for Starter plan (no rank tracking) */}
             {userPlan?.rankTrackingFrequency && (
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/projects/${projectId}/sitemap`)}
-                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
-              >
-                WordPress Sitemap
-              </Button>
+              <div className="ml-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/projects/${projectId}/sitemap`)}
+                  className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 dark:bg-[#3a3a3a] dark:text-white dark:border-[#3a3a3a] dark:hover:bg-[#4a4a4a]"
+                >
+                  Metadata Editor
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -332,10 +364,29 @@ export function ProjectDetailPage() {
               <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Location & Keyword Combinations</CardTitle>
-                  <CardDescription>
-                    Configure locations and keywords for page generation
-                  </CardDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>Location & Keyword Combinations</CardTitle>
+                      <CardDescription>
+                        Configure locations and keywords for page generation
+                      </CardDescription>
+                    </div>
+                    {combinations && combinations.length > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          // Navigate to combinations table and trigger generate mode
+                          const event = new CustomEvent('triggerGenerateMode')
+                          window.dispatchEvent(event)
+                        }}
+                        style={{ backgroundColor: '#1b9497' }}
+                        className="text-white hover:opacity-90"
+                      >
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate Content
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                 {combinationsLoading ? (
@@ -356,8 +407,14 @@ export function ProjectDetailPage() {
                             <h4 className="font-medium">Add Services</h4>
                           </div>
                           <p className="text-sm text-muted-foreground mb-3 flex-1">
-                            Add your services (e.g., "Web Design"). We'll find related keywords with search volume data.
+                            E.g. Web Design.
                           </p>
+                          <p className="text-sm text-muted-foreground mb-3 flex-1">
+                           We'll find related keywords with search volume data.
+                          </p>
+                          {services.length > 0 && (
+                            <p className="text-sm font-medium mb-3">You have {services.length} service{services.length !== 1 ? 's' : ''}.</p>
+                          )}
                           <Button
                             size="sm"
                             variant={services.length > 0 ? "outline" : "default"}
@@ -377,45 +434,67 @@ export function ProjectDetailPage() {
                             </span>
                             <h4 className="font-medium">Add Locations</h4>
                           </div>
+                          <p className="text-sm text-muted-foreground mb-3 flex-1">
+                            E.g. London.
+                          </p>
                           <p className="text-sm text-muted-foreground flex-1">
-                            Enter towns/cities you want to target. Each location combines with your services.
+                            Each location combines with your services.
                           </p>
                           {!hasServices && (
                             <p className="text-xs text-orange-500 mb-3">Add services first</p>
                           )}
+                          {locationCount > 0 && (
+                            <p className="text-sm font-medium mt-3">You have {locationCount} location{locationCount !== 1 ? 's' : ''}.</p>
+                          )}
                           <Button
                             size="sm"
-                            variant={!hasServices ? "outline" : "default"}
-                            style={hasServices ? { backgroundColor: 'var(--brand-dark)' } : {}}
-                            className={hasServices ? "hover:opacity-90 text-white w-full mt-3" : "w-full mt-auto"}
+                            variant={locationCount > 0 ? "outline" : !hasServices ? "outline" : "default"}
+                            style={locationCount === 0 && hasServices ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                            className={locationCount === 0 && hasServices ? "hover:opacity-90 text-white w-full mt-3" : "w-full mt-3"}
                             onClick={() => setShowAddLocationsDialog(true)}
                             disabled={!hasServices}
                           >
-                            Add Locations
+                            {locationCount > 0 ? 'Add More Locations' : 'Add Locations'}
                           </Button>
                         </div>
 
                         {/* Step 3 - Generate */}
-                        <div className="rounded-lg border p-5 flex flex-col bg-gray-100 dark:bg-gray-800/30 opacity-60">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium bg-gray-400 text-white">
-                              3
-                            </span>
-                            <h4 className="font-medium">Generate Content</h4>
-                          </div>
-                          <p className="text-sm text-muted-foreground flex-1">
-                            Generate AI-powered landing pages for each keyword + location combination.
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-3">Complete steps 1 & 2 first</p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full"
-                            disabled
-                          >
-                            Generate Pages
-                          </Button>
-                        </div>
+                        {(() => {
+                          const canGenerate = hasServices && locationCount > 0 && selectedKeywordCount > 0;
+                          const potentialCombinations = selectedKeywordCount * locationCount;
+                          return (
+                            <div className={`rounded-lg border p-5 flex flex-col ${canGenerate ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-gray-100 dark:bg-gray-800/30 opacity-60'}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${canGenerate ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-400 text-white'}`}>
+                                  3
+                                </span>
+                                <h4 className="font-medium">Generate Content</h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground flex-1">
+                                Generate AI-powered landing pages for each keyword + location combination.
+                              </p>
+                              {!canGenerate && (
+                                <p className="text-xs text-muted-foreground mb-3">Complete steps 1 & 2 first</p>
+                              )}
+                              {canGenerate && (
+                                <p className="text-sm font-medium mb-3">{selectedKeywordCount} keyword{selectedKeywordCount !== 1 ? 's' : ''} × {locationCount} location{locationCount !== 1 ? 's' : ''}</p>
+                              )}
+                              <Button
+                                size="sm"
+                                variant={canGenerate ? "default" : "outline"}
+                                style={canGenerate ? { backgroundColor: 'var(--brand-dark)' } : {}}
+                                className={canGenerate ? "hover:opacity-90 text-white w-full" : "w-full"}
+                                disabled={!canGenerate}
+                                onClick={() => setShowAddLocationsDialog(true)}
+                              >
+                                {canGenerate 
+                                  ? `Create ${potentialCombinations} Combination${potentialCombinations !== 1 ? 's' : ''}`
+                                  : 'Create Combinations'
+                                }
+                              </Button>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Alternative: CSV Upload */}
@@ -451,8 +530,8 @@ export function ProjectDetailPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setShowAddServiceDialog(true)}
-                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
+                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
                           Services
@@ -461,8 +540,8 @@ export function ProjectDetailPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setShowResearchKeywordsDialog(true)}
-                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
+                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
                           Keywords
@@ -471,8 +550,8 @@ export function ProjectDetailPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setShowAddLocationsDialog(true)}
-                          style={{ borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[var(--brand-dark)]/10 dark:text-white dark:hover:bg-[var(--brand-dark)]/20"
+                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
                         >
                           <Plus className="mr-0 h-4 w-4" />
                           Locations
@@ -509,6 +588,8 @@ export function ProjectDetailPage() {
                 projectId={projectId} 
                 combinationLimit={combinationLimit}
               />
+            ) : currentView === 'locations' ? (
+              <ProjectLocationsManager projectId={projectId} />
             ) : currentView === 'testimonials' ? (
               <Card>
                 <CardHeader>

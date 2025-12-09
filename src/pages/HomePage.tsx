@@ -23,7 +23,7 @@ export function HomePage() {
         </div>
         <p className="text-sm font-semibold uppercase tracking-wider text-[var(--brand-dark)] mb-4">SEO Agencies</p>
         <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-5xl mx-auto">
-          Create, Manage and Track <br /> Location Landing Pages at Scale for multiple WP websites.
+          Generate, Manage and Track <br /> Geo-Landing Pages at Scale for multiple client websites.
         </h1>
         <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
           Produce optimised location / keyword pages in minutes, refresh content whenever needed, and publish to any connected WordPress site from one dashboard.
