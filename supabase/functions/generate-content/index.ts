@@ -235,7 +235,7 @@ ${testimonialBlock ? `Testimonial to include:\n${testimonialBlock}` : "No testim
 
 ${serviceDescription ? `Service description: ${serviceDescription}` : ""}
 
-${serviceFaqsBlock || "No service-specific FAQs provided."}
+${serviceFaqsBlock ? `\nService-specific FAQs to include:\n${serviceFaqsBlock}` : ""}
 
 Instructions:
 
@@ -278,9 +278,9 @@ Instructions:
    - Close with </div>
 
 7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq">:
-   - ONLY include this section if service-specific FAQs are provided above.
-   - If service-specific FAQs are provided, use those questions and answers exactly as given, adapting only to include the location name where appropriate.
-   - If NO service-specific FAQs are provided, DO NOT include any FAQ section at all - skip this section entirely.
+   - CRITICAL: ONLY include this section if "Service-specific FAQs to include:" appears above in this prompt.
+   - If service-specific FAQs are provided above, use those questions and answers EXACTLY as given - do not create, modify, or invent any FAQs.
+   - If NO service-specific FAQs are provided above (no "Service-specific FAQs to include:" section), DO NOT include any FAQ section at all - skip this entire section.
    - Format each FAQ as an H3 for the question and a paragraph for the answer.
    - Close with </div>
 

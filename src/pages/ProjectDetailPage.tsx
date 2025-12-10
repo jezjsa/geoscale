@@ -30,11 +30,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Upload, AlertTriangle, Wand2 } from 'lucide-react'
+import { ArrowLeft, Plus, Upload, AlertTriangle, Wand2, X, Loader2 } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import { getProjectCombinations, getTrackedCombinationsCount } from '@/api/combinations'
+import { generateCombinations } from '@/api/combination-generator'
 import { getProjectServices, getProjectCombinationStats } from '@/api/services'
 import { fetchWordPressTemplates, testWordPressConnection } from '@/api/wordpress'
+import { queueContentGeneration } from '@/api/content-queue'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { generateWordPressApiKey } from '@/utils/api-key-generator'
@@ -62,6 +64,10 @@ export function ProjectDetailPage() {
   const [showResearchKeywordsDialog, setShowResearchKeywordsDialog] = useState(false)
   const [showUploadCsvDialog, setShowUploadCsvDialog] = useState(false)
   const [wpTemplates, setWpTemplates] = useState<Array<{ value: string; label: string }>>([])
+  
+  // Generate mode state (lifted from CombinationsTable for header buttons)
+  const [generateMode, setGenerateMode] = useState(false)
+  const [generateSelectedIds, setGenerateSelectedIds] = useState<Set<string>>(new Set())
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [wpConnectionVerified, setWpConnectionVerified] = useState(false)
   const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
@@ -150,6 +156,70 @@ export function ProjectDetailPage() {
       })
     },
   })
+
+  // Mutation to generate combinations from existing services/keywords and locations
+  const generateCombinationsMutation = useMutation({
+    mutationFn: async () => {
+      return generateCombinations({ project_id: projectId })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projectCombinationStats', projectId] })
+      toast.success('Combinations created successfully!', {
+        description: `Created ${data.created_count} new combination${data.created_count !== 1 ? 's' : ''}.`,
+      })
+    },
+    onError: (error: Error) => {
+      toast.error('Error creating combinations', {
+        description: error.message,
+      })
+    },
+  })
+
+  // Mutation to queue content generation for selected combinations
+  const queueGenerationMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated')
+      }
+      return queueContentGeneration(ids, projectId, user.id)
+    },
+    onSuccess: (data) => {
+      toast.success(`Queued ${data.jobsCreated} combination${data.jobsCreated !== 1 ? 's' : ''} for generation`, {
+        description: 'Content will be generated in the background. You can navigate away.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+      setGenerateMode(false)
+      setGenerateSelectedIds(new Set())
+    },
+    onError: (error: Error) => {
+      toast.error('Error queueing generation', {
+        description: error.message,
+      })
+    },
+  })
+
+  // Handler for when generation is triggered from CombinationsTable
+  const handleGenerationTriggered = (ids: string[]) => {
+    queueGenerationMutation.mutate(ids)
+  }
+
+  // Handler to enter generate mode and auto-select pending combinations
+  const handleEnterGenerateMode = () => {
+    setGenerateMode(true)
+    // Auto-select all pending combinations
+    const pendingIds = combinations
+      ?.filter(c => c.status === 'pending')
+      .map(c => c.id) || []
+    setGenerateSelectedIds(new Set(pendingIds))
+  }
+
+  // Handler to cancel generate mode
+  const handleCancelGenerateMode = () => {
+    setGenerateMode(false)
+    setGenerateSelectedIds(new Set())
+  }
 
   const handleFieldUpdate = async (field: string, value: string | boolean) => {
     try {
@@ -372,19 +442,44 @@ export function ProjectDetailPage() {
                       </CardDescription>
                     </div>
                     {combinations && combinations.length > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          // Navigate to combinations table and trigger generate mode
-                          const event = new CustomEvent('triggerGenerateMode')
-                          window.dispatchEvent(event)
-                        }}
-                        style={{ backgroundColor: '#1b9497' }}
-                        className="text-white hover:opacity-90"
-                      >
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Generate Content
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {!generateMode ? (
+                          <Button
+                            size="sm"
+                            onClick={handleEnterGenerateMode}
+                            style={{ backgroundColor: '#1b9497' }}
+                            className="text-white hover:opacity-90"
+                          >
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Generate Content
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelGenerateMode}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleGenerationTriggered(Array.from(generateSelectedIds))}
+                              disabled={generateSelectedIds.size === 0 || queueGenerationMutation.isPending}
+                              style={{ backgroundColor: 'var(--brand-dark)' }}
+                              className="text-white hover:opacity-90"
+                            >
+                              {queueGenerationMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Wand2 className="mr-2 h-4 w-4" />
+                              )}
+                              Start Generation {generateSelectedIds.size > 0 ? `(${generateSelectedIds.size})` : ''}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardHeader>
@@ -484,12 +579,14 @@ export function ProjectDetailPage() {
                                 variant={canGenerate ? "default" : "outline"}
                                 style={canGenerate ? { backgroundColor: 'var(--brand-dark)' } : {}}
                                 className={canGenerate ? "hover:opacity-90 text-white w-full" : "w-full"}
-                                disabled={!canGenerate}
-                                onClick={() => setShowAddLocationsDialog(true)}
+                                disabled={!canGenerate || generateCombinationsMutation.isPending}
+                                onClick={() => generateCombinationsMutation.mutate()}
                               >
-                                {canGenerate 
-                                  ? `Create ${potentialCombinations} Combination${potentialCombinations !== 1 ? 's' : ''}`
-                                  : 'Create Combinations'
+                                {generateCombinationsMutation.isPending 
+                                  ? 'Creating...'
+                                  : canGenerate 
+                                    ? `Create ${potentialCombinations} Combination${potentialCombinations !== 1 ? 's' : ''}`
+                                    : 'Create Combinations'
                                 }
                               </Button>
                             </div>
@@ -571,6 +668,12 @@ export function ProjectDetailPage() {
                       combinations={combinations} 
                       projectId={projectId}
                       blogUrl={project?.blog_url || project?.wp_url}
+                      generateMode={generateMode}
+                      onGenerateModeChange={setGenerateMode}
+                      selectedIds={generateSelectedIds}
+                      onSelectedIdsChange={setGenerateSelectedIds}
+                      onGenerationTriggered={handleGenerationTriggered}
+                      isGenerating={queueGenerationMutation.isPending}
                     />
                   </div>
                 )}

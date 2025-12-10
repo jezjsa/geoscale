@@ -17,10 +17,10 @@ interface CombinationResult {
 }
 
 /**
- * Generate all combinations of locations × keywords for a project
+ * Generate all combinations of locations × selected keywords for a project
  * This will:
  * 1. Fetch all locations for the project
- * 2. Fetch all keyword variations for the project
+ * 2. Fetch all selected keywords from service_keywords (via project_services)
  * 3. Create combinations and store in location_keywords table
  */
 export async function generateCombinations(input: GenerateCombinationsInput): Promise<CombinationResult> {
@@ -34,58 +34,114 @@ export async function generateCombinations(input: GenerateCombinationsInput): Pr
 
   if (locationsError) throw locationsError
 
-  // Fetch all keyword variations for this project
-  const { data: keywords, error: keywordsError } = await supabase
-    .from('keyword_variations')
-    .select('id, keyword')
+  // Fetch all services for this project
+  const { data: services, error: servicesError } = await supabase
+    .from('project_services')
+    .select('id')
     .eq('project_id', project_id)
 
-  if (keywordsError) throw keywordsError
+  if (servicesError) throw servicesError
 
   if (!locations || locations.length === 0) {
     throw new Error('No locations found for this project')
   }
 
-  if (!keywords || keywords.length === 0) {
-    throw new Error('No keyword variations found for this project')
+  if (!services || services.length === 0) {
+    throw new Error('No services found for this project')
   }
+
+  // Fetch all selected keywords from service_keywords
+  const serviceIds = services.map(s => s.id)
+  const { data: serviceKeywords, error: keywordsError } = await supabase
+    .from('service_keywords')
+    .select('id, keyword, service_id')
+    .in('service_id', serviceIds)
+    .eq('is_selected', true)
+
+  if (keywordsError) throw keywordsError
+
+  if (!serviceKeywords || serviceKeywords.length === 0) {
+    throw new Error('No selected keywords found. Please select keywords in your services.')
+  }
+
+  // First, ensure all keywords exist in keyword_variations table (for FK constraint)
+  const keywordsToInsert = serviceKeywords.map(sk => ({
+    project_id,
+    keyword: sk.keyword,
+    search_volume: null,
+    difficulty: null,
+  }))
+
+  const { data: insertedKeywords, error: kwInsertError } = await supabase
+    .from('keyword_variations')
+    .upsert(keywordsToInsert, {
+      onConflict: 'project_id,keyword',
+      ignoreDuplicates: false,
+    })
+    .select('id, keyword')
+
+  if (kwInsertError) throw kwInsertError
+
+  // Create keyword map for quick lookup
+  const keywordIdMap = new Map<string, string>()
+  insertedKeywords?.forEach((kw: any) => {
+    keywordIdMap.set(kw.keyword, kw.id)
+  })
 
   // Generate all combinations
   const combinations = []
   for (const location of locations) {
-    for (const keyword of keywords) {
+    for (const serviceKeyword of serviceKeywords) {
+      const keywordId = keywordIdMap.get(serviceKeyword.keyword)
+      if (!keywordId) continue
+
       // Create phrase variations based on keyword structure
       let phrase: string
-
-      if (keyword.keyword.includes('near me')) {
-        // For "near me" keywords, use: "keyword near location"
-        phrase = keyword.keyword.replace('near me', `near ${location.name}`)
+      if (serviceKeyword.keyword.includes('near me')) {
+        phrase = serviceKeyword.keyword.replace('near me', `near ${location.name}`)
       } else {
-        // Standard format: "keyword in location"
-        phrase = `${keyword.keyword} in ${location.name}`
+        phrase = `${serviceKeyword.keyword} in ${location.name}`
       }
 
       combinations.push({
         project_id,
         location_id: location.id,
-        keyword_id: keyword.id,
+        keyword_id: keywordId,
+        service_id: serviceKeyword.service_id,
         phrase: phrase.toLowerCase(),
         status: 'pending',
       })
     }
   }
 
-  // Insert combinations (using upsert with ignoreDuplicates to skip existing)
-  // This is crucial for "Add More" functionality - only creates NEW unique combinations
+  if (combinations.length === 0) {
+    return { created_count: 0, total_count: 0 }
+  }
+
+  // Insert combinations - use insert with ON CONFLICT DO NOTHING to handle duplicates gracefully
+  // This avoids the 409 Conflict error when combinations already exist
   const { data, error } = await supabase
     .from('location_keywords')
     .upsert(combinations, {
       onConflict: 'project_id,location_id,keyword_id',
-      ignoreDuplicates: true, // Skip duplicates - critical for Add More feature
+      ignoreDuplicates: true,
     })
     .select()
 
-  if (error) throw error
+  if (error) {
+    // If it's a unique constraint violation on phrase, try inserting one by one
+    if (error.code === '23505') {
+      let createdCount = 0
+      for (const combo of combinations) {
+        const { error: insertError } = await supabase
+          .from('location_keywords')
+          .insert(combo)
+        if (!insertError) createdCount++
+      }
+      return { created_count: createdCount, total_count: combinations.length }
+    }
+    throw error
+  }
 
   return {
     created_count: data?.length || 0,

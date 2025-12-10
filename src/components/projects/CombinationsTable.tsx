@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload, Map } from 'lucide-react'
 import { WordPressIcon } from '@/components/icons/WordPressIcon'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -57,9 +57,24 @@ interface CombinationsTableProps {
   combinations: Combination[]
   projectId: string
   blogUrl?: string
+  generateMode?: boolean
+  onGenerateModeChange?: (mode: boolean) => void
+  selectedIds?: Set<string>
+  onSelectedIdsChange?: (ids: Set<string>) => void
+  onGenerationTriggered?: (ids: string[]) => void
+  isGenerating?: boolean
 }
 
-export function CombinationsTable({ combinations, projectId }: CombinationsTableProps) {
+export function CombinationsTable({ 
+  combinations, 
+  projectId,
+  generateMode: externalGenerateMode,
+  onGenerateModeChange,
+  selectedIds: externalSelectedIds,
+  onSelectedIdsChange,
+  onGenerationTriggered,
+  isGenerating: externalIsGenerating,
+}: CombinationsTableProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -70,8 +85,32 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   const canUseRankTracking = plan?.rankTrackingFrequency !== null
   const [selectedTown, setSelectedTown] = useState<string>('all')
   const [deleteMode, setDeleteMode] = useState(false)
-  const [generateMode, setGenerateMode] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [internalGenerateMode, setInternalGenerateMode] = useState(false)
+  const [internalSelectedIds, setInternalSelectedIds] = useState<Set<string>>(new Set())
+  
+  // Use external state if provided, otherwise use internal state
+  const generateMode = externalGenerateMode !== undefined ? externalGenerateMode : internalGenerateMode
+  const selectedIds = externalSelectedIds !== undefined ? externalSelectedIds : internalSelectedIds
+  
+  const setGenerateMode = (mode: boolean) => {
+    if (onGenerateModeChange) {
+      onGenerateModeChange(mode)
+    } else {
+      setInternalGenerateMode(mode)
+    }
+  }
+  
+  const setSelectedIds = (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    if (onSelectedIdsChange) {
+      if (typeof ids === 'function') {
+        onSelectedIdsChange(ids(selectedIds))
+      } else {
+        onSelectedIdsChange(ids)
+      }
+    } else {
+      setInternalSelectedIds(ids as any)
+    }
+  }
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
   const [currentGeneratingId, setCurrentGeneratingId] = useState<string | null>(null)
   const [pushingIds, setPushingIds] = useState<Set<string>>(new Set())
@@ -406,8 +445,16 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
       toast.error('Please select at least one combination to generate')
       return
     }
-    generateMutation.mutate(Array.from(selectedIds))
+    // If external callback provided, use it; otherwise use internal mutation
+    if (onGenerationTriggered) {
+      onGenerationTriggered(Array.from(selectedIds))
+    } else {
+      generateMutation.mutate(Array.from(selectedIds))
+    }
   }
+  
+  // Use external isGenerating state if provided
+  const isGenerating = externalIsGenerating !== undefined ? externalIsGenerating : generateMutation.isPending
 
   const handleCancelGenerate = () => {
     setGenerateMode(false)
@@ -419,6 +466,17 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
   const handleViewContent = (id: string) => {
     console.log('Navigating to view content:', { projectId, locationKeywordId: id })
         navigate(`/projects/${projectId}/content/${id}`)
+  }
+
+  const handleViewHeatMap = (combination: Combination) => {
+    console.log('Navigating to heat map:', { projectId, combination })
+    navigate(`/projects/${projectId}/heat-map/${combination.id}`, {
+      state: {
+        phrase: combination.phrase,
+        location: combination.location.name,
+        keyword: combination.keyword.keyword
+      }
+    })
   }
 
   // Mutation to generate or regenerate a single combination
@@ -683,30 +741,34 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
               </Button>
             </>
           ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelGenerate}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleGenerate}
-                disabled={selectedIds.size === 0 || generateMutation.isPending}
-                style={{ backgroundColor: 'var(--brand-dark)' }}
-                className="text-white hover:opacity-90"
-              >
-                {generateMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Wand2 className="mr-2 h-4 w-4" />
-                )}
-                Generate {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-              </Button>
-            </>
+            // Only show generate mode buttons here if NOT using external control
+            // When using external control, buttons are in the card header
+            !onGenerateModeChange ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelGenerate}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleGenerate}
+                  disabled={selectedIds.size === 0 || isGenerating}
+                  style={{ backgroundColor: 'var(--brand-dark)' }}
+                  className="text-white hover:opacity-90"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-4 w-4" />
+                  )}
+                  Start Generation {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                </Button>
+              </>
+            ) : null
           )}
         </div>
       </div>
@@ -968,6 +1030,19 @@ export function CombinationsTable({ combinations, projectId }: CombinationsTable
                               ? 'text-muted-foreground hover:text-[var(--brand-dark)] cursor-pointer'
                               : 'text-muted-foreground/30 cursor-not-allowed'
                           }`}
+                        />
+                      </Button>
+                      
+                      {/* Heat Map Icon */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewHeatMap(combo)}
+                        className="h-8 w-8 p-0"
+                        title="View ranking heat map"
+                      >
+                        <Map 
+                          className="h-4 w-4 text-muted-foreground hover:text-[var(--brand-dark)] cursor-pointer"
                         />
                       </Button>
                       
