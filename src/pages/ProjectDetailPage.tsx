@@ -136,12 +136,14 @@ export function ProjectDetailPage() {
   // Per-project tracking limit
   const trackingLimit = userPlan?.rankTrackingLimit || 50
 
-  // Redirect to combinations view if both services and locations are empty
+  // Redirect to combinations view on initial load if both services and locations are empty
+  // and no explicit view is set in URL (indicating user didn't choose a tab)
   useEffect(() => {
-    if (!hasServices && locationCount === 0 && currentView !== 'combinations') {
+    const urlView = searchParams.get('view')
+    if (!urlView && !hasServices && locationCount === 0) {
       setCurrentView('combinations')
     }
-  }, [hasServices, locationCount, currentView])
+  }, [hasServices, locationCount])
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'inactive') => {
