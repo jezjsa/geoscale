@@ -24,6 +24,15 @@ interface CheckHeatMapRankingsResponse {
   averagePosition: number
   rankedCount: number
   notRankedCount: number
+  remainingChecks?: number
+}
+
+export interface RankMapCredits {
+  checksUsed: number
+  checksAllowed: number
+  checksPurchased: number
+  checksRemaining: number
+  resetDate: string | null
 }
 
 /**
@@ -92,7 +101,76 @@ export async function checkHeatMapRankings(input: CheckHeatMapRankingsInput): Pr
     businessCounts: data.business_counts || [],
     averagePosition: data.average_position,
     rankedCount: data.ranked_count,
-    notRankedCount: data.not_ranked_count
+    notRankedCount: data.not_ranked_count,
+    remainingChecks: data.remaining_checks
+  }
+}
+
+/**
+ * Get user's rank map credits and usage
+ */
+export async function getRankMapCredits(): Promise<RankMapCredits> {
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Get user record
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id, plan_id')
+    .eq('supabase_auth_user_id', user.id)
+    .single()
+
+  if (userError || !userData) {
+    throw new Error('User not found')
+  }
+
+  // Get plan details
+  const { data: plan, error: planError } = await supabase
+    .from('plans')
+    .select('rank_map_checks_per_month')
+    .eq('id', userData.plan_id)
+    .single()
+
+  if (planError || !plan) {
+    throw new Error('Plan not found')
+  }
+
+  // Get user credits
+  const { data: credits, error: creditsError } = await supabase
+    .from('user_credits')
+    .select('*')
+    .eq('user_id', userData.id)
+    .single()
+
+  // If no credits record exists, return defaults
+  if (creditsError && creditsError.code === 'PGRST116') {
+    return {
+      checksUsed: 0,
+      checksAllowed: plan.rank_map_checks_per_month || 0,
+      checksPurchased: 0,
+      checksRemaining: plan.rank_map_checks_per_month || 0,
+      resetDate: null
+    }
+  }
+
+  if (creditsError) {
+    throw new Error('Failed to fetch credits')
+  }
+
+  const checksAllowed = plan.rank_map_checks_per_month || 0
+  const checksUsed = credits?.rank_map_checks_used || 0
+  const checksPurchased = credits?.rank_map_checks_purchased || 0
+  const checksRemaining = checksAllowed + checksPurchased - checksUsed
+
+  return {
+    checksUsed,
+    checksAllowed,
+    checksPurchased,
+    checksRemaining: Math.max(0, checksRemaining),
+    resetDate: credits?.usage_reset_date || null
   }
 }
 
@@ -165,8 +243,17 @@ export async function deleteHeatMapData(projectId: string, keywordCombination: s
   }
 }
 
+export interface GridDataPoint {
+  grid_x: number
+  grid_y: number
+  latitude: number
+  longitude: number
+  position: number | null
+  business_count: number | null
+}
+
 /**
- * Save heat map scan summary with weak locations
+ * Save heat map scan summary with weak locations and full grid data
  */
 export async function saveHeatMapScan(input: {
   projectId: string
@@ -179,6 +266,7 @@ export async function saveHeatMapScan(input: {
   rankedCount: number
   notRankedCount: number
   weakLocations: Array<{ name: string; position: number | null; lat: number; lng: number }>
+  gridData?: GridDataPoint[]
 }): Promise<void> {
   const { error } = await supabase
     .from('heat_map_scans')
@@ -192,7 +280,8 @@ export async function saveHeatMapScan(input: {
       average_position: input.averagePosition,
       ranked_count: input.rankedCount,
       not_ranked_count: input.notRankedCount,
-      weak_locations: input.weakLocations
+      weak_locations: input.weakLocations,
+      grid_data: input.gridData || null
     })
 
   if (error) {

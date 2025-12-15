@@ -10,7 +10,7 @@ import { ArrowLeft, MapPin, Loader2, Play, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getProject } from '@/api/projects'
 import { generateGrid, GRID_PRESETS, GridPreset, GridPoint } from '@/utils/grid-generator'
-import { checkHeatMapRankings, saveHeatMapScan, getLatestHeatMapScan, getHeatMapScanHistory } from '@/api/heat-map'
+import { checkHeatMapRankings, saveHeatMapScan, getLatestHeatMapScan, getHeatMapScanHistory, getRankMapCredits, RankMapCredits } from '@/api/heat-map'
 import { createLocationKeywordCombinations } from '@/api/combinations'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -113,6 +113,8 @@ export function HeatMapPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [creatingCombinations, setCreatingCombinations] = useState(false)
   const [combinationsCreated, setCombinationsCreated] = useState<number | null>(null)
+  const [rankMapCredits, setRankMapCredits] = useState<RankMapCredits | null>(null)
+  const [loadingCredits, setLoadingCredits] = useState(true)
   const mapRef = useRef<google.maps.Map | null>(null)
   const pulseOpacity = 0.4 // Static opacity instead of pulsing
 
@@ -168,11 +170,20 @@ export function HeatMapPage() {
             setScanHistory(history)
           }
         }
+
+        // Load rank map credits
+        try {
+          const credits = await getRankMapCredits()
+          setRankMapCredits(credits)
+        } catch (creditsError) {
+          console.error('Failed to load rank map credits:', creditsError)
+        }
       } catch (error) {
         console.error('Failed to load project:', error)
         toast.error('Failed to load project')
       } finally {
         setLoading(false)
+        setLoadingCredits(false)
       }
     }
 
@@ -189,13 +200,21 @@ export function HeatMapPage() {
         radiusKm
       })
       
-      // Reset all grid data when settings change
-      setGridData({
-        points,
-        positions: new Array(points.length).fill(null),
-        businessCounts: new Array(points.length).fill(null),
-        averagePosition: 0,
-        isGenerating: false
+      // Only reset grid data if the grid size actually changed
+      // This prevents losing data when tab regains focus
+      setGridData(prev => {
+        // If we already have data with the same number of points, keep it
+        if (prev.points.length === points.length && prev.positions.some(p => p !== null)) {
+          return prev
+        }
+        // Otherwise generate new empty grid
+        return {
+          points,
+          positions: new Array(points.length).fill(null),
+          businessCounts: new Array(points.length).fill(null),
+          averagePosition: 0,
+          isGenerating: false
+        }
       })
     } else {
       // Clear grid data if no coordinates available
@@ -489,8 +508,24 @@ export function HeatMapPage() {
       
       toast.success(`Heat map generated! Average position: #${result.averagePosition}`)
       
+      // Update remaining credits (use credits_used from response, or calculate based on grid size)
+      if (result.remainingChecks !== undefined) {
+        const creditsUsed = Math.ceil((gridSize * gridSize) / 25)
+        setRankMapCredits(prev => prev ? { ...prev, checksRemaining: result.remainingChecks!, checksUsed: prev.checksUsed + creditsUsed } : null)
+      }
+      
       // Find weak locations (positions 4+ or not ranked)
       const weakLocs = await fetchWeakLocationsAndReturn(result.positions)
+      
+      // Build grid data for saving
+      const gridDataToSave = gridData.points.map((point, index) => ({
+        grid_x: point.x,
+        grid_y: point.y,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        position: result.positions[index],
+        business_count: result.businessCounts[index] || null
+      }))
       
       // Save scan to history
       try {
@@ -504,7 +539,8 @@ export function HeatMapPage() {
           averagePosition: result.averagePosition,
           rankedCount: result.rankedCount,
           notRankedCount: result.notRankedCount,
-          weakLocations: weakLocs
+          weakLocations: weakLocs,
+          gridData: gridDataToSave
         })
         
         setLastScanDate(new Date().toISOString())
@@ -527,9 +563,8 @@ export function HeatMapPage() {
     }
   }
 
-  // Calculate API cost estimate
+  // Calculate API call count for display
   const apiCallCount = gridSize * gridSize
-  const estimatedCost = (apiCallCount * 0.05).toFixed(2) // £0.05 per call estimate
 
   // Get position color based on ranking
   const getPositionColor = (position: number | null) => {
@@ -667,34 +702,91 @@ export function HeatMapPage() {
                   />
                 </div>
 
-                {/* Cost Estimate */}
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                  <div className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                    Estimated Cost: £{estimatedCost}
+                {/* Rank Map Credits */}
+                {!loadingCredits && rankMapCredits && (() => {
+                  const creditsNeeded = Math.ceil((gridSize * gridSize) / 25)
+                  const hasEnoughCredits = rankMapCredits.checksRemaining >= creditsNeeded
+                  
+                  return (
+                    <div className={`p-3 rounded-lg ${hasEnoughCredits ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                      <div className={`text-sm font-medium ${hasEnoughCredits ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                        {rankMapCredits.checksRemaining} credit{rankMapCredits.checksRemaining !== 1 ? 's' : ''} remaining
+                      </div>
+                      <div className={`text-xs ${hasEnoughCredits ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {rankMapCredits.checksUsed}/{rankMapCredits.checksAllowed} plan + {rankMapCredits.checksPurchased} purchased
+                      </div>
+                      
+                      {/* Credit cost for current grid size */}
+                      <div className={`text-xs mt-2 pt-2 border-t ${hasEnoughCredits ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}>
+                        <div className={`font-medium ${hasEnoughCredits ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                          This scan: {creditsNeeded} credit{creditsNeeded !== 1 ? 's' : ''}
+                        </div>
+                        <div className={hasEnoughCredits ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                          ({gridSize}x{gridSize} = {gridSize * gridSize} pins)
+                        </div>
+                      </div>
+                      
+                      {!hasEnoughCredits && (
+                        <div className="text-xs text-red-600 dark:text-red-400 mt-2">
+                          {rankMapCredits.checksRemaining === 0 
+                            ? 'No credits remaining' 
+                            : `Need ${creditsNeeded} credits, only ${rankMapCredits.checksRemaining} available`}
+                        </div>
+                      )}
+                      
+                      {/* Purchase More Credits Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-3 text-xs"
+                        onClick={() => navigate('/account#credits')}
+                      >
+                        Purchase More Scan Credits
+                      </Button>
+                    </div>
+                  )
+                })()}
+
+                {rankMapCredits?.checksAllowed === 0 && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                    <div className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Upgrade Required
+                    </div>
+                    <div className="text-xs text-amber-600 dark:text-amber-400">
+                      Rank map scans are available on Pro and Agency plans
+                    </div>
                   </div>
-                  <div className="text-xs text-orange-600 dark:text-orange-400">
-                    {apiCallCount} API calls
-                  </div>
-                </div>
+                )}
 
                 {/* Generate Button */}
-                <Button
-                  onClick={handleGenerateHeatMap}
-                  disabled={gridData.isGenerating || !project.latitude || !project.longitude}
-                  className="w-full"
-                >
-                  {gridData.isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      {!project.latitude || !project.longitude ? 'Location Required' : 'Generate Heat Map'}
-                    </>
-                  )}
-                </Button>
+                {(() => {
+                  const creditsNeeded = Math.ceil((gridSize * gridSize) / 25)
+                  const hasEnoughCredits = (rankMapCredits?.checksRemaining ?? 0) >= creditsNeeded
+                  
+                  return (
+                    <Button
+                      onClick={handleGenerateHeatMap}
+                      disabled={gridData.isGenerating || !project.latitude || !project.longitude || !hasEnoughCredits}
+                      className="w-full"
+                    >
+                      {gridData.isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          {!project.latitude || !project.longitude 
+                            ? 'Location Required' 
+                            : !hasEnoughCredits
+                            ? `Need ${creditsNeeded} Credits`
+                            : `Generate Heat Map (${creditsNeeded} credit${creditsNeeded !== 1 ? 's' : ''})`}
+                        </>
+                      )}
+                    </Button>
+                  )
+                })()}
 
                 {/* Progress Bar */}
                 {progress > 0 && progress < 100 && (
@@ -776,14 +868,43 @@ export function HeatMapPage() {
               <Card className="mt-4">
                 <CardHeader>
                   <CardTitle className="text-lg">Scan History</CardTitle>
-                  <CardDescription>Track ranking improvements over time</CardDescription>
+                  <CardDescription>Click a scan to load it on the map</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {scanHistory.map((scan, index) => (
                       <div 
                         key={scan.id}
-                        className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        className={`p-3 border rounded-lg transition-colors cursor-pointer ${
+                          scan.grid_data ? 'hover:bg-muted/50 hover:border-[var(--brand-dark)]' : 'opacity-60'
+                        }`}
+                        onClick={() => {
+                          if (scan.grid_data && scan.grid_data.length > 0) {
+                            // Load historical scan data into the map
+                            const positions = scan.grid_data.map((p: any) => p.position)
+                            const businessCounts = scan.grid_data.map((p: any) => p.business_count)
+                            const points = scan.grid_data.map((p: any) => ({
+                              x: p.grid_x,
+                              y: p.grid_y,
+                              latitude: p.latitude,
+                              longitude: p.longitude
+                            }))
+                            
+                            setGridData({
+                              points,
+                              positions,
+                              businessCounts,
+                              averagePosition: scan.average_position,
+                              isGenerating: false
+                            })
+                            setWeakLocations(scan.weak_locations || [])
+                            setGridSize(scan.grid_size)
+                            setRadiusKm(scan.radius_km)
+                            toast.success(`Loaded scan from ${new Date(scan.scanned_at).toLocaleDateString('en-GB')}`)
+                          } else {
+                            toast.info('This scan does not have detailed grid data saved')
+                          }
+                        }}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="text-sm font-medium">
@@ -795,11 +916,16 @@ export function HeatMapPage() {
                               minute: '2-digit'
                             })}
                           </div>
-                          {index === 0 && (
-                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
-                              Latest
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {!scan.grid_data && (
+                              <span className="text-xs text-muted-foreground">No grid data</span>
+                            )}
+                            {index === 0 && (
+                              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                Latest
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>

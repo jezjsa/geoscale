@@ -107,6 +107,21 @@ serve(async (req) => {
             `Starter plan allows weekly ranking checks. Please wait ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} before checking again. Upgrade to Pro for daily checks.`
           );
         }
+      } else if (plan.rank_tracking_frequency === "every_other_day") {
+        const everyOtherDayInHours = 48; // 48 hours
+        if (hoursSinceLastCheck < everyOtherDayInHours) {
+          const hoursRemaining = Math.ceil(everyOtherDayInHours - hoursSinceLastCheck);
+          if (hoursRemaining > 24) {
+            const daysRemaining = Math.ceil(hoursRemaining / 24);
+            throw new Error(
+              `You can check rankings every other day. Please wait ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} before checking again.`
+            );
+          } else {
+            throw new Error(
+              `You can check rankings every other day. Please wait ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} before checking again.`
+            );
+          }
+        }
       } else if (plan.rank_tracking_frequency === "daily") {
         const dayInHours = 24;
         if (hoursSinceLastCheck < dayInHours) {
@@ -130,7 +145,7 @@ serve(async (req) => {
     // Use blog_url if available, otherwise fall back to wp_url
     const baseUrl = project.blog_url || project.wp_url;
 
-    // Get combinations to check
+    // Get combinations to check - include generated_pages to get the slug
     let query = supabase
       .from("location_keywords")
       .select(
@@ -138,8 +153,8 @@ serve(async (req) => {
         id,
         phrase,
         status,
-        slug,
-        project_locations!inner(name, slug)
+        project_locations!inner(name, slug),
+        generated_pages(slug)
       `
       )
       .eq("project_id", project_id)
@@ -157,8 +172,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: "No pushed combinations found to check",
+          message: "No pushed combinations found to check. Push pages to WordPress first, then check rankings.",
           checked_count: 0,
+          ranked_count: 0,
+          not_ranked_count: 0,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -175,9 +192,10 @@ serve(async (req) => {
 
     // Prepare tasks for DataForSEO (batch API call)
     const tasks = combinations.map((combo: any) => {
-      // Construct the full URL
-      const slug = combo.slug || combo.phrase.toLowerCase().replace(/\s+/g, "-");
-      const fullUrl = `${baseUrl.replace(/\/$/, "")}/${slug}`;
+      // Construct the full URL using the slug from generated_pages
+      // generated_pages is an array, get the first one's slug
+      const pageSlug = combo.generated_pages?.[0]?.slug || combo.phrase.toLowerCase().replace(/\s+/g, "-");
+      const fullUrl = `${baseUrl.replace(/\/$/, "")}/${pageSlug}`;
 
       return {
         keyword: combo.phrase,

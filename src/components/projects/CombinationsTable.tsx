@@ -199,6 +199,23 @@ export function CombinationsTable({
           message: `Next check available in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Upgrade to Pro for daily checks.`
         }
       }
+    } else if (limits.rankTrackingFrequency === 'every_other_day') {
+      const everyOtherDayInHours = 48
+      if (hoursSinceLastCheck < everyOtherDayInHours) {
+        const hoursRemaining = Math.ceil(everyOtherDayInHours - hoursSinceLastCheck)
+        if (hoursRemaining > 24) {
+          const daysRemaining = Math.ceil(hoursRemaining / 24)
+          return {
+            canCheck: false,
+            message: `Next check available in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`
+          }
+        } else {
+          return {
+            canCheck: false,
+            message: `Next check available in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}`
+          }
+        }
+      }
     } else if (limits.rankTrackingFrequency === 'daily') {
       const dayInHours = 24
       if (hoursSinceLastCheck < dayInHours) {
@@ -562,8 +579,16 @@ export function CombinationsTable({
       return checkRankings({ project_id: projectId })
     },
     onSuccess: (data) => {
+      const nextCheckMessage = limits.rankTrackingFrequency === 'every_other_day' 
+        ? 'You can check again in 2 days.'
+        : limits.rankTrackingFrequency === 'daily'
+        ? 'You can check again tomorrow.'
+        : limits.rankTrackingFrequency === 'weekly'
+        ? 'You can check again in 7 days.'
+        : ''
+      
       toast.success('Rankings updated successfully!', {
-        description: `Checked ${data.checked_count} combinations. ${data.ranked_count} ranked in top 100.`,
+        description: `Checked ${data.checked_count} combinations. ${data.ranked_count} ranked in top 100.${nextCheckMessage ? ` ${nextCheckMessage}` : ''}`,
       })
       queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
     },
@@ -942,6 +967,8 @@ export function CombinationsTable({
                               </span>
                             )}
                           </div>
+                        ) : combo.last_position_check ? (
+                          <span className="text-xs text-muted-foreground">100+</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
@@ -1004,8 +1031,10 @@ export function CombinationsTable({
                           className={`text-lg ${
                             pushingIds.has(combo.id)
                               ? 'text-blue-400 animate-pulse'
-                              : combo.status === 'generated' || combo.status === 'pushed'
+                              : combo.status === 'pushed'
                               ? 'text-blue-500 hover:text-blue-600 cursor-pointer'
+                              : combo.status === 'generated'
+                              ? 'text-orange-500 hover:text-orange-600 cursor-pointer'
                               : 'text-muted-foreground/30 cursor-not-allowed'
                           }`}
                         />
@@ -1149,9 +1178,9 @@ export function CombinationsTable({
                 </div>
                 <div>
                   <p className="font-medium mb-1 flex items-center gap-1">
-                    <WordPressIcon className="text-blue-500" /> Push to WordPress
+                    <WordPressIcon className="text-orange-500" /> / <WordPressIcon className="text-blue-500" /> Push to WordPress
                   </p>
-                  <p className="text-muted-foreground">Publish generated content to your WordPress site. Only available for generated content.</p>
+                  <p className="text-muted-foreground">Publish generated content to your WordPress site. <span className="text-orange-500 font-medium">Orange</span> = ready to push, <span className="text-blue-500 font-medium">Blue</span> = already pushed.</p>
                 </div>
                 <div>
                   <p className="font-medium mb-1 flex items-center gap-1">

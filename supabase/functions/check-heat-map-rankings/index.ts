@@ -86,6 +86,125 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Get user from auth header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Authorization header required')
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !authUser) {
+      throw new Error('Invalid authentication')
+    }
+
+    // Get user record from users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, plan_id')
+      .eq('supabase_auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !user) {
+      throw new Error('User not found')
+    }
+
+    // Get plan details
+    const { data: plan, error: planError } = await supabase
+      .from('plans')
+      .select('name, rank_map_checks_per_month')
+      .eq('id', user.plan_id)
+      .single()
+
+    if (planError || !plan) {
+      throw new Error('Plan not found')
+    }
+
+    console.log(`👤 User plan: ${plan.name}, rank_map_checks_per_month: ${plan.rank_map_checks_per_month}`)
+
+    // Check if plan allows rank map checks
+    if (plan.rank_map_checks_per_month === 0 || plan.rank_map_checks_per_month === null) {
+      throw new Error('Rank map checks are not available on your plan. Please upgrade to Pro or Agency.')
+    }
+
+    // Get or create user_credits record
+    let { data: credits, error: creditsError } = await supabase
+      .from('user_credits')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (creditsError && creditsError.code === 'PGRST116') {
+      // No record exists, create one
+      const nextMonth = new Date()
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      nextMonth.setDate(1)
+      nextMonth.setHours(0, 0, 0, 0)
+
+      const { data: newCredits, error: insertError } = await supabase
+        .from('user_credits')
+        .insert({
+          user_id: user.id,
+          rank_map_checks_used: 0,
+          rank_map_checks_purchased: 0,
+          usage_reset_date: nextMonth.toISOString()
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('Failed to create user_credits:', insertError)
+        throw new Error('Failed to initialize usage tracking')
+      }
+      credits = newCredits
+    } else if (creditsError) {
+      throw new Error('Failed to check usage limits')
+    }
+
+    // Check if usage needs to be reset (new month)
+    const now = new Date()
+    const resetDate = new Date(credits.usage_reset_date)
+    
+    if (now >= resetDate) {
+      // Reset monthly usage
+      const nextMonth = new Date()
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      nextMonth.setDate(1)
+      nextMonth.setHours(0, 0, 0, 0)
+
+      const { error: resetError } = await supabase
+        .from('user_credits')
+        .update({
+          rank_map_checks_used: 0,
+          usage_reset_date: nextMonth.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+
+      if (resetError) {
+        console.error('Failed to reset usage:', resetError)
+      } else {
+        credits.rank_map_checks_used = 0
+        credits.usage_reset_date = nextMonth.toISOString()
+      }
+    }
+
+    // Calculate credits needed based on grid size (25 pins = 1 credit)
+    const totalPins = grid_size * grid_size
+    const creditsNeeded = Math.ceil(totalPins / 25)
+    
+    // Calculate remaining checks
+    const totalAllowed = plan.rank_map_checks_per_month + (credits.rank_map_checks_purchased || 0)
+    const remaining = totalAllowed - (credits.rank_map_checks_used || 0)
+
+    console.log(`📊 Usage: ${credits.rank_map_checks_used}/${plan.rank_map_checks_per_month} plan + ${credits.rank_map_checks_purchased || 0} purchased = ${remaining} remaining`)
+    console.log(`📍 Grid ${grid_size}x${grid_size} = ${totalPins} pins = ${creditsNeeded} credits needed`)
+
+    if (remaining < creditsNeeded) {
+      throw new Error(`This scan requires ${creditsNeeded} credits (${grid_size}x${grid_size} = ${totalPins} pins), but you only have ${remaining} remaining. Choose a smaller grid size or purchase additional credits.`)
+    }
+
     // Get DataForSEO credentials from environment
     const dataforseoLogin = Deno.env.get('DATAFORSEO_LOGIN')
     const dataforseoPassword = Deno.env.get('DATAFORSEO_PASSWORD')
@@ -326,7 +445,23 @@ serve(async (req: Request) => {
       throw new Error('Failed to save heat map data')
     }
 
+    // Increment usage count after successful check (deduct credits based on grid size)
+    const { error: usageError } = await supabase
+      .from('user_credits')
+      .update({
+        rank_map_checks_used: (credits.rank_map_checks_used || 0) + creditsNeeded,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+
+    if (usageError) {
+      console.error('Failed to update usage count:', usageError)
+      // Don't throw - the check was successful, just log the error
+    }
+
+    const newRemaining = remaining - creditsNeeded
     console.log(`✅ Heat map complete: ${rankedCount} ranked, ${notRankedCount} not ranked`)
+    console.log(`📊 Usage updated: deducted ${creditsNeeded} credits, ${newRemaining} remaining`)
 
     return new Response(
       JSON.stringify({
@@ -336,7 +471,9 @@ serve(async (req: Request) => {
         average_position: averagePosition,
         ranked_count: rankedCount,
         not_ranked_count: notRankedCount,
-        total_points: grid_points.length
+        total_points: grid_points.length,
+        remaining_checks: newRemaining,
+        credits_used: creditsNeeded
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
