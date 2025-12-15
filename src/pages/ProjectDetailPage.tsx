@@ -136,6 +136,13 @@ export function ProjectDetailPage() {
   // Per-project tracking limit
   const trackingLimit = userPlan?.rankTrackingLimit || 50
 
+  // Redirect to combinations view if both services and locations are empty
+  useEffect(() => {
+    if (!hasServices && locationCount === 0 && currentView !== 'combinations') {
+      setCurrentView('combinations')
+    }
+  }, [hasServices, locationCount, currentView])
+
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'inactive') => {
       const { error } = await supabase
@@ -530,6 +537,9 @@ export function ProjectDetailPage() {
                   <div className="py-8">
                     <div className="max-w-3xl mx-auto">
                       <h3 className="text-lg font-medium text-center mb-6">Get Started</h3>
+                      <p className="text-center text-muted-foreground mb-6">
+                        Add your services, then locations and we'll instantly create combination SEO pages for you, e.g. web design in Doncaster
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Step 1 - Services */}
                         <div className={`rounded-lg border p-5 flex flex-col ${services.length > 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
