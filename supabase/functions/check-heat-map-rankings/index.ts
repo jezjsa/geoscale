@@ -222,10 +222,10 @@ serve(async (req: Request) => {
     const grid_points = generateGrid(centerLat, centerLng, grid_size, radius_km)
     console.log(`📍 Generated ${grid_points.length} grid points`)
 
-    // Get project details to extract business name and other info
+    // Get project details to extract domain URLs
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('project_name, company_name, base_location, latitude, longitude, blog_url')
+      .select('project_name, company_name, base_location, latitude, longitude, blog_url, wp_url')
       .eq('id', project_id)
       .single()
 
@@ -233,24 +233,39 @@ serve(async (req: Request) => {
       throw new Error('Project not found')
     }
 
-    // For Google Maps matching, we use the company_name field (falls back to project_name)
-    // Normalize the name for fuzzy matching
-    const businessName = (project.company_name || project.project_name).toLowerCase().trim()
+    // Extract domains from both wp_url (WordPress URL) and blog_url (website URL)
+    // We check both as they can be different (e.g., 55digital.net and blog.55digital.net)
+    const targetDomains: string[] = []
     
-    // Also extract domain from blog_url as a fallback
-    let targetDomain = ''
-    if (project.blog_url) {
+    // Helper function to extract domain from URL
+    const extractDomain = (urlString: string): string | null => {
+      if (!urlString) return null
       try {
-        const url = new URL(project.blog_url)
-        targetDomain = url.hostname.replace('www.', '')
+        const url = new URL(urlString)
+        return url.hostname.replace('www.', '').toLowerCase()
       } catch {
-        targetDomain = project.blog_url.replace(/^https?:\/\//, '').replace('www.', '').split('/')[0]
+        return urlString.replace(/^https?:\/\//, '').replace('www.', '').split('/')[0].toLowerCase()
+      }
+    }
+    
+    // Add domain from wp_url if set
+    if (project.wp_url) {
+      const domain = extractDomain(project.wp_url)
+      if (domain && !targetDomains.includes(domain)) {
+        targetDomains.push(domain)
+      }
+    }
+    
+    // Add domain from blog_url if set
+    if (project.blog_url) {
+      const domain = extractDomain(project.blog_url)
+      if (domain && !targetDomains.includes(domain)) {
+        targetDomains.push(domain)
       }
     }
 
     console.log(`🔍 Checking Google Maps rankings for "${keyword_combination}" across ${grid_points.length} points`)
-    console.log(`🏢 Business name: ${businessName}`)
-    console.log(`🌐 Target domain: ${targetDomain || 'not set'}`)
+    console.log(`🌐 Target domains: ${targetDomains.length > 0 ? targetDomains.join(', ') : 'none set'}`)
 
     // Prepare DataForSEO authentication using Deno's btoa
     const auth = btoa(`${dataforseoLogin}:${dataforseoPassword}`)
@@ -302,33 +317,32 @@ serve(async (req: Request) => {
       const taskResult = apiData.tasks?.[0]
       
       if (taskResult?.status_code === 20000 && taskResult?.result?.[0]?.items) {
-        // Find the business in Google Maps results
+        // Find the business in Google Maps results - DOMAIN MATCH ONLY
+        // This is the most reliable method as business names can have false positives
         let position = 1
+        
         const matchingResult = taskResult.result[0].items.find((item: any) => {
           if (!item.title) {
             position++
             return false
           }
           
-          const itemTitle = (item.title || '').toLowerCase().trim()
-          
-          // Primary match: Business name contains our project name or vice versa
-          if (itemTitle.includes(businessName) || businessName.includes(itemTitle)) {
-            return true
-          }
-          
-          // Try partial word matching (e.g., "dolphin" matches "Dolphin ICT Ltd")
-          const businessWords = businessName.split(/\s+/).filter((w: string) => w.length > 2)
-          const titleWords = itemTitle.split(/\s+/).filter((w: string) => w.length > 2)
-          const matchingWords = businessWords.filter((bw: string) => titleWords.some((tw: string) => tw.includes(bw) || bw.includes(tw)))
-          if (matchingWords.length >= 1) {
-            return true
-          }
-          
-          // Secondary match: Check domain if available
-          if (targetDomain && item.domain) {
-            const itemDomain = item.domain.replace('www.', '')
-            if (itemDomain.includes(targetDomain) || targetDomain.includes(itemDomain)) {
+          // Only match by domain - check against all target domains (wp_url and blog_url)
+          if (targetDomains.length > 0 && item.domain) {
+            const itemDomain = item.domain.replace('www.', '').toLowerCase()
+            
+            // Check if item domain matches any of our target domains
+            const domainMatches = targetDomains.some(targetDomain => {
+              // Exact match
+              if (itemDomain === targetDomain) return true
+              // Subdomain match (e.g., blog.55digital.net matches 55digital.net)
+              if (itemDomain.endsWith('.' + targetDomain)) return true
+              // Reverse subdomain match (e.g., 55digital.net matches blog.55digital.net)
+              if (targetDomain.endsWith('.' + itemDomain)) return true
+              return false
+            })
+            
+            if (domainMatches) {
               return true
             }
           }

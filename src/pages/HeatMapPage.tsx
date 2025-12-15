@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Navigation } from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import { Progress } from '@/components/ui/progress'
 import { ArrowLeft, MapPin, Loader2, Play, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -108,9 +108,7 @@ export function HeatMapPage() {
   const [loadingLocations, setLoadingLocations] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressPhase, setProgressPhase] = useState<'locations' | 'business' | null>(null)
-  const [lastScanDate, setLastScanDate] = useState<string | null>(null)
   const [scanHistory, setScanHistory] = useState<any[]>([])
-  const [showHistory, setShowHistory] = useState(false)
   const [creatingCombinations, setCreatingCombinations] = useState(false)
   const [combinationsCreated, setCombinationsCreated] = useState<number | null>(null)
   const [rankMapCredits, setRankMapCredits] = useState<RankMapCredits | null>(null)
@@ -162,7 +160,6 @@ export function HeatMapPage() {
         if (location.state?.phrase) {
           const latestScan = await getLatestHeatMapScan(projectId, location.state.phrase)
           if (latestScan) {
-            setLastScanDate(latestScan.scanned_at)
             setWeakLocations(latestScan.weak_locations || [])
             
             // Load scan history
@@ -543,8 +540,6 @@ export function HeatMapPage() {
           gridData: gridDataToSave
         })
         
-        setLastScanDate(new Date().toISOString())
-        
         // Refresh scan history
         const history = await getHeatMapScanHistory(projectId!, location.state!.phrase)
         setScanHistory(history)
@@ -563,8 +558,6 @@ export function HeatMapPage() {
     }
   }
 
-  // Calculate API call count for display
-  const apiCallCount = gridSize * gridSize
 
   // Get position color based on ranking
   const getPositionColor = (position: number | null) => {
@@ -616,9 +609,9 @@ export function HeatMapPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Ranking Heat Map</h1>
+            <h1 className="text-3xl font-bold">Google Map Pack</h1>
             <p className="text-muted-foreground">
-              Analyzing rankings for "{location.state?.phrase}"
+              Rankings for "{location.state?.phrase}"
             </p>
           </div>
           
@@ -670,21 +663,6 @@ export function HeatMapPage() {
                       <SelectItem value="comprehensive">Comprehensive (15x15, 25km)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                {/* Grid Size Slider */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Number of Pins: {gridSize}x{gridSize} ({apiCallCount})
-                  </label>
-                  <Slider
-                    value={[gridSize]}
-                    onValueChange={(value) => setGridSize(value[0])}
-                    min={3}
-                    max={15}
-                    step={1}
-                    className="w-full"
-                  />
                 </div>
 
                 {/* Radius Slider */}
@@ -801,34 +779,6 @@ export function HeatMapPage() {
                   </div>
                 )}
 
-                {/* Last Scan Info */}
-                {lastScanDate && !gridData.isGenerating && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
-                      Last scanned
-                    </div>
-                    <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                      {new Date(lastScanDate).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                    {scanHistory.length > 1 && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs mt-1"
-                        onClick={() => setShowHistory(!showHistory)}
-                      >
-                        View {scanHistory.length} scans
-                      </Button>
-                    )}
-                  </div>
-                )}
-
                 {/* Results Summary */}
                 {gridData.positions.some(p => p !== null) && (
                   <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-2">
@@ -863,10 +813,10 @@ export function HeatMapPage() {
               </CardContent>
             </Card>
 
-            {/* Scan History */}
-            {showHistory && scanHistory.length > 0 && (
+            {/* Scan History Card */}
+            {scanHistory.length > 0 && (
               <Card className="mt-4">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Scan History</CardTitle>
                   <CardDescription>Click a scan to load it on the map</CardDescription>
                 </CardHeader>
@@ -956,7 +906,7 @@ export function HeatMapPage() {
               <CardHeader>
                 <CardTitle>Geographic Ranking Map</CardTitle>
                 <CardDescription>
-                  Visual representation of ranking positions across the target area
+                  Visual representation of ranking positions across the target area within Google Maps.
                 </CardDescription>
               </CardHeader>
               <CardContent>
