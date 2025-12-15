@@ -76,64 +76,100 @@ serve(async (req) => {
 
     const { data: plan, error: planError } = await supabase
       .from("plans")
-      .select("name, rank_tracking_frequency")
+      .select("name, rank_check_daily_base, rank_check_per_site")
       .eq("id", userData.plan_id)
       .single();
 
     if (planError) throw planError;
 
-    // Check the last time rankings were checked for this project
-    const { data: lastCheck } = await supabase
-      .from("location_keywords")
-      .select("last_position_check")
-      .eq("project_id", project_id)
-      .not("last_position_check", "is", null)
-      .order("last_position_check", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Check if plan allows rank tracking
+    if (plan.rank_check_daily_base === 0 && plan.rank_check_per_site === 0) {
+      throw new Error("Rank tracking is not available on your plan. Please upgrade to Pro or Agency.");
+    }
 
-    if (lastCheck?.last_position_check) {
-      const lastCheckTime = new Date(lastCheck.last_position_check);
-      const now = new Date();
-      const hoursSinceLastCheck = (now.getTime() - lastCheckTime.getTime()) / (1000 * 60 * 60);
+    // Count user's active projects to calculate daily quota
+    const { count: projectCount, error: projectCountError } = await supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", project.user_id);
 
-      // Enforce frequency limits based on plan
-      if (plan.rank_tracking_frequency === "weekly") {
-        const weekInHours = 7 * 24; // 168 hours
-        if (hoursSinceLastCheck < weekInHours) {
-          const hoursRemaining = Math.ceil(weekInHours - hoursSinceLastCheck);
-          const daysRemaining = Math.ceil(hoursRemaining / 24);
-          throw new Error(
-            `Starter plan allows weekly ranking checks. Please wait ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} before checking again. Upgrade to Pro for daily checks.`
-          );
-        }
-      } else if (plan.rank_tracking_frequency === "every_other_day") {
-        const everyOtherDayInHours = 48; // 48 hours
-        if (hoursSinceLastCheck < everyOtherDayInHours) {
-          const hoursRemaining = Math.ceil(everyOtherDayInHours - hoursSinceLastCheck);
-          if (hoursRemaining > 24) {
-            const daysRemaining = Math.ceil(hoursRemaining / 24);
-            throw new Error(
-              `You can check rankings every other day. Please wait ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} before checking again.`
-            );
-          } else {
-            throw new Error(
-              `You can check rankings every other day. Please wait ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} before checking again.`
-            );
-          }
-        }
-      } else if (plan.rank_tracking_frequency === "daily") {
-        const dayInHours = 24;
-        if (hoursSinceLastCheck < dayInHours) {
-          const hoursRemaining = Math.ceil(dayInHours - hoursSinceLastCheck);
-          throw new Error(
-            `You can check rankings once per day. Please wait ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} before checking again.`
-          );
-        }
+    if (projectCountError) throw projectCountError;
+
+    // Calculate daily quota: base + (per_site * number_of_projects)
+    const dailyQuota = plan.rank_check_daily_base + (plan.rank_check_per_site * (projectCount || 1));
+
+    console.log(`📊 Daily quota: ${plan.rank_check_daily_base} base + (${plan.rank_check_per_site} × ${projectCount} sites) = ${dailyQuota}`);
+
+    // Get or create user_credits record
+    let { data: credits, error: creditsError } = await supabase
+      .from("user_credits")
+      .select("*")
+      .eq("user_id", project.user_id)
+      .single();
+
+    if (creditsError && creditsError.code === "PGRST116") {
+      // No record exists, create one
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      const { data: newCredits, error: insertError } = await supabase
+        .from("user_credits")
+        .insert({
+          user_id: project.user_id,
+          rank_checks_used_today: 0,
+          rank_checks_reset_date: tomorrow.toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Failed to create user_credits:", insertError);
+        throw new Error("Failed to initialize usage tracking");
+      }
+      credits = newCredits;
+    } else if (creditsError) {
+      throw new Error("Failed to check usage limits");
+    }
+
+    // Check if daily quota needs to be reset (new day)
+    const now = new Date();
+    const resetDate = new Date(credits.rank_checks_reset_date);
+    
+    if (now >= resetDate) {
+      // Reset daily usage
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      const { error: resetError } = await supabase
+        .from("user_credits")
+        .update({
+          rank_checks_used_today: 0,
+          rank_checks_reset_date: tomorrow.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", project.user_id);
+
+      if (resetError) {
+        console.error("Failed to reset daily usage:", resetError);
+      } else {
+        credits.rank_checks_used_today = 0;
+        credits.rank_checks_reset_date = tomorrow.toISOString();
       }
     }
 
-    console.log(`✅ Plan check passed: ${plan.name} (${plan.rank_tracking_frequency})`);
+    // Calculate remaining checks for today
+    const usedToday = credits.rank_checks_used_today || 0;
+    const remainingToday = dailyQuota - usedToday;
+
+    console.log(`📊 Usage today: ${usedToday}/${dailyQuota} (${remainingToday} remaining)`);
+
+    if (remainingToday <= 0) {
+      throw new Error(`You have used all ${dailyQuota} rank checks for today. Your quota resets at midnight.`);
+    }
+
+    console.log(`✅ Plan check passed: ${plan.name} (${dailyQuota} daily quota)`);
 
 
     if (!project.blog_url && !project.wp_url) {
@@ -185,13 +221,20 @@ serve(async (req) => {
 
     console.log(`📊 Found ${combinations.length} combinations to check`);
 
+    // Limit combinations to remaining daily quota
+    let combinationsToCheck = combinations;
+    if (combinations.length > remainingToday) {
+      console.log(`⚠️ Limiting to ${remainingToday} combinations (daily quota remaining)`);
+      combinationsToCheck = combinations.slice(0, remainingToday);
+    }
+
     // Create Basic Auth header for DataForSEO
     const auth = base64Encode(
       new TextEncoder().encode(`${dataForSeoLogin}:${dataForSeoPassword}`)
     );
 
     // Prepare tasks for DataForSEO (batch API call)
-    const tasks = combinations.map((combo: any) => {
+    const tasks = combinationsToCheck.map((combo: any) => {
       // Construct the full URL using the slug from generated_pages
       // generated_pages is an array, get the first one's slug
       const pageSlug = combo.generated_pages?.[0]?.slug || combo.phrase.toLowerCase().replace(/\s+/g, "-");
@@ -252,7 +295,7 @@ serve(async (req) => {
       for (let j = 0; j < batch.length; j++) {
         const task = batch[j];
         const result = data.tasks?.[j];
-        const combo = combinations[i + j];
+        const combo = combinationsToCheck[i + j];
 
         if (result?.status_code === 20000) {
           const items = result?.result?.[0]?.items || [];
@@ -304,6 +347,26 @@ serve(async (req) => {
 
     const rankedCount = updates.filter((u) => u.position !== null).length;
 
+    // Update daily usage count
+    const checksPerformed = updates.length;
+    if (checksPerformed > 0) {
+      const { error: usageError } = await supabase
+        .from("user_credits")
+        .update({
+          rank_checks_used_today: (credits.rank_checks_used_today || 0) + checksPerformed,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", project.user_id);
+
+      if (usageError) {
+        console.error("Failed to update daily usage:", usageError);
+      } else {
+        console.log(`📊 Updated daily usage: ${usedToday} + ${checksPerformed} = ${usedToday + checksPerformed}/${dailyQuota}`);
+      }
+    }
+
+    const newRemainingToday = remainingToday - checksPerformed;
+
     console.log(
       `✨ Updated ${updates.length} combinations (${rankedCount} ranked)`
     );
@@ -314,6 +377,9 @@ serve(async (req) => {
         checked_count: updates.length,
         ranked_count: rankedCount,
         not_ranked_count: updates.length - rankedCount,
+        daily_quota: dailyQuota,
+        used_today: usedToday + checksPerformed,
+        remaining_today: newRemainingToday,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

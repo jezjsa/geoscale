@@ -9,6 +9,8 @@ export interface Plan {
   combinationsPerWebsite: number; // Per-project limit
   rankTrackingFrequency: 'weekly' | 'every_other_day' | 'daily' | null;
   rankTrackingLimit: number; // Per-project rank tracking limit
+  rankCheckDailyBase: number; // Base daily rank check quota
+  rankCheckPerSite: number; // Additional daily checks per site
   basePriceGbp: number;
   perSitePriceGbp: number;
   isOneOff: boolean; // true for Starter (one-time payment)

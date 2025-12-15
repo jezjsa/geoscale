@@ -41,6 +41,9 @@ export const getAllPlans = async (): Promise<Plan[]> => {
       combinationsPerWebsite: plan.combinations_per_website || Math.floor(combinationPageLimit / websiteLimit),
       rankTrackingFrequency: plan.rank_tracking_frequency || null,
       rankTrackingLimit: plan.rank_tracking_per_website || (rankTrackingLimit > 0 ? Math.floor(rankTrackingLimit / websiteLimit) : 0),
+      // Daily rank check quota fields
+      rankCheckDailyBase: plan.rank_check_daily_base || 0,
+      rankCheckPerSite: plan.rank_check_per_site || 0,
       basePriceGbp: parseFloat(plan.price_monthly || plan.base_price_gbp || 0),
       perSitePriceGbp: parseFloat(plan.price_per_site || plan.per_site_price_gbp || 0),
       isOneOff: plan.is_one_off || false,

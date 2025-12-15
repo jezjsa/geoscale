@@ -170,65 +170,21 @@ export function CombinationsTable({
     }
   }, [combinations, generatingIds])
 
-  // Calculate when next ranking check is available based on plan
-  const nextRankingCheckInfo = useMemo(() => {
-    if (!limits?.rankTrackingFrequency) {
-      return { canCheck: true, message: '' }
+  // Check if rank tracking is available (daily quota system)
+  const rankCheckInfo = useMemo(() => {
+    // No rank tracking for Starter plan
+    if (!plan?.rankCheckDailyBase && !plan?.rankCheckPerSite) {
+      return { canCheck: false, message: 'Upgrade to Pro for rank tracking' }
     }
 
-    // Find the most recent check time across all combinations
-    const lastCheckTimes = combinations
-      .filter(c => c.last_position_check)
-      .map(c => new Date(c.last_position_check!))
-
-    if (lastCheckTimes.length === 0) {
-      return { canCheck: true, message: 'Check rankings' }
+    // Count pushed combinations that can be checked
+    const pushedCount = combinations.filter(c => c.status === 'pushed').length
+    if (pushedCount === 0) {
+      return { canCheck: false, message: 'No pushed pages to check' }
     }
 
-    const mostRecentCheck = new Date(Math.max(...lastCheckTimes.map(d => d.getTime())))
-    const now = new Date()
-    const hoursSinceLastCheck = (now.getTime() - mostRecentCheck.getTime()) / (1000 * 60 * 60)
-
-    if (limits.rankTrackingFrequency === 'weekly') {
-      const weekInHours = 7 * 24
-      if (hoursSinceLastCheck < weekInHours) {
-        const hoursRemaining = Math.ceil(weekInHours - hoursSinceLastCheck)
-        const daysRemaining = Math.ceil(hoursRemaining / 24)
-        return {
-          canCheck: false,
-          message: `Next check available in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Upgrade to Pro for daily checks.`
-        }
-      }
-    } else if (limits.rankTrackingFrequency === 'every_other_day') {
-      const everyOtherDayInHours = 48
-      if (hoursSinceLastCheck < everyOtherDayInHours) {
-        const hoursRemaining = Math.ceil(everyOtherDayInHours - hoursSinceLastCheck)
-        if (hoursRemaining > 24) {
-          const daysRemaining = Math.ceil(hoursRemaining / 24)
-          return {
-            canCheck: false,
-            message: `Next check available in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`
-          }
-        } else {
-          return {
-            canCheck: false,
-            message: `Next check available in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}`
-          }
-        }
-      }
-    } else if (limits.rankTrackingFrequency === 'daily') {
-      const dayInHours = 24
-      if (hoursSinceLastCheck < dayInHours) {
-        const hoursRemaining = Math.ceil(dayInHours - hoursSinceLastCheck)
-        return {
-          canCheck: false,
-          message: `Next check available in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}`
-        }
-      }
-    }
-
-    return { canCheck: true, message: 'Check rankings' }
-  }, [combinations, limits])
+    return { canCheck: true, message: `Check ${pushedCount} ranking${pushedCount !== 1 ? 's' : ''}` }
+  }, [combinations, plan])
 
   // Clear generatingIds when all are complete
   useEffect(() => {
@@ -718,8 +674,8 @@ export function CombinationsTable({
                   variant="outline"
                   size="sm"
                   onClick={() => checkRankingsMutation.mutate()}
-                  disabled={checkRankingsMutation.isPending || !nextRankingCheckInfo.canCheck}
-                  title={nextRankingCheckInfo.message || "Check Google rankings for pushed pages"}
+                  disabled={checkRankingsMutation.isPending || !rankCheckInfo.canCheck}
+                  title={rankCheckInfo.message || "Check Google rankings for pushed pages"}
                 >
                   {checkRankingsMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
