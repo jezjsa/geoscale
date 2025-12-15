@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Configuration
+// Configuration - v14 with onConflict fix
 const BATCH_SIZE = 5; // Process up to 5 jobs per cron run
 const MAX_EXECUTION_TIME_MS = 50000; // Stop processing after 50 seconds to avoid timeout
 
@@ -24,7 +24,7 @@ serve(async (req) => {
     // The function itself uses service role key for all operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
+    const openrouterApiKey = Deno.env.get("OPENROUTER_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -117,46 +117,229 @@ serve(async (req) => {
 
         console.log(`📝 [QUEUE WORKER] Generating content for: ${lkData.phrase}`);
 
+        // Fetch service page URL if service is associated
+        let servicePageUrl = "";
+        if (lkData.service_id) {
+          const { data: serviceData } = await supabase
+            .from("project_services")
+            .select("service_page_url")
+            .eq("id", lkData.service_id)
+            .single();
+          if (serviceData?.service_page_url) {
+            servicePageUrl = serviceData.service_page_url;
+          }
+        }
+
+        // Fetch parent town data if this is a suburb page
+        let parentTownData: { phrase: string; wp_page_url: string | null; location: any } | null = null;
+        if (lkData.parent_location_id) {
+          const { data: parentData } = await supabase
+            .from("location_keywords")
+            .select(`
+              phrase,
+              wp_page_url,
+              location:project_locations!location_keywords_location_id_fkey(name)
+            `)
+            .eq("id", lkData.parent_location_id)
+            .single();
+          if (parentData) {
+            parentTownData = parentData as any;
+          }
+        }
+
+        // Build internal linking blocks
+        const serviceName = lkData.keyword?.keyword || "service";
+        const location = lkData.location?.name || "";
+        const businessName = lkData.project?.company_name || lkData.project?.project_name || "Our Business";
+        const phoneNumber = lkData.project?.phone_number || "";
+        const contactUrl = lkData.project?.contact_url || "";
+        const serviceDescription = lkData.project?.service_description || "";
+
+        // Fetch a random testimonial for this project
+        const { data: testimonials, error: testimonialsError } = await supabase
+          .from("project_testimonials")
+          .select("testimonial_text, customer_name, business_name")
+          .eq("project_id", lkData.project_id);
+
+        if (testimonialsError) {
+          console.error("Failed to fetch testimonials:", testimonialsError);
+        }
+
+        // Select a random testimonial if available
+        let testimonialBlock = "";
+        if (testimonials && testimonials.length > 0) {
+          const randomTestimonial = testimonials[
+            Math.floor(Math.random() * testimonials.length)
+          ] as any;
+          
+          const attribution = [
+            randomTestimonial.customer_name,
+            randomTestimonial.business_name,
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          testimonialBlock = `"${randomTestimonial.testimonial_text}"${attribution ? ` - ${attribution}` : ""}`;
+        }
+
+        // Fetch all project services to include in prompt
+        let projectServicesBlock = "";
+        const { data: projectServices, error: servicesError } = await supabase
+          .from("project_services")
+          .select("name, description")
+          .eq("project_id", lkData.project_id);
+
+        if (servicesError) {
+          console.error("Failed to fetch project services:", servicesError);
+        }
+
+        if (projectServices && projectServices.length > 0) {
+          const servicesList = projectServices
+            .map((s: any) => s.description ? `- ${s.name}: ${s.description}` : `- ${s.name}`)
+            .join("\n");
+          projectServicesBlock = servicesList;
+        }
+
+        // Fetch service-specific FAQs if a service is associated
+        let serviceFaqsBlock = "";
+        if (lkData.service_id) {
+          const { data: serviceFaqs, error: faqsError } = await supabase
+            .from("service_faqs")
+            .select("question, answer, sort_order")
+            .eq("service_id", lkData.service_id)
+            .order("sort_order", { ascending: true });
+
+          if (faqsError) {
+            console.error("Failed to fetch service FAQs:", faqsError);
+          }
+
+          if (serviceFaqs && serviceFaqs.length > 0) {
+            const faqsList = (serviceFaqs as any[])
+              .map((faq) => `Q: ${faq.question}\nA: ${faq.answer}`)
+              .join("\n\n");
+            serviceFaqsBlock = faqsList;
+          }
+        }
+
+        let internalLinkingBlock = "";
+        let internalLinkingInstructions = "";
+
+        if (parentTownData) {
+          // This is a suburb page
+          const parentLocation = Array.isArray(parentTownData.location) 
+            ? parentTownData.location[0]?.name 
+            : parentTownData.location?.name;
+          
+          internalLinkingBlock = `
+INTERNAL LINKING DATA (Suburb Page):
+- Parent Town: ${parentLocation || "Unknown"}
+- Parent Town URL: ${parentTownData.wp_page_url || "Not yet published"}
+${servicePageUrl ? `- Main Service Page URL: ${servicePageUrl}` : ""}`;
+
+          internalLinkingInstructions = `
+INTERNAL LINKING INSTRUCTIONS (Suburb Page):
+${parentTownData.wp_page_url ? `- In the intro or summary section, include a natural link to the parent town page.
+  Example: "For wider coverage across the area, see our main <a href="${parentTownData.wp_page_url}">${serviceName} in ${parentLocation}</a> page."` : "- Parent town page not yet published, skip parent link for now."}
+${servicePageUrl ? `- In the CTA section, include a link to the main service page.
+  Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."` : ""}`;
+        } else if (servicePageUrl) {
+          // Regular page with just service page link
+          internalLinkingBlock = `
+INTERNAL LINKING DATA:
+- Main Service Page URL: ${servicePageUrl}`;
+
+          internalLinkingInstructions = `
+INTERNAL LINKING INSTRUCTIONS:
+- In the CTA or summary section, include a link to the main service page.
+  Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."`;
+        }
+
         // Build the prompt
-        const prompt = `You are an expert SEO content writer. Create a comprehensive, engaging landing page for the following:
+        const prompt = `Create a comprehensive, SEO-optimized landing page for a service business that will rank highly in Google search results.
 
-Business: ${lkData.project.company_name || lkData.project.project_name}
-Service: ${lkData.project.service_description || lkData.keyword.keyword}
-Location: ${lkData.location.name}
-Target Keyword: "${lkData.phrase}"
-${lkData.project.contact_name ? `Contact: ${lkData.project.contact_name}` : ''}
-${lkData.project.phone_number ? `Phone: ${lkData.project.phone_number}` : ''}
-${lkData.project.contact_url ? `Website: ${lkData.project.contact_url}` : ''}
+Service: ${serviceName}
+Location: ${location}
+Target keyword phrase: ${serviceName} in ${location}
 
-Create a landing page with:
-- A compelling H1 title (DO NOT include the business name in the H1)
-- Well-structured HTML content with proper headings (h2, h3)
-- Natural keyword integration
-- Local relevance for ${lkData.location.name}
-- Clear call-to-action
-- Professional, engaging tone
-- 800-1200 words
-- A meta title (can include business name)
-- A meta description (155 characters max)
+Business name: ${businessName}
+Phone number: ${phoneNumber}
+Contact page URL: ${contactUrl}
+${internalLinkingBlock}
+
+${testimonialBlock ? `Testimonial to include:\n${testimonialBlock}` : "No testimonials provided."}
+
+${serviceDescription ? `Service description: ${serviceDescription}` : ""}
+
+${projectServicesBlock ? `Services offered by this business:\n${projectServicesBlock}` : ""}
+
+${serviceFaqsBlock ? `Service-specific FAQs to include:\n${serviceFaqsBlock}` : ""}
+${internalLinkingInstructions}
+
+Create a complete, engaging landing page article that includes:
+
+**REQUIRED ELEMENTS (must be included):**
+- Business name and location prominently featured
+- Phone number and contact URL in the content
+- At least one customer testimonial (use the provided testimonial exactly) - skip if none provided
+- Clear call-to-action at the end
+
+**CONTENT STRUCTURE (flexible but comprehensive):**
+- **Introduction**: Compelling opening that explains the service benefits and includes business name
+- **Why Choose Section**: 4-6 compelling reasons to choose this business (can include local expertise, unique selling points, benefits)
+- **Services/Process Section**: ONLY list services from "Services offered by this business" above. If no services are provided, write general content about the main service type
+- **Testimonials**: Include the provided testimonial(s) in a dedicated section - skip if none provided
+- **Benefits/Value Proposition**: Additional reasons this service is valuable
+- **FAQ Section**: ONLY include if "Service-specific FAQs to include:" appears above with actual FAQs. If no FAQs are provided, DO NOT create or invent any FAQ section
+- **Strong Call-to-Action**: End with clear contact information and next steps
+
+**CRITICAL RULES - DO NOT VIOLATE:**
+- DO NOT invent case studies, client projects, portfolio examples, or success stories
+- DO NOT fabricate statistics or metrics (e.g., "50% increase", "reduced by X%", "X+ clients served")
+- DO NOT claim specific outcomes or results for unnamed clients
+- DO NOT create fake testimonials - only use the exact testimonial text provided above
+- DO NOT invent specific business names, project names, or client names
+- Only make general claims about service quality and expertise, not specific measurable results
+- All claims must be general and non-specific (e.g., "we deliver quality results" NOT "we increased sales by 50%")
+- DO NOT invent service names - only use services listed in "Services offered by this business" above
+- If no services list is provided, only discuss the main service type generically
+
+**SEO REQUIREMENTS:**
+- Natural keyword integration throughout (aim for 3-6 keyword mentions)
+- Local relevance and location mentions (4-8 location references)
+- Professional, engaging tone suitable for B2B or local business audience
+- 800-1500 words of high-quality, original content
+- Mobile-friendly structure
+- Schema markup friendly (use proper headings, lists, etc.)
+
+**FORMATTING:**
+- Use semantic HTML: h2, h3, p, ul, li, strong, em
+- Tables for comparisons if helpful
+- No H1 tags (WordPress uses page title as H1)
+- Proper alt text for any images mentioned
+- Clean, readable structure
+
+${internalLinkingInstructions}
 
 Format your response as JSON:
 {
   "title": "Service in Location (NO business name)",
   "meta_title": "Meta title here (can include business name)",
-  "meta_description": "Meta description here",
+  "meta_description": "Meta description here (150 characters max)",
   "content": "HTML content here"
 }`;
 
-        // Call OpenAI API
-        console.log(`🤖 [QUEUE WORKER] Calling OpenAI API...`);
-        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Call OpenRouter API
+        console.log(`🤖 [QUEUE WORKER] Calling OpenRouter API...`);
+        const openaiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${openaiApiKey}`,
+            Authorization: `Bearer ${openrouterApiKey}`,
+            "HTTP-Referer": supabaseUrl,
+            "X-Title": "GeoScale",
           },
           body: JSON.stringify({
-            model: "gpt-4-turbo",
+            model: "x-ai/grok-4.1-fast",
             messages: [
               {
                 role: "user",
@@ -168,17 +351,17 @@ Format your response as JSON:
 
         if (!openaiResponse.ok) {
           const errorText = await openaiResponse.text();
-          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+          throw new Error(`OpenRouter API error: ${openaiResponse.status} - ${errorText}`);
         }
 
         const openaiData = await openaiResponse.json();
         const generatedText = openaiData.choices[0]?.message?.content;
 
         if (!generatedText) {
-          throw new Error("No content generated from OpenAI");
+          throw new Error("No content generated from OpenRouter");
         }
 
-        console.log(`✅ [QUEUE WORKER] OpenAI response received`);
+        console.log(`✅ [QUEUE WORKER] OpenRouter response received`);
 
         // Parse JSON response
         let parsedContent;
@@ -191,7 +374,7 @@ Format your response as JSON:
           }
         } catch (parseError: any) {
           console.error("❌ [QUEUE WORKER] JSON parse error:", parseError);
-          throw new Error(`Failed to parse OpenAI response: ${parseError.message}`);
+          throw new Error(`Failed to parse OpenRouter response: ${parseError.message}`);
         }
 
         // Generate slug
@@ -213,6 +396,9 @@ Format your response as JSON:
             meta_title: parsedContent.meta_title || parsedContent.title,
             meta_description: parsedContent.meta_description || "",
             updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'location_keyword_id',
+            ignoreDuplicates: false
           })
           .select()
           .single();
@@ -242,11 +428,11 @@ Format your response as JSON:
         await supabase.from("api_logs").insert({
           user_id: job.user_id,
           project_id: job.project_id,
-          api_type: "openai",
+          api_type: "openrouter",
           endpoint: "/v1/chat/completions",
           method: "POST",
           status_code: 200,
-          request_body: { model: "gpt-4-turbo", prompt_length: prompt.length, job_id: job.id },
+          request_body: { model: "x-ai/grok-4.1-fast", prompt_length: prompt.length, job_id: job.id },
           response_body: { success: true, generated_page_id: generatedPage.id },
         });
 
@@ -280,7 +466,7 @@ Format your response as JSON:
         await supabase.from("api_logs").insert({
           user_id: job.user_id,
           project_id: job.project_id,
-          api_type: "openai",
+          api_type: "openrouter",
           endpoint: "/v1/chat/completions",
           method: "POST",
           status_code: 500,

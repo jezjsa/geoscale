@@ -73,6 +73,7 @@ export async function getProjectCombinations(projectId: string) {
       previous_position,
       last_position_check,
       track_position,
+      parent_location_id,
       location:project_locations (
         id,
         name,
@@ -125,6 +126,45 @@ export async function deleteLocationKeyword(id: string) {
   if (error) throw error
 }
 
+/**
+ * Get main town combinations (those without a parent) for use as parent options
+ * Returns unique locations that can be selected as parent towns
+ */
+export async function getMainTownCombinations(projectId: string) {
+  const { data, error } = await supabase
+    .from('location_keywords')
+    .select(`
+      id,
+      phrase,
+      location:project_locations (
+        id,
+        name
+      )
+    `)
+    .eq('project_id', projectId)
+    .is('parent_location_id', null)
+
+  if (error) throw error
+
+  // Normalize and deduplicate by location name
+  const locationMap = new Map<string, { id: string; locationName: string; combinationId: string }>()
+  
+  data?.forEach((item: any) => {
+    const location = Array.isArray(item.location) ? item.location[0] : item.location
+    if (location?.name && !locationMap.has(location.name)) {
+      locationMap.set(location.name, {
+        id: location.id,
+        locationName: location.name,
+        combinationId: item.id, // Use first combination ID for this location
+      })
+    }
+  })
+
+  return Array.from(locationMap.values()).sort((a, b) => 
+    a.locationName.localeCompare(b.locationName)
+  )
+}
+
 interface CsvUploadResponse {
   rows_processed: number
   combinations_count: number
@@ -133,7 +173,7 @@ interface CsvUploadResponse {
 
 export async function addSpecificCombinations(
   projectId: string,
-  combinations: Array<{ location: string; keyword: string }>
+  combinations: Array<{ location: string; keyword: string; parentLocationId?: string }>
 ): Promise<{ combinations_count: number }> {
   // Extract unique locations and keywords
   const uniqueLocations = new Set<string>()
@@ -194,6 +234,19 @@ export async function addSpecificCombinations(
     keywordIdMap.set(kw.keyword, kw.id)
   })
 
+  // If we have a parent location ID, fetch its service_id to inherit
+  let parentServiceId: string | null = null
+  const firstParentId = combinations[0]?.parentLocationId
+  if (firstParentId) {
+    const { data: parentData } = await supabase
+      .from('location_keywords')
+      .select('service_id')
+      .eq('id', firstParentId)
+      .single()
+    
+    parentServiceId = parentData?.service_id || null
+  }
+
   // Generate combinations
   const combinationsToInsert = combinations.map(combo => {
     const locationId = locationIdMap.get(combo.location)
@@ -217,6 +270,8 @@ export async function addSpecificCombinations(
       keyword_id: keywordId,
       phrase: phrase.toLowerCase(),
       status: 'pending',
+      parent_location_id: combo.parentLocationId || null,
+      service_id: parentServiceId, // Inherit service_id from parent
     }
   })
 

@@ -12,9 +12,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Loader2, AlertTriangle, X, AlertCircle } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Plus, Loader2, AlertTriangle, X, AlertCircle, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { addSpecificCombinations, getProjectCombinations } from '@/api/combinations'
+import { addSpecificCombinations, getProjectCombinations, getMainTownCombinations } from '@/api/combinations'
 import { getProjectServices, getServiceKeywords } from '@/api/services'
 
 interface AddLocationsDialogProps {
@@ -83,6 +91,18 @@ export function AddLocationsDialog({
 
   const keywordCount = allKeywords?.length || 0
   
+  // Suburb mode state
+  const [isSuburbMode, setIsSuburbMode] = useState(false)
+  const [selectedParentLocationId, setSelectedParentLocationId] = useState<string>('')
+
+  // Fetch main town combinations for parent dropdown
+  const { data: mainTowns } = useQuery({
+    queryKey: ['mainTownCombinations', projectId],
+    queryFn: () => getMainTownCombinations(projectId),
+    enabled: open && isSuburbMode,
+    staleTime: 0,
+  })
+
   // 5 input rows for towns
   const [townInputs, setTownInputs] = useState<string[]>(['', '', '', '', ''])
   
@@ -178,13 +198,20 @@ export function AddLocationsDialog({
       return
     }
 
+    // Validate suburb mode requires parent selection
+    if (isSuburbMode && !selectedParentLocationId) {
+      toast.error('Please select a parent town for these suburbs')
+      return
+    }
+
     // Create combinations for each town × keyword pair
-    const combinations: Array<{ location: string; keyword: string }> = []
+    const combinations: Array<{ location: string; keyword: string; parentLocationId?: string }> = []
     towns.forEach(town => {
       allKeywords.forEach(keyword => {
         combinations.push({
           location: town,
           keyword: keyword,
+          parentLocationId: isSuburbMode ? selectedParentLocationId : undefined,
         })
       })
     })
@@ -195,6 +222,8 @@ export function AddLocationsDialog({
   const handleClose = () => {
     setTownInputs(['', '', '', '', ''])
     setAdditionalTowns([])
+    setIsSuburbMode(false)
+    setSelectedParentLocationId('')
     onOpenChange(false)
   }
 
@@ -226,12 +255,65 @@ export function AddLocationsDialog({
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto py-4 px-1 space-y-4">
               
+              {/* Suburb mode toggle */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <Label htmlFor="suburb-mode" className="text-sm font-medium cursor-pointer">
+                      Add as suburbs of an existing town
+                    </Label>
+                  </div>
+                  <Switch
+                    id="suburb-mode"
+                    checked={isSuburbMode}
+                    onCheckedChange={setIsSuburbMode}
+                    disabled={addMutation.isPending}
+                  />
+                </div>
+                
+                {isSuburbMode && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Select the parent town these suburbs belong to:
+                    </Label>
+                    <Select
+                      value={selectedParentLocationId}
+                      onValueChange={setSelectedParentLocationId}
+                      disabled={addMutation.isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select parent town..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mainTowns && mainTowns.length > 0 ? (
+                          mainTowns.map((town) => (
+                            <SelectItem key={town.combinationId} value={town.combinationId}>
+                              {town.locationName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No main towns found - add towns first
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Suburb pages will link to their parent town page for better SEO.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Town inputs */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Enter Towns/Cities</Label>
+                  <Label className="text-sm font-medium">
+                    {isSuburbMode ? 'Enter Suburbs' : 'Enter Towns/Cities'}
+                  </Label>
                   <span className="text-sm text-muted-foreground">
-                    {selectedTowns.length} town{selectedTowns.length !== 1 ? 's' : ''} entered
+                    {selectedTowns.length} {isSuburbMode ? 'suburb' : 'town'}{selectedTowns.length !== 1 ? 's' : ''} entered
                   </span>
                 </div>
                 
@@ -243,7 +325,9 @@ export function AddLocationsDialog({
                       <div key={index} className="space-y-1">
                         <div className="relative">
                           <Input
-                            placeholder={`Town ${index + 1} (e.g., ${['Manchester', 'Leeds', 'Sheffield', 'Birmingham', 'Bristol'][index]})`}
+                            placeholder={isSuburbMode 
+                              ? `Suburb ${index + 1} (e.g., ${['Didsbury', 'Chorlton', 'Withington', 'Fallowfield', 'Levenshulme'][index]})`
+                              : `Town ${index + 1} (e.g., ${['Manchester', 'Leeds', 'Sheffield', 'Birmingham', 'Bristol'][index]})`}
                             value={value}
                             onChange={(e) => handleTownInputChange(index, e.target.value)}
                             disabled={addMutation.isPending}
@@ -280,7 +364,7 @@ export function AddLocationsDialog({
                           <div className="flex gap-2">
                             <div className="relative flex-1">
                               <Input
-                                placeholder={`Town ${townInputs.length + index + 1}`}
+                                placeholder={isSuburbMode ? `Suburb ${townInputs.length + index + 1}` : `Town ${townInputs.length + index + 1}`}
                                 value={value}
                                 onChange={(e) => handleAdditionalTownChange(index, e.target.value)}
                                 disabled={addMutation.isPending}
@@ -329,13 +413,13 @@ export function AddLocationsDialog({
                     className="w-full"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Another Town
+                    {isSuburbMode ? 'Add Another Suburb' : 'Add Another Town'}
                   </Button>
                 )}
 
                 {isAtLimit && selectedTowns.length > 0 && (
                   <p className="text-xs text-yellow-500 text-center">
-                    Plan limit reached: {maxTownsAllowed} towns maximum with {keywordCount} keywords
+                    Plan limit reached: {maxTownsAllowed} {isSuburbMode ? 'suburbs' : 'towns'} maximum with {keywordCount} keywords
                   </p>
                 )}
               </div>
@@ -380,7 +464,8 @@ export function AddLocationsDialog({
                     keywordCount === 0 || 
                     addMutation.isPending ||
                     wouldExceedLimit ||
-                    hasDuplicateTowns
+                    hasDuplicateTowns ||
+                    (isSuburbMode && !selectedParentLocationId)
                   }
                 >
                   {addMutation.isPending 

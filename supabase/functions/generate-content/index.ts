@@ -31,6 +31,23 @@ interface LocationKeywordData {
   };
   project_id: string;
   service_id: string | null;
+  parent_location_id: string | null;
+}
+
+interface ParentTownData {
+  phrase: string;
+  wp_page_url: string | null;
+  location: {
+    name: string;
+  };
+}
+
+interface SuburbPageData {
+  phrase: string;
+  wp_page_url: string | null;
+  location: {
+    name: string;
+  };
 }
 
 interface TestimonialData {
@@ -87,10 +104,10 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+    const openrouterApiKey = Deno.env.get("OPENROUTER_API_KEY");
 
-    if (!openaiApiKey) {
-      throw new Error("OPENAI_API_KEY is not set");
+    if (!openrouterApiKey) {
+      throw new Error("OPENROUTER_API_KEY is not set");
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -139,6 +156,7 @@ serve(async (req) => {
             phrase,
             project_id,
             service_id,
+            parent_location_id,
             location:project_locations!location_keywords_location_id_fkey(name),
             keyword:keyword_variations!location_keywords_keyword_id_fkey(keyword)
           `
@@ -192,9 +210,23 @@ serve(async (req) => {
           testimonialBlock = `"${randomTestimonial.testimonial_text}"${attribution ? ` - ${attribution}` : ""}`;
         }
 
-        // Fetch service-specific FAQs if a service is associated
+        // Fetch service-specific FAQs and service page URL if a service is associated
         let serviceFaqsBlock = "";
+        let servicePageUrl = "";
         if (lkData.service_id) {
+          // Fetch service details including page URL
+          const { data: serviceData, error: serviceError } = await supabase
+            .from("project_services")
+            .select("service_page_url")
+            .eq("id", lkData.service_id)
+            .single();
+
+          if (serviceError) {
+            console.error("Failed to fetch service:", serviceError);
+          } else if (serviceData?.service_page_url) {
+            servicePageUrl = serviceData.service_page_url;
+          }
+
           const { data: serviceFaqs, error: faqsError } = await supabase
             .from("service_faqs")
             .select("question, answer, sort_order")
@@ -213,6 +245,66 @@ serve(async (req) => {
           }
         }
 
+        // Fetch all project services to include in prompt
+        let projectServicesBlock = "";
+        const { data: projectServices, error: servicesError } = await supabase
+          .from("project_services")
+          .select("name, description")
+          .eq("project_id", lkData.project_id);
+
+        if (servicesError) {
+          console.error("Failed to fetch project services:", servicesError);
+        }
+
+        if (projectServices && projectServices.length > 0) {
+          const servicesList = projectServices
+            .map((s: { name: string; description: string | null }) => 
+              s.description ? `- ${s.name}: ${s.description}` : `- ${s.name}`
+            )
+            .join("\n");
+          projectServicesBlock = servicesList;
+        }
+
+        // Fetch parent town data if this is a suburb page
+        let parentTownData: ParentTownData | null = null;
+        if (lkData.parent_location_id) {
+          const { data: parentData, error: parentError } = await supabase
+            .from("location_keywords")
+            .select(`
+              phrase,
+              wp_page_url,
+              location:project_locations!location_keywords_location_id_fkey(name)
+            `)
+            .eq("id", lkData.parent_location_id)
+            .single();
+
+          if (parentError) {
+            console.error("Failed to fetch parent town:", parentError);
+          } else if (parentData) {
+            parentTownData = parentData as unknown as ParentTownData;
+          }
+        }
+
+        // Fetch suburb pages if this is a main town page (no parent)
+        let suburbPages: SuburbPageData[] = [];
+        if (!lkData.parent_location_id) {
+          const { data: suburbData, error: suburbError } = await supabase
+            .from("location_keywords")
+            .select(`
+              phrase,
+              wp_page_url,
+              location:project_locations!location_keywords_location_id_fkey(name)
+            `)
+            .eq("parent_location_id", locationKeywordId)
+            .in("status", ["generated", "pushed"]);
+
+          if (suburbError) {
+            console.error("Failed to fetch suburb pages:", suburbError);
+          } else if (suburbData && suburbData.length > 0) {
+            suburbPages = suburbData as unknown as SuburbPageData[];
+          }
+        }
+
         // Build the prompt
         const serviceName = lkData.keyword.keyword || projectData.base_keyword || "service";
         const location = lkData.location.name;
@@ -221,7 +313,72 @@ serve(async (req) => {
         const contactUrl = projectData.contact_url || "";
         const serviceDescription = projectData.service_description || "";
 
-        const prompt = `Create a complete geo targeted landing page for a service business.
+        // Build internal linking blocks
+        let internalLinkingBlock = "";
+        let internalLinkingInstructions = "";
+
+        // Determine page type and build appropriate linking data
+        const isSuburbPage = !!parentTownData;
+        const isMainTownWithSuburbs = !isSuburbPage && suburbPages.length > 0;
+
+        if (isSuburbPage && parentTownData) {
+          const parentLocation = Array.isArray(parentTownData.location) 
+            ? parentTownData.location[0]?.name 
+            : parentTownData.location?.name;
+          
+          internalLinkingBlock = `
+INTERNAL LINKING DATA (Suburb Page):
+- Parent Town: ${parentLocation || "Unknown"}
+- Parent Town URL: ${parentTownData.wp_page_url || "Not yet published"}
+${servicePageUrl ? `- Main Service Page URL: ${servicePageUrl}` : ""}`;
+
+          internalLinkingInstructions = `
+INTERNAL LINKING INSTRUCTIONS (Suburb Page):
+${parentTownData.wp_page_url ? `- In the intro or summary section, include a natural link to the parent town page.
+  Example: "For wider coverage across the area, see our main <a href="${parentTownData.wp_page_url}">${serviceName} in ${parentLocation}</a> page."` : "- Parent town page not yet published, skip parent link for now."}
+${servicePageUrl ? `- In the CTA section, include a link to the main service page.
+  Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."` : ""}`;
+        } else if (isMainTownWithSuburbs) {
+          const suburbList = suburbPages
+            .map(s => {
+              const suburbLocation = Array.isArray(s.location) 
+                ? s.location[0]?.name 
+                : s.location?.name;
+              return `- ${suburbLocation}: ${s.wp_page_url || "Not yet published"}`;
+            })
+            .join("\n");
+
+          internalLinkingBlock = `
+INTERNAL LINKING DATA (Main Town Page):
+${servicePageUrl ? `- Main Service Page URL: ${servicePageUrl}` : ""}
+- Suburb Pages We Cover:
+${suburbList}`;
+
+          internalLinkingInstructions = `
+INTERNAL LINKING INSTRUCTIONS (Main Town Page):
+${servicePageUrl ? `- In the CTA section, include a link to the main service page.
+  Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."` : ""}
+- Add a section wrapped in <div class="geo-areas-covered"> with an H2 heading like "Areas We Also Cover" or "Nearby Areas We Serve".
+  - List all suburb pages as a bulleted list with links.
+  - Only include suburbs that have a URL (are published).
+  - Example format:
+    <ul>
+      <li><a href="[suburb_url]">${serviceName} in [Suburb Name]</a></li>
+    </ul>
+  - Close with </div>`;
+        } else if (servicePageUrl) {
+          // Regular page with just service page link
+          internalLinkingBlock = `
+INTERNAL LINKING DATA:
+- Main Service Page URL: ${servicePageUrl}`;
+
+          internalLinkingInstructions = `
+INTERNAL LINKING INSTRUCTIONS:
+- In the CTA or summary section, include a link to the main service page.
+  Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."`;
+        }
+
+        const prompt = `Create a comprehensive, SEO-optimized landing page for a service business that will rank highly in Google search results.
 
 Service: ${serviceName}
 Location: ${location}
@@ -230,100 +387,81 @@ Target keyword phrase: ${serviceName} in ${location}
 Business name: ${businessName}
 Phone number: ${phoneNumber}
 Contact page URL: ${contactUrl}
+${internalLinkingBlock}
 
 ${testimonialBlock ? `Testimonial to include:\n${testimonialBlock}` : "No testimonials provided."}
 
 ${serviceDescription ? `Service description: ${serviceDescription}` : ""}
 
-${serviceFaqsBlock ? `\nService-specific FAQs to include:\n${serviceFaqsBlock}` : ""}
+${projectServicesBlock ? `Services offered by this business:\n${projectServicesBlock}` : ""}
 
-Instructions:
+${serviceFaqsBlock ? `Service-specific FAQs to include:\n${serviceFaqsBlock}` : ""}
+${internalLinkingInstructions}
 
-1. DO NOT include an H1 heading in the content - WordPress will use the page title as the H1.
+Create a complete, engaging landing page article that includes:
 
-2. Write an intro paragraph wrapped in <div class="geo-intro">:
-   - Explains what the service is and why it benefits local customers.
-   - Mentions the business name.
-   - Invites users to call the phone number${phoneNumber ? ` (${phoneNumber})` : ""} or use the contact page URL${contactUrl ? ` (${contactUrl})` : ""}.
-   - Optionally includes a short testimonial sentence if it fits naturally.
-   - Close with </div>
+**REQUIRED ELEMENTS (must be included):**
+- Business name and location prominently featured
+- Phone number and contact URL in the content
+- At least one customer testimonial (use the provided testimonial exactly) - skip if none provided
+- Clear call-to-action at the end
 
-3. Create a section wrapped in <div class="geo-why-choose"> with a natural-sounding H2 heading about why to choose the business.
-   - Use natural phrasing like "Why Choose ${businessName} for Web Design in ${location}" or "Why Choose ${businessName} as Your Web Design Agency in ${location}".
-   - Adapt the phrasing to make grammatical sense with the service type (e.g., add "your" or rephrase as needed).
-   - Include 5 to 7 bullet points.
-   - You may reference outcomes that match the testimonials, but do not rewrite or change the testimonial quotes themselves.
-   - Close with </div>
+**CONTENT STRUCTURE (flexible but comprehensive):**
+- **Introduction**: Compelling opening that explains the service benefits and includes business name
+- **Why Choose Section**: 4-6 compelling reasons to choose this business (can include local expertise, unique selling points, benefits)
+- **Services/Process Section**: ONLY list services from "Services offered by this business" above. If no services are provided, write general content about the main service type
+- **Testimonials**: Include the provided testimonial(s) in a dedicated section - skip if none provided
+- **Benefits/Value Proposition**: Additional reasons this service is valuable
+- **FAQ Section**: ONLY include if "Service-specific FAQs to include:" appears above with actual FAQs. If no FAQs are provided, DO NOT create or invent any FAQ section
+- **Strong Call-to-Action**: End with clear contact information and next steps
 
-4. Create a section wrapped in <div class="geo-services"> with an H2 heading about the services offered.
-   - Use natural phrasing like "Our Web Design Services" or "Web Design Services in ${location}".
-   - Include 3 to 5 service sub headings with short paragraphs.
-   - Close with </div>
+**CRITICAL RULES - DO NOT VIOLATE:**
+- DO NOT invent case studies, client projects, portfolio examples, or success stories
+- DO NOT fabricate statistics or metrics (e.g., "50% increase", "reduced by X%", "X+ clients served")
+- DO NOT claim specific outcomes or results for unnamed clients
+- DO NOT create fake testimonials - only use the exact testimonial text provided above
+- DO NOT invent specific business names, project names, or client names
+- Only make general claims about service quality and expertise, not specific measurable results
+- All claims must be general and non-specific (e.g., "we deliver quality results" NOT "we increased sales by 50%")
+- DO NOT invent service names - only use services listed in "Services offered by this business" above
+- If no services list is provided, only discuss the main service type generically
 
-5. Create a section wrapped in <div class="geo-testimonials"> titled: "What Our Clients Say".
-   - Use the supplied testimonial if available.
-   - Quote the testimonial exactly as provided inside quotation marks.
-   - Wrap each testimonial in a div with class "testimonial" for proper HTML formatting.
-   - Inside the div, use a blockquote for the quote and a p tag with class "testimonial-author" for attribution.
-   - Example format: 
-     <div class="testimonial">
-       <blockquote>"Full testimonial quote here."</blockquote>
-       <p class="testimonial-author"><em>- Name, Company/Role</em></p>
-     </div>
-   - Close with </div>
+**SEO REQUIREMENTS:**
+- Natural keyword integration throughout (aim for 3-6 keyword mentions)
+- Local relevance and location mentions (4-8 location references)
+- Professional, engaging tone suitable for B2B or local business audience
+- 800-1500 words of high-quality, original content
+- Mobile-friendly structure
+- Schema markup friendly (use proper headings, lists, etc.)
 
-6. Create a clear call to action section wrapped in <div class="geo-cta">.
-   - Tell users to call the phone number and link to the contact page URL.
-   - You may briefly refer to the testimonial as social proof.
-   - Close with </div>
+**FORMATTING:**
+- Use semantic HTML: h2, h3, p, ul, li, strong, em
+- Tables for comparisons if helpful
+- No H1 tags (WordPress uses page title as H1)
+- Proper alt text for any images mentioned
+- Clean, readable structure
 
-7. Create an SEO friendly FAQ section wrapped in <div class="geo-faq">:
-   - CRITICAL: ONLY include this section if "Service-specific FAQs to include:" appears above in this prompt.
-   - If service-specific FAQs are provided above, use those questions and answers EXACTLY as given - do not create, modify, or invent any FAQs.
-   - If NO service-specific FAQs are provided above (no "Service-specific FAQs to include:" section), DO NOT include any FAQ section at all - skip this entire section.
-   - Format each FAQ as an H3 for the question and a paragraph for the answer.
-   - Close with </div>
-
-8. Finish with a short summary wrapped in <div class="geo-summary"> reinforcing the main keyword and location.
-   - Remind users they can call the phone number or use the contact page URL.
-   - Close with </div>
-
-Rules:
-- All non testimonial text must be original, human sounding, and helpful.
-- Use natural UK english.
-- Do not invent prices or discounts unless clearly suggested in the input.
-- Use the phone number, contact page URL, and testimonial exactly as provided.
-- Do not fabricate or modify testimonial quotes.
-- DO NOT create a "Recent Local Projects" section or any section with specific project examples.
-- DO NOT invent specific businesses, projects, or case studies.
-- Only use the 8 sections specified in the instructions above - do not add additional sections.
-- Output ONLY valid HTML content (no markdown, no explanation text).
-- DO NOT include an H1 tag in the content - start with the intro paragraph.
-- Use semantic HTML tags (h2, h3, p, ul, li, etc.) but NO H1 tags.
-- Include proper HTML structure but NO html, head, or body tags - just the content.
-
-Also provide:
-- A page title (will be used as the H1 heading by WordPress) - DO NOT include the business name in this title, just use the service and location (e.g., "Web Design in ${location}")
-- A meta title (60 characters max) - CAN include the business name for SEO purposes
-- A meta description (155 characters max)
+${internalLinkingInstructions}
 
 Format your response as JSON:
 {
   "title": "Service in Location (NO business name)",
   "meta_title": "Meta title here (can include business name)",
-  "meta_description": "Meta description here",
+  "meta_description": "Meta description here (150 characters max)",
   "content": "HTML content here"
 }`;
 
-        // Call OpenAI API with GPT-4 Turbo model
-        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Call OpenRouter API with Grok 4.1 Fast model
+        const openaiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${openaiApiKey}`,
+            Authorization: `Bearer ${openrouterApiKey}`,
+            "HTTP-Referer": supabaseUrl,
+            "X-Title": "GeoScale",
           },
           body: JSON.stringify({
-            model: "gpt-4-turbo",
+            model: "x-ai/grok-4.1-fast",
             messages: [
               {
                 role: "user",
@@ -335,14 +473,14 @@ Format your response as JSON:
 
         if (!openaiResponse.ok) {
           const errorText = await openaiResponse.text();
-          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+          throw new Error(`OpenRouter API error: ${openaiResponse.status} - ${errorText}`);
         }
 
         const openaiData = await openaiResponse.json();
         const generatedText = openaiData.choices[0]?.message?.content;
 
         if (!generatedText) {
-          throw new Error("No content generated from OpenAI");
+          throw new Error("No content generated from OpenRouter");
         }
 
         // Parse the JSON response
@@ -356,7 +494,7 @@ Format your response as JSON:
             generatedContent = JSON.parse(generatedText);
           }
         } catch (parseError) {
-          console.error("Failed to parse OpenAI response:", generatedText);
+          console.error("Failed to parse OpenRouter response:", generatedText);
           throw new Error(`Failed to parse generated content: ${parseError.message}`);
         }
 
@@ -396,11 +534,11 @@ Format your response as JSON:
         await supabase.from("api_logs").insert({
           user_id: user.id,
           project_id: lkData.project_id,
-          api_type: "openai",
+          api_type: "openrouter",
           endpoint: "/v1/chat/completions",
           method: "POST",
           status_code: 200,
-          request_body: { model: "gpt-4-turbo", prompt_length: prompt.length },
+          request_body: { model: "x-ai/grok-4.1-fast", prompt_length: prompt.length },
           response_body: { success: true },
         });
 
@@ -428,7 +566,7 @@ Format your response as JSON:
         await supabase.from("api_logs").insert({
           user_id: user.id,
           project_id: lkData?.project_id,
-          api_type: "openai",
+          api_type: "openrouter",
           endpoint: "/v1/chat/completions",
           method: "POST",
           status_code: 500,

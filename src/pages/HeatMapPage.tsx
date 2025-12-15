@@ -12,8 +12,9 @@ import { getProject } from '@/api/projects'
 import { generateGrid, GRID_PRESETS, GridPreset, GridPoint } from '@/utils/grid-generator'
 import { checkHeatMapRankings, saveHeatMapScan, getLatestHeatMapScan, getHeatMapScanHistory } from '@/api/heat-map'
 import { createLocationKeywordCombinations } from '@/api/combinations'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-import { GoogleMap, useJsApiLoader, Circle, Marker, OverlayView } from '@react-google-maps/api'
+import { GoogleMap, useJsApiLoader, Circle, OverlayView } from '@react-google-maps/api'
 
 // Google Maps configuration
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -65,6 +66,7 @@ interface HeatMapPageState {
 interface GridData {
   points: GridPoint[]
   positions: (number | null)[]
+  businessCounts: (number | null)[]
   averagePosition: number
   isGenerating: boolean
 }
@@ -98,33 +100,46 @@ export function HeatMapPage() {
   const [gridData, setGridData] = useState<GridData>({
     points: [],
     positions: [],
+    businessCounts: [],
     averagePosition: 0,
     isGenerating: false
   })
   const [weakLocations, setWeakLocations] = useState<WeakLocation[]>([])
   const [loadingLocations, setLoadingLocations] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [progressPhase, setProgressPhase] = useState<'locations' | 'business' | null>(null)
   const [lastScanDate, setLastScanDate] = useState<string | null>(null)
   const [scanHistory, setScanHistory] = useState<any[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [creatingCombinations, setCreatingCombinations] = useState(false)
   const [combinationsCreated, setCombinationsCreated] = useState<number | null>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
-  const [pulseOpacity, setPulseOpacity] = useState(0.5)
+  const pulseOpacity = 0.4 // Static opacity instead of pulsing
 
-  // Pulse animation for loading circles
-  useEffect(() => {
-    if (!gridData.isGenerating) return
+  // Persist gridData to localStorage
+  const persistGridData = (data: GridData) => {
+    if (projectId && combinationId) {
+      const key = `heatmap-${projectId}-${combinationId}`
+      localStorage.setItem(key, JSON.stringify(data))
+    }
+  }
 
-    const interval = setInterval(() => {
-      setPulseOpacity(prev => {
-        const next = prev + 0.05
-        return next > 0.8 ? 0.2 : next
-      })
-    }, 50)
-
-    return () => clearInterval(interval)
-  }, [gridData.isGenerating])
+  // Load gridData from localStorage
+  const loadPersistedGridData = (): GridData | null => {
+    if (projectId && combinationId) {
+      const key = `heatmap-${projectId}-${combinationId}`
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        try {
+          return JSON.parse(stored)
+        } catch (e) {
+          console.warn('Failed to parse persisted gridData:', e)
+          localStorage.removeItem(key)
+        }
+      }
+    }
+    return null
+  }
 
   // Load project data and latest scan
   useEffect(() => {
@@ -135,6 +150,12 @@ export function HeatMapPage() {
         const data = await getProject(projectId)
         setProject(data)
 
+        // Load persisted gridData
+        const persistedData = loadPersistedGridData()
+        if (persistedData) {
+          setGridData(persistedData)
+        }
+
         // Load latest scan if we have a keyword combination
         if (location.state?.phrase) {
           const latestScan = await getLatestHeatMapScan(projectId, location.state.phrase)
@@ -143,7 +164,7 @@ export function HeatMapPage() {
             setWeakLocations(latestScan.weak_locations || [])
             
             // Load scan history
-            const history = await getHeatMapScanHistory(projectId, location.state.phrase)
+            const history = await getHeatMapScanHistory(projectId, location.state!.phrase)
             setScanHistory(history)
           }
         }
@@ -172,6 +193,7 @@ export function HeatMapPage() {
       setGridData({
         points,
         positions: new Array(points.length).fill(null),
+        businessCounts: new Array(points.length).fill(null),
         averagePosition: 0,
         isGenerating: false
       })
@@ -180,6 +202,7 @@ export function HeatMapPage() {
       setGridData({
         points: [],
         positions: [],
+        businessCounts: [],
         averagePosition: 0,
         isGenerating: false
       })
@@ -193,6 +216,22 @@ export function HeatMapPage() {
     setLoadingLocations(true)
     const geocoder = new google.maps.Geocoder()
     const weak: WeakLocation[] = []
+    
+    // Get the base location from the keyword combination (e.g., "Doncaster" from "web design in doncaster")
+    const baseLocation = location.state?.location?.toLowerCase() || ''
+    
+    // Fetch existing project locations to exclude them
+    let existingLocationNames: string[] = []
+    try {
+      const { data: existingLocations } = await supabase
+        .from('project_locations')
+        .select('name')
+        .eq('project_id', projectId)
+      
+      existingLocationNames = (existingLocations || []).map((loc: { name: string }) => loc.name.toLowerCase())
+    } catch (error) {
+      console.error('Failed to fetch existing locations:', error)
+    }
     
     // Find points with position 4+ or not ranked
     for (let i = 0; i < positions.length; i++) {
@@ -213,8 +252,21 @@ export function HeatMapPage() {
             )
             
             if (locality) {
+              const locationName = locality.long_name
+              const locationNameLower = locationName.toLowerCase()
+              
+              // Skip if this is the base location (e.g., Doncaster)
+              if (locationNameLower === baseLocation) {
+                continue
+              }
+              
+              // Skip if this location already exists in project_locations
+              if (existingLocationNames.includes(locationNameLower)) {
+                continue
+              }
+              
               weak.push({
-                name: locality.long_name,
+                name: locationName,
                 position,
                 lat: point.latitude,
                 lng: point.longitude
@@ -369,17 +421,38 @@ export function HeatMapPage() {
     
     setGridData(prev => ({ ...prev, isGenerating: true }))
     setProgress(0)
+    setProgressPhase('locations')
     
-    // Simulate progress based on estimated time (200ms per API call + delays)
+    // Simulate progress based on estimated time
+    // Phase 1: Locations (0-50%) - ranking checks
+    // Phase 2: Business data (50-100%) - Places API calls
     const totalCalls = gridSize * gridSize
-    const estimatedTimePerCall = 250 // ms (200ms API + 50ms overhead)
-    const totalEstimatedTime = totalCalls * estimatedTimePerCall
+    const estimatedTimePerCall = 200 // ms per ranking call
+    const estimatedBusinessTimePerCall = 200 // ms per business call
+    const totalLocationTime = totalCalls * estimatedTimePerCall
+    const totalBusinessTime = totalCalls * estimatedBusinessTimePerCall
+    
+    let currentPhase = 'locations'
+    const startTime = Date.now()
     
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) return prev // Cap at 95% until actual completion
-        return prev + (100 / (totalEstimatedTime / 100))
-      })
+      const elapsed = Date.now() - startTime
+      
+      if (currentPhase === 'locations') {
+        // Phase 1: 0-50%
+        const locationProgress = Math.min((elapsed / totalLocationTime) * 50, 48)
+        setProgress(locationProgress)
+        
+        if (elapsed >= totalLocationTime) {
+          currentPhase = 'business'
+          setProgressPhase('business')
+        }
+      } else {
+        // Phase 2: 50-100%
+        const businessElapsed = elapsed - totalLocationTime
+        const businessProgress = 50 + Math.min((businessElapsed / totalBusinessTime) * 50, 48)
+        setProgress(businessProgress)
+      }
     }, 100)
     
     try {
@@ -395,13 +468,24 @@ export function HeatMapPage() {
       
       clearInterval(progressInterval)
       setProgress(100)
+      setProgressPhase(null)
       
       setGridData(prev => ({
         ...prev,
         positions: result.positions,
+        businessCounts: result.businessCounts || [],
         averagePosition: result.averagePosition,
         isGenerating: false
       }))
+      
+      // Persist the updated data
+      persistGridData({
+        ...gridData,
+        positions: result.positions,
+        businessCounts: result.businessCounts || [],
+        averagePosition: result.averagePosition,
+        isGenerating: false
+      })
       
       toast.success(`Heat map generated! Average position: #${result.averagePosition}`)
       
@@ -617,7 +701,10 @@ export function HeatMapPage() {
                   <div className="space-y-2">
                     <Progress value={progress} className="h-2" />
                     <p className="text-xs text-center text-muted-foreground">
-                      Checking {gridSize * gridSize} locations... {Math.round(progress)}%
+                      {progressPhase === 'locations' 
+                        ? `Checking ${gridSize * gridSize} locations... ${Math.round(progress)}%`
+                        : `Getting business density data... ${Math.round(progress)}%`
+                      }
                     </p>
                   </div>
                 )}
@@ -652,13 +739,33 @@ export function HeatMapPage() {
 
                 {/* Results Summary */}
                 {gridData.positions.some(p => p !== null) && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Average Position: #{gridData.averagePosition}
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-2">
+                    <div>
+                      <div className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Average Position: #{gridData.averagePosition}
+                      </div>
+                      <div className="text-xs text-green-600 dark:text-green-400">
+                        {gridData.positions.filter(p => p !== null).length} of {gridData.positions.length} points ranked
+                      </div>
                     </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      {gridData.positions.filter(p => p !== null).length} of {gridData.positions.length} points ranked
-                    </div>
+                    {gridData.businessCounts.some(c => c !== null) && (() => {
+                      const validCounts = gridData.businessCounts.filter((c): c is number => c !== null)
+                      const highDensity = validCounts.filter(c => c >= 20).length
+                      const medDensity = validCounts.filter(c => c >= 6 && c < 20).length
+                      const lowDensity = validCounts.filter(c => c < 6).length
+                      return (
+                        <div className="pt-2 border-t border-green-200 dark:border-green-800">
+                          <div className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                            🏢 Business Density
+                          </div>
+                          <div className="flex gap-2 text-xs">
+                            <span className="bg-green-600 text-white px-1.5 py-0.5 rounded">{highDensity} High</span>
+                            <span className="bg-yellow-500 text-white px-1.5 py-0.5 rounded">{medDensity} Med</span>
+                            <span className="bg-gray-500 text-white px-1.5 py-0.5 rounded">{lowDensity} Low</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
               </CardContent>
@@ -802,20 +909,12 @@ export function HeatMapPage() {
                       onZoomChanged={handleZoomChanged}
                       onClick={handleMapClick}
                     >
-                      {/* Center marker for the business location */}
-                      <Marker
-                        position={{ lat: project.latitude, lng: project.longitude }}
-                        title={project.project_name}
-                        icon={{
-                          url: '/icon.svg',
-                          scaledSize: new google.maps.Size(50, 50),
-                          anchor: new google.maps.Point(25, 50)
-                        }}
-                      />
+                      {/* Center marker removed - was interfering with grid point graphics */}
                       
                       {/* Grid point circles - show preview or results */}
                       {gridData.points.map((point, index) => {
                         const position = gridData.positions[index]
+                        const businessCount = gridData.businessCounts[index]
                         const isLoading = gridData.isGenerating
                         const hasData = gridData.positions.some(p => p !== null)
                         const isPreview = !hasData && !isLoading
@@ -836,11 +935,10 @@ export function HeatMapPage() {
                               }}
                               onClick={() => {
                                 if (!isPreview) {
-                                  toast.info(
-                                    position !== null 
-                                      ? `Position #${position} at this location`
-                                      : 'Not ranked at this location'
-                                  )
+                                  const positionText = position !== null ? `Position #${position}` : 'Not ranked'
+                                  const densityLabel = businessCount !== null ? (businessCount >= 20 ? 'High' : businessCount >= 6 ? 'Medium' : 'Low') : null
+                                  const businessText = densityLabel ? ` • ${densityLabel} business density` : ''
+                                  toast.info(`${positionText}${businessText}`)
                                 }
                               }}
                             />
@@ -851,10 +949,9 @@ export function HeatMapPage() {
                                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                               >
                                 <div 
-                                  className="flex items-center justify-center font-bold text-white pointer-events-none"
+                                  className="flex flex-col items-center justify-center pointer-events-none"
                                   style={{
-                                    transform: 'translate(-50%, -50%)',
-                                    fontSize: radiusKm <= 5 ? '18px' : radiusKm <= 15 ? '16px' : '14px'
+                                    transform: 'translate(-50%, -50%)'
                                   }}
                                 >
                                   {isLoading ? (
@@ -880,7 +977,25 @@ export function HeatMapPage() {
                                       />
                                     </svg>
                                   ) : (
-                                    position !== null ? position : 'NR'
+                                    <>
+                                      <span 
+                                        className="font-bold text-white"
+                                        style={{ fontSize: radiusKm <= 5 ? '18px' : radiusKm <= 15 ? '16px' : '14px' }}
+                                      >
+                                        {position !== null ? position : 'NR'}
+                                      </span>
+                                      {businessCount !== null && (
+                                        <span 
+                                          className={`text-white rounded-full px-1.5 py-0.5 mt-0.5 font-medium flex items-center justify-center ${
+                                            businessCount >= 20 ? 'bg-green-600' : businessCount >= 6 ? 'bg-yellow-500' : 'bg-gray-500'
+                                          }`}
+                                          style={{ fontSize: radiusKm <= 5 ? '9px' : '7px' }}
+                                          title={`${businessCount >= 20 ? 'High' : businessCount >= 6 ? 'Medium' : 'Low'} business density (${businessCount >= 20 ? '20+' : businessCount} found)`}
+                                        >
+                                          {businessCount >= 20 ? 'High' : businessCount >= 6 ? 'Med' : 'Low'}
+                                        </span>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </OverlayView>
@@ -916,7 +1031,16 @@ export function HeatMapPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-                    <span>Not Ranked on Google Maps</span>
+                    <span>Not Ranked</span>
+                  </div>
+                  <div className="flex items-center gap-2 border-l pl-4 ml-2 group relative">
+                    <span className="bg-gray-500 text-white rounded-full px-1.5 py-0.5 text-xs">Low</span>
+                    <span className="bg-yellow-500 text-white rounded-full px-1.5 py-0.5 text-xs">Med</span>
+                    <span className="bg-green-600 text-white rounded-full px-1.5 py-0.5 text-xs">High</span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      Business Density
+                      <span className="inline-flex items-center justify-center w-4 h-4 text-xs bg-gray-200 dark:bg-gray-700 rounded-full cursor-help" title="We show relative business density, not total counts. Google Maps limits results per area, but this still highlights where demand exists.">?</span>
+                    </span>
                   </div>
                 </div>
               </CardContent>

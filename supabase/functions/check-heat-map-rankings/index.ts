@@ -17,6 +17,7 @@ interface HeatMapRequest {
   radius_km: number
   centerLat: number
   centerLng: number
+  include_business_count?: boolean
 }
 
 interface GridPoint {
@@ -68,7 +69,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { project_id, combination_id, keyword_combination, grid_size, radius_km, centerLat, centerLng }: HeatMapRequest = await req.json()
+    const { project_id, combination_id, keyword_combination, grid_size, radius_km, centerLat, centerLng, include_business_count = true }: HeatMapRequest = await req.json()
     
     console.log('🔥 Edge Function called with:', {
       project_id,
@@ -136,8 +137,12 @@ serve(async (req: Request) => {
     const auth = btoa(`${dataforseoLogin}:${dataforseoPassword}`)
     
     const positions: (number | null)[] = new Array(grid_points.length).fill(null)
+    const businessCounts: (number | null)[] = new Array(grid_points.length).fill(null)
     let rankedCount = 0
     let notRankedCount = 0
+    
+    // Get Google Places API key (New API)
+    const googlePlacesApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
 
     // Process grid points ONE AT A TIME (Google Maps API doesn't support batching)
     for (let i = 0; i < grid_points.length; i++) {
@@ -234,6 +239,54 @@ serve(async (req: Request) => {
         notRankedCount++
       }
 
+      // Fetch business count using Google Places API (New) if enabled
+      if (include_business_count && googlePlacesApiKey) {
+        try {
+          // Use Google Places API (New) Nearby Search to count businesses
+          // Search for business-related place types within a radius based on grid spacing
+          const searchRadius = Math.min(Math.round((radius_km * 1000) / grid_size), 50000) // meters per grid cell, max 50km
+          
+          const placesResponse = await fetch(
+            'https://places.googleapis.com/v1/places:searchNearby',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': googlePlacesApiKey,
+                'X-Goog-FieldMask': 'places.id'
+              },
+              body: JSON.stringify({
+                locationRestriction: {
+                  circle: {
+                    center: { latitude: point.latitude, longitude: point.longitude },
+                    radius: searchRadius
+                  }
+                },
+                // Use business-related types instead of 'establishment' which isn't valid
+                includedTypes: ['store', 'restaurant', 'cafe', 'bar', 'bank', 'gym', 'hair_care', 'beauty_salon', 'spa', 'dentist', 'doctor', 'pharmacy', 'veterinary_care', 'car_repair', 'car_dealer', 'real_estate_agency', 'insurance_agency', 'lawyer', 'accounting', 'lodging'],
+                maxResultCount: 20
+              })
+            }
+          )
+          
+          if (placesResponse.ok) {
+            const placesData = await placesResponse.json()
+            // Count the number of businesses returned (max 20 per request)
+            businessCounts[i] = placesData.places?.length || 0
+            if (i === 0) {
+              console.log(`🏢 Business count at point 0: ${businessCounts[i]} (radius: ${searchRadius}m)`)
+            }
+          } else {
+            const errorText = await placesResponse.text()
+            console.error(`Places API error for point ${i}: ${placesResponse.status} - ${errorText}`)
+            businessCounts[i] = null
+          }
+        } catch (placesError) {
+          console.error(`Failed to get business count for point ${i}:`, placesError)
+          businessCounts[i] = null
+        }
+      }
+
       // Small delay between requests to respect rate limits (reduced for speed)
       if (i < grid_points.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 200))
@@ -256,6 +309,7 @@ serve(async (req: Request) => {
       latitude: point.latitude,
       longitude: point.longitude,
       position: positions[index],
+      business_count: businessCounts[index],
       search_location: `${point.latitude.toFixed(4)},${point.longitude.toFixed(4)}`,
       grid_size,
       radius_km: radius_km
@@ -278,6 +332,7 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         positions,
+        business_counts: businessCounts,
         average_position: averagePosition,
         ranked_count: rankedCount,
         not_ranked_count: notRankedCount,

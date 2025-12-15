@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,7 @@ import { addServiceKeywords } from '@/api/services'
 
 interface AddServiceDialogProps {
   projectId: string
+  wpUrl?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -31,12 +32,13 @@ interface FetchedKeyword {
   difficulty?: number
 }
 
-export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDialogProps) {
+export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddServiceDialogProps) {
   const queryClient = useQueryClient()
   
   // Add service dialog state
   const [newServiceName, setNewServiceName] = useState('')
   const [newServiceDescription, setNewServiceDescription] = useState('')
+  const [newServicePageUrl, setNewServicePageUrl] = useState('')
   
   // Keyword selection dialog state
   const [showKeywordSelectionDialog, setShowKeywordSelectionDialog] = useState(false)
@@ -46,6 +48,7 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
   const [isAddingKeywords, setIsAddingKeywords] = useState(false)
   const [pendingServiceName, setPendingServiceName] = useState('')
   const [pendingServiceDescription, setPendingServiceDescription] = useState('')
+  const [pendingServicePageUrl, setPendingServicePageUrl] = useState('')
 
   // Step 1: Fetch keywords first, DON'T create service yet
   const handleCreateService = async () => {
@@ -54,11 +57,13 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
     const serviceName = newServiceName.trim()
     const serviceDescription = newServiceDescription.trim()
     
-    // Store the name/description for later (service created after keyword confirmation)
+    // Store the name/description/url for later (service created after keyword confirmation)
     setPendingServiceName(serviceName)
     setPendingServiceDescription(serviceDescription)
+    setPendingServicePageUrl(newServicePageUrl.trim())
     setNewServiceName('')
     setNewServiceDescription('')
+    setNewServicePageUrl('')
     onOpenChange(false)
     
     // Show keyword selection dialog immediately with loading state
@@ -98,7 +103,7 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
     setIsAddingKeywords(true)
     try {
       // NOW create the service
-      const service = await createProjectService(projectId, pendingServiceName, pendingServiceDescription)
+      const service = await createProjectService(projectId, pendingServiceName, pendingServiceDescription, pendingServicePageUrl)
       
       // Add selected keywords
       const selectedKeywords = fetchedKeywords.filter((_, i) => selectedKeywordIndexes.has(i))
@@ -112,6 +117,7 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
       setShowKeywordSelectionDialog(false)
       setPendingServiceName('')
       setPendingServiceDescription('')
+      setPendingServicePageUrl('')
       setFetchedKeywords([])
       setSelectedKeywordIndexes(new Set())
     } catch (error: any) {
@@ -126,6 +132,7 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
     setShowKeywordSelectionDialog(false)
     setPendingServiceName('')
     setPendingServiceDescription('')
+    setPendingServicePageUrl('')
     setFetchedKeywords([])
     setSelectedKeywordIndexes(new Set())
     toast.info('Service creation cancelled')
@@ -140,7 +147,7 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
     
     try {
       // Create the service
-      const service = await createProjectService(projectId, serviceName, serviceDescription)
+      const service = await createProjectService(projectId, serviceName, serviceDescription, newServicePageUrl.trim())
       
       // Auto-add the service name as a keyword (selected by default)
       await addServiceKeywords(service.id, [{ keyword: serviceName, search_volume: 0 }])
@@ -149,11 +156,32 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
       queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
       setNewServiceName('')
       setNewServiceDescription('')
+      setNewServicePageUrl('')
       onOpenChange(false)
     } catch (error: any) {
       toast.error('Failed to create service', { description: error.message })
     }
   }
+
+  // Helper to create slug from name
+  const createSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  // Pre-populate service page URL when service name changes
+  useEffect(() => {
+    if (wpUrl && newServiceName.trim()) {
+      const slug = createSlug(newServiceName)
+      const baseUrl = wpUrl.replace(/\/$/, '') // Remove trailing slash
+      setNewServicePageUrl(`${baseUrl}/${slug}`)
+    } else if (!newServiceName.trim()) {
+      setNewServicePageUrl('')
+    }
+  }, [newServiceName, wpUrl])
 
   const toggleKeywordIndex = (index: number) => {
     setSelectedKeywordIndexes(prev => {
@@ -214,6 +242,18 @@ export function AddServiceDialog({ projectId, open, onOpenChange }: AddServiceDi
                 onChange={(e) => setNewServiceDescription(e.target.value)}
                 rows={3}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="servicePageUrl">Main Service Page URL (optional)</Label>
+              <Input
+                id="servicePageUrl"
+                placeholder={wpUrl ? `${wpUrl}/service-name` : 'https://yoursite.com/web-design'}
+                value={newServicePageUrl}
+                onChange={(e) => setNewServicePageUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to your existing service page on WordPress. Used for internal linking in generated content.
+              </p>
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">

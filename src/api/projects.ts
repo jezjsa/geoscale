@@ -91,6 +91,9 @@ export async function updateProject(projectId: string, updates: Partial<{
   wp_api_key: string
   wp_page_template: string
   wp_publish_status: string
+  town: string
+  latitude: number
+  longitude: number
 }>) {
   const { data, error } = await supabase
     .from('projects')

@@ -27,6 +27,7 @@ import {
   getProjectServices,
   createProjectService,
   deleteProjectService,
+  updateProjectService,
   getServiceKeywords,
   toggleKeywordSelection,
   bulkToggleKeywords,
@@ -45,6 +46,7 @@ import { addServiceKeywords } from '@/api/services'
 interface ProjectServicesManagerProps {
   projectId: string
   combinationLimit: number
+  wpUrl?: string
 }
 
 interface FetchedKeyword {
@@ -53,7 +55,7 @@ interface FetchedKeyword {
   difficulty?: number
 }
 
-export function ProjectServicesManager({ projectId, combinationLimit }: ProjectServicesManagerProps) {
+export function ProjectServicesManager({ projectId, combinationLimit, wpUrl }: ProjectServicesManagerProps) {
   const queryClient = useQueryClient()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showKeywordSelectionDialog, setShowKeywordSelectionDialog] = useState(false)
@@ -61,6 +63,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
   const [serviceToDelete, setServiceToDelete] = useState<ProjectService | null>(null)
   const [newServiceName, setNewServiceName] = useState('')
   const [newServiceDescription, setNewServiceDescription] = useState('')
+  const [newServicePageUrl, setNewServicePageUrl] = useState('')
   const [isFetchingKeywords, setIsFetchingKeywords] = useState(false)
   const [isAddingKeywords, setIsAddingKeywords] = useState(false)
   
@@ -80,9 +83,26 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     queryFn: () => getProjectCombinationStats(projectId),
   })
 
-  // Store the service name/description for creating after keyword selection
+  // Store the service name/description/url for creating after keyword selection
   const [pendingServiceName, setPendingServiceName] = useState('')
   const [pendingServiceDescription, setPendingServiceDescription] = useState('')
+  const [pendingServicePageUrl, setPendingServicePageUrl] = useState('')
+
+  // Helper to create slug from service name
+  const createSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  // Auto-generate service page URL when name changes
+  const getAutoServicePageUrl = (serviceName: string) => {
+    if (!wpUrl || !serviceName.trim()) return ''
+    const baseUrl = wpUrl.replace(/\/$/, '')
+    return `${baseUrl}/${createSlug(serviceName)}`
+  }
   
   // For finding keywords for an existing service
   const [serviceToAddKeywords, setServiceToAddKeywords] = useState<ProjectService | null>(null)
@@ -111,12 +131,15 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     
     const serviceName = newServiceName.trim()
     const serviceDescription = newServiceDescription.trim()
+    const servicePageUrl = newServicePageUrl.trim() || getAutoServicePageUrl(serviceName)
     
-    // Store the name/description for later (service created after keyword confirmation)
+    // Store the name/description/url for later (service created after keyword confirmation)
     setPendingServiceName(serviceName)
     setPendingServiceDescription(serviceDescription)
+    setPendingServicePageUrl(servicePageUrl)
     setNewServiceName('')
     setNewServiceDescription('')
+    setNewServicePageUrl('')
     setShowAddDialog(false)
     
     // Show keyword selection dialog immediately with loading state
@@ -156,7 +179,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     setIsAddingKeywords(true)
     try {
       // NOW create the service
-      const service = await createProjectService(projectId, pendingServiceName, pendingServiceDescription)
+      const service = await createProjectService(projectId, pendingServiceName, pendingServiceDescription, pendingServicePageUrl)
       
       // Add selected keywords
       const selectedKeywords = fetchedKeywords.filter((_, i) => selectedKeywordIndexes.has(i))
@@ -172,6 +195,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
       setShowKeywordSelectionDialog(false)
       setPendingServiceName('')
       setPendingServiceDescription('')
+      setPendingServicePageUrl('')
       setFetchedKeywords([])
       setSelectedKeywordIndexes(new Set())
     }
@@ -182,6 +206,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     setShowKeywordSelectionDialog(false)
     setPendingServiceName('')
     setPendingServiceDescription('')
+    setPendingServicePageUrl('')
     setFetchedKeywords([])
     setSelectedKeywordIndexes(new Set())
     toast.info('Service creation cancelled')
@@ -193,10 +218,11 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
     
     const serviceName = newServiceName.trim()
     const serviceDescription = newServiceDescription.trim()
+    const servicePageUrl = newServicePageUrl.trim() || getAutoServicePageUrl(serviceName)
     
     try {
       // Create the service
-      const service = await createProjectService(projectId, serviceName, serviceDescription)
+      const service = await createProjectService(projectId, serviceName, serviceDescription, servicePageUrl)
       
       // Auto-add the service name as a keyword (selected by default)
       await addServiceKeywords(service.id, [{ keyword: serviceName, search_volume: 0 }])
@@ -205,6 +231,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
       queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
       setNewServiceName('')
       setNewServiceDescription('')
+      setNewServicePageUrl('')
       setShowAddDialog(false)
     } catch (error: any) {
       toast.error('Failed to create service', { description: error.message })
@@ -457,6 +484,7 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                       combinationLimit={combinationLimit}
                       currentTotal={stats?.totalCombinations || 0}
                       locationCount={stats?.locationCount || 0}
+                      wpUrl={wpUrl}
                       onDelete={() => handleDeleteClick(service)}
                       onFindKeywords={() => handleFindKeywordsForService(service)}
                       onAddFaq={() => handleAddFaqForService(service)}
@@ -488,11 +516,20 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                 id="serviceName"
                 placeholder="e.g., Web Design, IT Support, Plumbing"
                 value={newServiceName}
-                onChange={(e) => setNewServiceName(e.target.value)}
+                onChange={(e) => {
+                  const name = e.target.value
+                  setNewServiceName(name)
+                  // Auto-populate URL if user hasn't manually edited it
+                  if (wpUrl && name.trim()) {
+                    setNewServicePageUrl(getAutoServicePageUrl(name))
+                  } else if (!name.trim()) {
+                    setNewServicePageUrl('')
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && newServiceName.trim()) {
                     e.preventDefault()
-                    handleCreateService()
+                    handleAddServiceOnly()
                   }
                 }}
               />
@@ -507,6 +544,18 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
                 rows={3}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="servicePageUrl">Main Service Page URL (optional)</Label>
+              <Input
+                id="servicePageUrl"
+                placeholder={wpUrl ? `${wpUrl.replace(/\/$/, '')}/service-name` : 'https://yoursite.com/web-design'}
+                value={newServicePageUrl}
+                onChange={(e) => setNewServicePageUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to your existing service page on WordPress. Used for internal linking in generated content.
+              </p>
+            </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
@@ -517,18 +566,18 @@ export function ProjectServicesManager({ projectId, combinationLimit }: ProjectS
             </Button>
             <Button
               variant="outline"
-              onClick={handleAddServiceOnly}
+              onClick={handleCreateService}
               disabled={!newServiceName.trim()}
             >
-              Add Service Only
+              Find Related Keywords
             </Button>
             <Button
-              onClick={handleCreateService}
+              onClick={handleAddServiceOnly}
               disabled={!newServiceName.trim()}
               style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >
-              Find Related Keywords
+              Add Service Only
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -931,6 +980,7 @@ function ServiceContentPanel({
   combinationLimit,
   currentTotal,
   locationCount,
+  wpUrl,
   onDelete,
   onFindKeywords,
   onAddFaq,
@@ -942,14 +992,63 @@ function ServiceContentPanel({
   combinationLimit: number
   currentTotal: number
   locationCount: number
+  wpUrl?: string
   onDelete: () => void
   onFindKeywords: () => void
   onAddFaq: () => void
   onEditFaq: (faq: ServiceFaq) => void
   onDeleteFaq: (faq: ServiceFaq) => void
 }) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'keywords' | 'faqs'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'keywords' | 'faqs' | 'settings'>('overview')
   const queryClient = useQueryClient()
+
+  // Helper to create slug from service name
+  const createSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  // Generate default URL from wpUrl and service name
+  const getDefaultServiceUrl = () => {
+    if (service.service_page_url) return service.service_page_url
+    if (wpUrl && service.name) {
+      const baseUrl = wpUrl.replace(/\/$/, '') // Remove trailing slash
+      return `${baseUrl}/${createSlug(service.name)}`
+    }
+    return ''
+  }
+
+  // Settings form state
+  const [editName, setEditName] = useState(service.name)
+  const [editDescription, setEditDescription] = useState(service.description || '')
+  const [editServicePageUrl, setEditServicePageUrl] = useState(getDefaultServiceUrl())
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+
+  // Handle saving service settings
+  const handleSaveSettings = async () => {
+    if (!editName.trim()) {
+      toast.error('Service name is required')
+      return
+    }
+    
+    setIsSavingSettings(true)
+    try {
+      await updateProjectService(service.id, {
+        name: editName.trim(),
+        description: editDescription.trim() || undefined,
+        service_page_url: editServicePageUrl.trim() || undefined,
+      })
+      toast.success('Service updated')
+      queryClient.invalidateQueries({ queryKey: ['projectServices', projectId] })
+    } catch (error: any) {
+      toast.error('Failed to update service', { description: error.message })
+    } finally {
+      setIsSavingSettings(false)
+    }
+  }
 
   // Keywords query
   const { data: keywords, isLoading: keywordsLoading } = useQuery({
@@ -1056,6 +1155,17 @@ function ServiceContentPanel({
             }`}
           >
             FAQs ({service.faq_count || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'settings'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Settings className="h-4 w-4 inline mr-1" />
+            Settings
           </button>
         </div>
         <Button
@@ -1265,6 +1375,68 @@ function ServiceContentPanel({
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Settings Tab Content */}
+      {activeTab === 'settings' && (
+        <div className="py-2 space-y-4">
+          <div className="space-y-4 max-w-xl">
+            <div className="space-y-2">
+              <Label htmlFor={`edit-name-${service.id}`}>Service Name</Label>
+              <Input
+                id={`edit-name-${service.id}`}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="e.g., Web Design"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor={`edit-description-${service.id}`}>Description (optional)</Label>
+              <Textarea
+                id={`edit-description-${service.id}`}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Brief description of this service for AI context"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                This description helps the AI understand your service better when generating content.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor={`edit-url-${service.id}`}>Main Service Page URL (optional)</Label>
+              <Input
+                id={`edit-url-${service.id}`}
+                value={editServicePageUrl}
+                onChange={(e) => setEditServicePageUrl(e.target.value)}
+                placeholder={wpUrl ? `${wpUrl.replace(/\/$/, '')}/${createSlug(service.name)}` : 'https://yoursite.com/web-design'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to your existing service page on WordPress. Generated location pages will link back to this page for better SEO.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isSavingSettings || !editName.trim()}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white"
+              >
+                {isSavingSettings ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

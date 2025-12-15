@@ -72,6 +72,7 @@ export function ProjectDetailPage() {
   const [wpConnectionVerified, setWpConnectionVerified] = useState(false)
   const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false)
   const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [isGeocodingTown, setIsGeocodingTown] = useState(false)
   
   const setCurrentView = (view: 'combinations' | 'services' | 'locations' | 'testimonials' | 'settings') => {
     setSearchParams({ view })
@@ -232,6 +233,43 @@ export function ProjectDetailPage() {
         description: error instanceof Error ? error.message : 'Failed to save',
       })
       throw error
+    }
+  }
+
+  const handleTownUpdate = async (townName: string) => {
+    if (!townName.trim()) {
+      await handleFieldUpdate('town', '')
+      return
+    }
+
+    setIsGeocodingTown(true)
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(townName + ', UK')}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+      )
+      const data = await response.json()
+
+      if (data.status === 'OK' && data.results.length > 0) {
+        const location = data.results[0].geometry.location
+        await updateProject(projectId, {
+          town: townName,
+          latitude: location.lat,
+          longitude: location.lng
+        })
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+        queryClient.invalidateQueries({ queryKey: ['agencyProjects'] })
+        toast.success(`Location set to ${townName} (${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`)
+      } else {
+        toast.error('Could not find coordinates for this town', {
+          description: 'Please check the spelling and try again'
+        })
+      }
+    } catch (error) {
+      toast.error('Error geocoding town', {
+        description: error instanceof Error ? error.message : 'Failed to get coordinates'
+      })
+    } finally {
+      setIsGeocodingTown(false)
     }
   }
 
@@ -690,6 +728,7 @@ export function ProjectDetailPage() {
               <ProjectServicesManager 
                 projectId={projectId} 
                 combinationLimit={combinationLimit}
+                wpUrl={project?.wp_url}
               />
             ) : currentView === 'locations' ? (
               <ProjectLocationsManager projectId={projectId} />
@@ -794,6 +833,29 @@ export function ProjectDetailPage() {
                           multiline
                           placeholder="Enter service description"
                         />
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Town/City (for Heat Map)</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <InlineEdit
+                              value={project.town}
+                              onSave={handleTownUpdate}
+                              placeholder="e.g., Doncaster"
+                            />
+                          </div>
+                          {isGeocodingTown && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                        </div>
+                        {project.latitude && project.longitude ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Coordinates: {Number(project.latitude).toFixed(4)}, {Number(project.longitude).toFixed(4)}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Enter a town name to set the center point for ranking heat maps
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -987,6 +1049,7 @@ export function ProjectDetailPage() {
       {/* Add Service Dialog (for onboarding flow) */}
       <AddServiceDialog
         projectId={projectId}
+        wpUrl={project?.wp_url}
         open={showAddServiceDialog}
         onOpenChange={setShowAddServiceDialog}
       />

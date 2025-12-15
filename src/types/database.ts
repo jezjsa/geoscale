@@ -66,6 +66,7 @@ export interface Project {
   project_name: string
   base_keyword: string | null
   base_location: string | null
+  town: string | null
   latitude: number | null
   longitude: number | null
   created_at: string

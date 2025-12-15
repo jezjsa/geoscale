@@ -11,6 +11,7 @@ export interface ProjectService {
   name: string
   slug: string
   description?: string
+  service_page_url?: string
   created_at: string
   updated_at: string
   // Computed fields from joins
@@ -88,7 +89,8 @@ export async function getProjectService(serviceId: string): Promise<ProjectServi
 export async function createProjectService(
   projectId: string,
   name: string,
-  description?: string
+  description?: string,
+  servicePageUrl?: string
 ): Promise<ProjectService> {
   const slug = createSlug(name)
 
@@ -99,6 +101,7 @@ export async function createProjectService(
       name: name.trim(),
       slug,
       description: description?.trim() || null,
+      service_page_url: servicePageUrl?.trim() || null,
     })
     .select()
     .single()
@@ -109,7 +112,7 @@ export async function createProjectService(
 
 export async function updateProjectService(
   serviceId: string,
-  updates: { name?: string; description?: string }
+  updates: { name?: string; description?: string; service_page_url?: string }
 ): Promise<ProjectService> {
   const updateData: any = { updated_at: new Date().toISOString() }
   
@@ -119,6 +122,9 @@ export async function updateProjectService(
   }
   if (updates.description !== undefined) {
     updateData.description = updates.description?.trim() || null
+  }
+  if (updates.service_page_url !== undefined) {
+    updateData.service_page_url = updates.service_page_url?.trim() || null
   }
 
   const { data, error } = await supabase

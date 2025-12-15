@@ -20,6 +20,7 @@ interface CheckHeatMapRankingsInput {
 interface CheckHeatMapRankingsResponse {
   success: boolean
   positions: (number | null)[]
+  businessCounts: (number | null)[]
   averagePosition: number
   rankedCount: number
   notRankedCount: number
@@ -88,6 +89,7 @@ export async function checkHeatMapRankings(input: CheckHeatMapRankingsInput): Pr
   return {
     success: true,
     positions: data.positions,
+    businessCounts: data.business_counts || [],
     averagePosition: data.average_position,
     rankedCount: data.ranked_count,
     notRankedCount: data.not_ranked_count
