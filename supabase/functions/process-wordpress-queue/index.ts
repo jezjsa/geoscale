@@ -7,8 +7,9 @@ const corsHeaders = {
 };
 
 // Configuration
-const BATCH_SIZE = 10; // Process up to 10 jobs per cron run (WP pushes are faster than content generation)
+const BATCH_SIZE = 5; // Process up to 5 jobs per cron run for reliability
 const MAX_EXECUTION_TIME_MS = 50000; // Stop processing after 50 seconds to avoid timeout
+const STUCK_JOB_THRESHOLD_MINUTES = 5; // Reset jobs stuck in "processing" for longer than this
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,6 +26,37 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`🔄 [WP QUEUE WORKER] Starting batch processing (up to ${BATCH_SIZE} jobs)...`);
+
+    // First, check for and reset any stuck jobs (processing for too long)
+    const stuckThreshold = new Date(Date.now() - STUCK_JOB_THRESHOLD_MINUTES * 60 * 1000).toISOString();
+    const { data: stuckJobs, error: stuckError } = await supabase
+      .from("wordpress_push_jobs")
+      .update({ 
+        status: "queued", 
+        error_message: "Reset: job was stuck in processing state",
+        updated_at: new Date().toISOString()
+      })
+      .eq("status", "processing")
+      .lt("started_at", stuckThreshold)
+      .select("id");
+
+    if (!stuckError && stuckJobs && stuckJobs.length > 0) {
+      console.log(`🔧 [WP QUEUE WORKER] Reset ${stuckJobs.length} stuck jobs back to queued`);
+    }
+
+    // Check if there are already jobs being processed (prevent overlapping runs)
+    const { count: processingCount } = await supabase
+      .from("wordpress_push_jobs")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "processing");
+
+    if (processingCount && processingCount > 0) {
+      console.log(`⏳ [WP QUEUE WORKER] ${processingCount} jobs still processing, skipping this run`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Previous batch still processing", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Get batch of queued jobs (ordered by priority desc, then created_at asc)
     const { data: jobs, error: fetchError } = await supabase
