@@ -270,6 +270,7 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
             >
               Find Related Keywords
             </Button>
+            <span className="text-sm text-muted-foreground">or</span>
             <Button
               onClick={handleAddServiceOnly}
               disabled={!newServiceName.trim()}
