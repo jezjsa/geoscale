@@ -101,7 +101,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                   <TableRow key={project.id} className="hover:bg-accent/50">
                     <TableCell className="font-medium">
                       <Link 
-                        to={`/projects/${project.id}?view=${project.service_count > 0 ? 'combinations' : 'services'}`}
+                        to={`/projects/${project.id}?view=combinations`}
                         className="text-link hover:text-link-hover hover:underline transition-colors"
                       >
                         {project.company_name || project.project_name}
@@ -162,7 +162,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                         asChild
                         className="h-8 w-8"
                       >
-                        <Link to={`/projects/${project.id}?view=${project.service_count > 0 ? 'combinations' : 'services'}`}>
+                        <Link to={`/projects/${project.id}?view=combinations`}>
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>
