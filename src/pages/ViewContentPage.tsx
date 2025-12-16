@@ -625,85 +625,6 @@ export function ViewContentPage() {
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-          <Button
-            onClick={handlePublishToWordPress}
-            disabled={isPublishing || isRegenerating || !hasWordPressConnection}
-            variant="outline"
-            className="gap-2"
-            style={hasWordPressConnection 
-              ? { borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }
-              : { borderColor: '#9ca3af', color: '#9ca3af' }
-            }
-          >
-            {isPublishing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              <>
-                <ArrowUpToLine className="h-4 w-4" />
-                {content?.location_keyword?.status === 'pushed' ? 'Republish to WordPress' : 'Publish to WordPress'}
-              </>
-            )}
-          </Button>
-          {/* Hide Regenerate button for Starter plan users */}
-          {canRegenerateContent && (
-            <Button
-              onClick={handleRegenerate}
-              disabled={isRegenerating || regenerateMutation.isPending}
-              className="gap-2 text-white"
-              style={{ backgroundColor: 'var(--brand-dark)' }}
-            >
-              {isRegenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Regenerating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  Regenerate Content
-                </>
-              )}
-            </Button>
-          )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/projects/${projectId}/ranking/${locationKeywordId}`)}
-              className="gap-2"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Rank History
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Navigate to heat map with this combination's phrase
-                if (content?.location_keyword?.phrase) {
-                  navigate(`/heat-map/${projectId}?keyword=${encodeURIComponent(content.location_keyword.phrase)}`)
-                } else {
-                  navigate(`/heat-map/${projectId}`)
-                }
-              }}
-              className="gap-2"
-            >
-              <Map className="h-4 w-4" />
-              Map Pack
-            </Button>
-          </div>
-          {!hasWordPressConnection && (
-            <p className="text-xs text-gray-400">
-              WordPress not connected. <button onClick={() => navigate(`/projects/${projectId}?view=settings`)} className="underline hover:text-[var(--brand-dark)]">Configure in Project Settings</button>
-            </p>
-          )}
-        </div>
       </div>
 
       {/* Progress Bar */}
@@ -974,8 +895,84 @@ export function ViewContentPage() {
 
         </div>
 
-        {/* Right Column - SEO Score + Metadata + Google Preview (narrower) */}
+        {/* Right Column - Actions + SEO Score + Metadata + Google Preview (narrower) */}
         <div className="space-y-6">
+          {/* Actions Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-center">Actions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={handlePublishToWordPress}
+                  disabled={isPublishing || isRegenerating || !hasWordPressConnection}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  style={hasWordPressConnection 
+                    ? { borderColor: 'var(--brand-dark)', color: 'var(--brand-dark)' }
+                    : { borderColor: '#9ca3af', color: '#9ca3af' }
+                  }
+                >
+                  {isPublishing ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <ArrowUpToLine className="h-3 w-3" />
+                  )}
+                  {content?.location_keyword?.status === 'pushed' ? 'Republish' : 'Publish'}
+                </Button>
+                {canRegenerateContent && (
+                  <Button
+                    onClick={handleRegenerate}
+                    disabled={isRegenerating || regenerateMutation.isPending}
+                    size="sm"
+                    className="gap-1 text-xs text-white"
+                    style={{ backgroundColor: 'var(--brand-dark)' }}
+                  >
+                    {isRegenerating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    Regenerate
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/projects/${projectId}/ranking/${locationKeywordId}`)}
+                  className="gap-1 text-xs"
+                >
+                  <TrendingUp className="h-3 w-3" />
+                  Rank History
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (content?.location_keyword?.phrase) {
+                      navigate(`/heat-map/${projectId}?keyword=${encodeURIComponent(content.location_keyword.phrase)}`)
+                    } else {
+                      navigate(`/heat-map/${projectId}`)
+                    }
+                  }}
+                  className="gap-1 text-xs"
+                >
+                  <Map className="h-3 w-3" />
+                  Map Pack
+                </Button>
+              </div>
+              {!hasWordPressConnection && (
+                <p className="text-xs text-gray-400 text-center">
+                  <button onClick={() => navigate(`/projects/${projectId}?view=settings`)} className="underline hover:text-[var(--brand-dark)]">Connect WordPress</button>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* SEO Score Card */}
           {(() => {
             const seoScore = calculateSEOScore(
