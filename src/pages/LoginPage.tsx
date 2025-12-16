@@ -180,6 +180,12 @@ export function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+      
+      <div className="mt-6 text-center">
+        <Link to="/" className="text-sm text-muted-foreground hover:text-[var(--brand-dark)] hover:underline">
+          ← Back to Home
+        </Link>
+      </div>
     </div>
   )
 }
