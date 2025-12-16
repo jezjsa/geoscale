@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Table,
@@ -26,7 +26,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { queueContentGeneration } from '@/api/content-queue'
-import { queueWordPressPush } from '@/api/wordpress-queue'
+import { queueWordPressPush, getProjectWordPressPushQueueStats } from '@/api/wordpress-queue'
 import { QueueStatusIndicator } from './QueueStatusIndicator'
 import { checkRankings } from '@/api/rankings'
 import { togglePositionTracking, getTrackedCombinationsCount } from '@/api/combinations'
@@ -118,6 +118,14 @@ export function CombinationsTable({
   const [showHelp, setShowHelp] = useState(false)
   const [trackedCount, setTrackedCount] = useState(0)
   const [togglingTrackIds, setTogglingTrackIds] = useState<Set<string>>(new Set())
+
+  // Query for WordPress push queue stats
+  const { data: wpQueueStats } = useQuery({
+    queryKey: ['wpPushQueueStats', projectId],
+    queryFn: () => getProjectWordPressPushQueueStats(projectId),
+    refetchInterval: 10000, // Refresh every 10 seconds when there are pending jobs
+    enabled: !!projectId,
+  })
 
   // Fetch tracked count on mount and when combinations change
   useEffect(() => {
@@ -809,9 +817,26 @@ export function CombinationsTable({
         </div>
       </div>
 
-      {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredCombinations.length} of {combinations.length} combination{combinations.length !== 1 ? 's' : ''}
+      {/* Results Count and Queue Status */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Showing {filteredCombinations.length} of {combinations.length} combination{combinations.length !== 1 ? 's' : ''}
+        </span>
+        {wpQueueStats && wpQueueStats.totalPending > 0 && (
+          <span className="flex items-center gap-2 text-orange-600">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {wpQueueStats.processing > 0 ? (
+              <span>Publishing {wpQueueStats.processing} to WordPress{wpQueueStats.queued > 0 ? `, ${wpQueueStats.queued} queued` : ''}</span>
+            ) : (
+              <span>{wpQueueStats.queued} queued for WordPress</span>
+            )}
+            {wpQueueStats.estimatedMinutes > 0 && (
+              <span className="text-muted-foreground">
+                (~{wpQueueStats.estimatedMinutes} min{wpQueueStats.estimatedMinutes !== 1 ? 's' : ''})
+              </span>
+            )}
+          </span>
+        )}
       </div>
 
       {/* Table */}

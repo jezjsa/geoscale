@@ -156,3 +156,33 @@ export async function getGlobalWordPressPushQueueStats() {
     processing: processingCount || 0,
   }
 }
+
+/**
+ * Get WordPress push queue stats for a specific project
+ */
+export async function getProjectWordPressPushQueueStats(projectId: string) {
+  const { count: queuedCount } = await supabase
+    .from('wordpress_push_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+    .eq('status', 'queued')
+
+  const { count: processingCount } = await supabase
+    .from('wordpress_push_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+    .eq('status', 'processing')
+
+  const totalPending = (queuedCount || 0) + (processingCount || 0)
+  
+  // Estimate: cron runs every minute, processes 5 at a time
+  // So if we have 10 pending, it will take ~2 minutes
+  const estimatedMinutes = Math.ceil(totalPending / 5)
+
+  return {
+    queued: queuedCount || 0,
+    processing: processingCount || 0,
+    totalPending,
+    estimatedMinutes,
+  }
+}
