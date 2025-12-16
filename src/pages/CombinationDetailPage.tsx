@@ -193,8 +193,8 @@ export function CombinationDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold">
-                  {combination.position || '-'}
+                <span className={`text-3xl font-bold ${combination.position === null && combination.last_position_check ? 'text-muted-foreground' : ''}`}>
+                  {combination.position !== null ? combination.position : (combination.last_position_check ? '100+' : '-')}
                 </span>
                 {positionChange && (
                   <div className={`flex items-center text-sm ${
@@ -219,8 +219,8 @@ export function CombinationDetailPage() {
               <CardDescription>Best Position</CardDescription>
             </CardHeader>
             <CardContent>
-              <span className="text-3xl font-bold text-green-600">
-                {bestPosition || '-'}
+              <span className={`text-3xl font-bold ${bestPosition !== null ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {bestPosition !== null ? bestPosition : (history && history.length > 0 ? '100+' : '-')}
               </span>
             </CardContent>
           </Card>
@@ -230,8 +230,8 @@ export function CombinationDetailPage() {
               <CardDescription>Worst Position</CardDescription>
             </CardHeader>
             <CardContent>
-              <span className="text-3xl font-bold text-red-600">
-                {worstPosition || '-'}
+              <span className={`text-3xl font-bold ${worstPosition !== null ? 'text-red-600' : 'text-muted-foreground'}`}>
+                {worstPosition !== null ? worstPosition : (history && history.length > 0 ? '100+' : '-')}
               </span>
             </CardContent>
           </Card>
@@ -241,8 +241,8 @@ export function CombinationDetailPage() {
               <CardDescription>Average Position</CardDescription>
             </CardHeader>
             <CardContent>
-              <span className="text-3xl font-bold">
-                {avgPosition || '-'}
+              <span className={`text-3xl font-bold ${avgPosition === null && history && history.length > 0 ? 'text-muted-foreground' : ''}`}>
+                {avgPosition !== null ? avgPosition : (history && history.length > 0 ? '100+' : '-')}
               </span>
             </CardContent>
           </Card>
