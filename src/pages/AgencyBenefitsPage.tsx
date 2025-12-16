@@ -13,7 +13,7 @@ interface BenefitCardProps {
 }
 
 function BenefitCard({ title, description, imagePlaceholder, imagePosition = 'right', bgColor = 'white' }: BenefitCardProps) {
-  const bgClass = bgColor === 'grey' ? 'bg-[#f5f5f7]' : 'bg-white'
+  const bgClass = bgColor === 'grey' ? 'bg-[#f5f5f7] dark:bg-[#1c1c1e]' : 'bg-white dark:bg-background'
   
   return (
     <section className={`${bgClass} py-20 px-6`}>
@@ -21,17 +21,17 @@ function BenefitCard({ title, description, imagePlaceholder, imagePosition = 'ri
         <div className={`flex flex-col ${imagePosition === 'left' ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12`}>
           {/* Text Content */}
           <div className="flex-1 text-center lg:text-left">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] tracking-tight mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-6">
               {title}
             </h2>
-            <p className="text-xl md:text-2xl text-[#86868b] leading-relaxed max-w-xl">
+            <p className="text-xl md:text-2xl text-[#86868b] dark:text-gray-400 leading-relaxed max-w-xl">
               {description}
             </p>
           </div>
           
           {/* Image Placeholder */}
           <div className="flex-1 w-full">
-            <div className="bg-[#e8e8ed] rounded-3xl aspect-video flex items-center justify-center min-h-[300px] lg:min-h-[400px]">
+            <div className="bg-[#e8e8ed] dark:bg-[#2c2c2e] rounded-3xl aspect-video flex items-center justify-center min-h-[300px] lg:min-h-[400px]">
               {imagePlaceholder ? (
                 <img 
                   src={imagePlaceholder} 
@@ -39,7 +39,7 @@ function BenefitCard({ title, description, imagePlaceholder, imagePosition = 'ri
                   className="w-full h-full object-cover rounded-3xl"
                 />
               ) : (
-                <span className="text-[#86868b] text-lg">Screenshot placeholder</span>
+                <span className="text-[#86868b] dark:text-gray-500 text-lg">Screenshot placeholder</span>
               )}
             </div>
           </div>
@@ -102,15 +102,15 @@ export function AgencyBenefitsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-white pt-16">
+    <div className="min-h-screen bg-white dark:bg-background pt-16">
       <Navigation />
       {/* Hero Section */}
-      <section className="bg-white pt-20 pb-20 px-6">
+      <section className="bg-white dark:bg-background pt-20 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-[#1d1d1f] tracking-tight mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-6">
             Built for SEO Agencies
           </h1>
-          <p className="text-xl md:text-2xl text-[#86868b] mb-10 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-[#86868b] dark:text-gray-400 mb-10 max-w-2xl mx-auto">
             Scale your local SEO services. Deliver results faster. Grow your agency.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -171,7 +171,9 @@ export function AgencyBenefitsPage() {
         </div>
       </section>
 
-      <Footer />
+      <div className="[&_footer]:mt-0">
+        <Footer />
+      </div>
     </div>
   )
 }
