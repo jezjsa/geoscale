@@ -16,6 +16,9 @@ interface CheckRankingsResponse {
   checked_count: number
   ranked_count: number
   not_ranked_count: number
+  daily_quota?: number
+  used_today?: number
+  remaining_today?: number
 }
 
 /**

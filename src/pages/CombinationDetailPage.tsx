@@ -94,7 +94,7 @@ export function CombinationDetailPage() {
 
   const isLoading = combinationLoading || historyLoading
 
-  // Format chart data
+  // Format chart data - show 100+ as position 100 for unranked
   const chartData = (history || []).map((h) => ({
     date: new Date(h.checked_at).toLocaleDateString('en-GB', { 
       day: '2-digit', 
@@ -105,9 +105,9 @@ export function CombinationDetailPage() {
       month: '2-digit',
       year: 'numeric',
     }),
-    position: h.position,
-    // Invert for chart (lower position = higher on chart)
-    displayPosition: h.position ? 101 - h.position : null,
+    position: h.position !== null ? h.position : 100,
+    isUnranked: h.position === null,
+    displayLabel: h.position !== null ? h.position : '100+',
   }))
 
   // Calculate stats
@@ -284,14 +284,14 @@ export function CombinationDetailPage() {
                       }}
                     />
                     <Tooltip 
-                      content={({ active, payload }) => {
+                      content={({ active, payload }: any) => {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload
                           return (
                             <div className="bg-background border rounded-lg shadow-lg p-3">
                               <p className="font-medium">{data.fullDate}</p>
-                              <p className="text-[var(--brand-dark)]">
-                                Position: {data.position || 'Not ranked'}
+                              <p className={data.isUnranked ? 'text-muted-foreground' : 'text-[var(--brand-dark)]'}>
+                                Position: {data.displayLabel}
                               </p>
                             </div>
                           )
@@ -392,7 +392,7 @@ export function CombinationDetailPage() {
                               {h.position}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">Not ranked</span>
+                            <span className="text-muted-foreground">100+</span>
                           )}
                         </td>
                       </tr>

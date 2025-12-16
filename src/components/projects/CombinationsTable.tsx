@@ -575,16 +575,12 @@ export function CombinationsTable({
       return checkRankings({ project_id: projectId })
     },
     onSuccess: (data) => {
-      const nextCheckMessage = limits.rankTrackingFrequency === 'every_other_day' 
-        ? 'You can check again in 2 days.'
-        : limits.rankTrackingFrequency === 'daily'
-        ? 'You can check again tomorrow.'
-        : limits.rankTrackingFrequency === 'weekly'
-        ? 'You can check again in 7 days.'
+      const remainingMessage = data.remaining_today !== undefined 
+        ? `${data.remaining_today} checks remaining today.`
         : ''
       
       toast.success('Rankings updated successfully!', {
-        description: `Checked ${data.checked_count} combinations. ${data.ranked_count} ranked in top 100.${nextCheckMessage ? ` ${nextCheckMessage}` : ''}`,
+        description: `Checked ${data.checked_count} combinations. ${data.ranked_count} ranked in top 100.${remainingMessage ? ` ${remainingMessage}` : ''}`,
       })
       queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
     },
