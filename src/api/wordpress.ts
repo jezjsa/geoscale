@@ -179,48 +179,37 @@ export async function updateWordPressPageMeta(params: {
 }
 
 /**
- * Test WordPress connection
+ * Test WordPress connection via Edge Function to avoid CORS issues
  */
 export async function testWordPressConnection(
   wordpressUrl: string,
   wordpressApiKey: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    let wpUrl = wordpressUrl.trim()
-    if (!wpUrl.startsWith('http://') && !wpUrl.startsWith('https://')) {
-      wpUrl = 'https://' + wpUrl
-    }
-    wpUrl = wpUrl.replace(/\/$/, '')
-
-    const response = await fetch(`${wpUrl}/wp-json/geoscale/v1/test`, {
-      method: 'GET',
-      headers: {
-        'X-GeoScale-API-Key': wordpressApiKey.trim(),
+    // Get session to ensure JWT token is included
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // Use the fetch-wordpress-templates Edge Function to test connection
+    // If it can fetch templates, the connection works
+    const { data, error } = await supabase.functions.invoke('fetch-wordpress-templates', {
+      body: {
+        wordpressUrl,
+        wordpressApiKey,
       },
+      headers: session ? {
+        Authorization: `Bearer ${session.access_token}`,
+      } : {},
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      let errorMessage = 'Connection failed'
-      
-      if (response.status === 401) {
-        errorMessage = 'Invalid API key'
-      } else if (response.status === 404) {
-        errorMessage = 'GeoScale plugin not found - Please install the plugin'
-      } else {
-        try {
-          const errorJson = JSON.parse(errorText)
-          errorMessage = errorJson.message || errorMessage
-        } catch (e) {
-          errorMessage = `${errorMessage} (Status: ${response.status})`
-        }
-      }
-      
-      return { success: false, message: errorMessage }
+    if (error) {
+      return { success: false, message: error.message || 'Connection failed' }
     }
 
-    const data = await response.json()
-    return { success: true, message: data.message || 'Connection successful' }
+    if (!data.success) {
+      return { success: false, message: data.error || 'Connection failed' }
+    }
+
+    return { success: true, message: 'Connection successful - WordPress plugin detected' }
   } catch (error) {
     return {
       success: false,

@@ -128,7 +128,7 @@ serve(async (req) => {
             *,
             location:project_locations!location_id(name),
             keyword:keyword_variations!keyword_id(keyword),
-            project:projects!project_id(wp_url, wp_api_key, wp_page_template, wp_publish_status)
+            project:projects!project_id(wp_url, blog_url, wp_api_key, wp_page_template, wp_publish_status)
           `)
           .eq("id", job.location_keyword_id)
           .single();
@@ -154,14 +154,16 @@ serve(async (req) => {
         }
 
         const project = lkData.project;
-        if (!project?.wp_url || !project?.wp_api_key) {
+        // Use blog_url if available, otherwise fall back to wp_url
+        const apiBaseUrl = project?.blog_url || project?.wp_url;
+        if (!apiBaseUrl || !project?.wp_api_key) {
           throw new Error("WordPress URL or API Key not configured for this project");
         }
 
         console.log(`📤 [WP QUEUE WORKER] Pushing to WordPress: ${lkData.phrase}`);
 
-        // Prepare WordPress API URL
-        let wpUrl = project.wp_url.trim();
+        // Prepare WordPress API URL (use blog_url for API calls)
+        let wpUrl = apiBaseUrl.trim();
         if (!wpUrl.startsWith("http://") && !wpUrl.startsWith("https://")) {
           wpUrl = "https://" + wpUrl;
         }
