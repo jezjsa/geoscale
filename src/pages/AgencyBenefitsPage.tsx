@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import { Navigation } from '@/components/Navigation'
+import { Footer } from '@/components/Footer'
 
 interface BenefitCardProps {
   title: string
@@ -169,6 +170,8 @@ export function AgencyBenefitsPage() {
           </Button>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }
