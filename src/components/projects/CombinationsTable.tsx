@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload, Map } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload, Map, History } from 'lucide-react'
 import { WordPressIcon } from '@/components/icons/WordPressIcon'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -1080,6 +1080,17 @@ export function CombinationsTable({
                           }`}
                         />
                       </Button>
+                      
+                      {/* Ranking History Icon */}
+                      <Link
+                        to={`/projects/${projectId}/ranking/${combo.id}`}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent"
+                        title="View ranking history"
+                      >
+                        <History 
+                          className="h-4 w-4 text-muted-foreground hover:text-[var(--brand-dark)] cursor-pointer"
+                        />
+                      </Link>
                       
                       {/* Heat Map Icon */}
                       <Button
