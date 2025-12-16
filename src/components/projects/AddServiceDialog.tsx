@@ -270,14 +270,14 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
             >
               Find Related Keywords
             </Button>
-            <span className="text-sm text-muted-foreground">or</span>
+            <span className="text-sm text-muted-foreground self-center">or</span>
             <Button
               onClick={handleAddServiceOnly}
               disabled={!newServiceName.trim()}
               style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >
-              Add Service Only
+              Add Service
             </Button>
           </DialogFooter>
         </DialogContent>
