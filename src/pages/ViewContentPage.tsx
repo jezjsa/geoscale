@@ -6,7 +6,7 @@ import { InlineEdit } from '@/components/InlineEdit'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine, Sparkles, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, RefreshCw, ArrowUpToLine, Sparkles, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Map, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { generateContent, publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { getCurrentUserPlan } from '@/lib/plan-service'
@@ -670,6 +670,33 @@ export function ViewContentPage() {
               )}
             </Button>
           )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/projects/${projectId}/ranking/${locationKeywordId}`)}
+              className="gap-2"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Rank History
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Navigate to heat map with this combination's phrase
+                if (content?.location_keyword?.phrase) {
+                  navigate(`/heat-map/${projectId}?keyword=${encodeURIComponent(content.location_keyword.phrase)}`)
+                } else {
+                  navigate(`/heat-map/${projectId}`)
+                }
+              }}
+              className="gap-2"
+            >
+              <Map className="h-4 w-4" />
+              Map Pack
+            </Button>
           </div>
           {!hasWordPressConnection && (
             <p className="text-xs text-gray-400">
