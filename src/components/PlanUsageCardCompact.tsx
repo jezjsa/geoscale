@@ -157,7 +157,7 @@ export function PlanUsageCardCompact() {
             className="flex-1 text-xs"
           >
             <Link to="/account#plan">
-              Buy More Sites
+              Buy More Websites
             </Link>
           </Button>
           <Button 
