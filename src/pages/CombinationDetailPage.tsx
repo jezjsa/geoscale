@@ -155,33 +155,29 @@ export function CombinationDetailPage() {
     <div className="min-h-screen bg-background pt-16">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        {/* Back button */}
-        <div className="mb-6">
-          <Button variant="ghost" asChild>
-            <Link to={`/projects/${combination.project_id}?view=combinations`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Combinations
-            </Link>
-          </Button>
-        </div>
-
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{combination.phrase}</h1>
-              <p className="text-muted-foreground">
-                {combination.project?.company_name || combination.project?.project_name}
-              </p>
-            </div>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Ranking History</h1>
+            <p className="text-muted-foreground">
+              {combination.phrase}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             {combination.wp_page_url && (
-              <Button variant="outline" asChild>
+              <Button variant="outline" size="sm" asChild>
                 <a href={combination.wp_page_url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Page
                 </a>
               </Button>
             )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/projects/${combination.project_id}?view=combinations`}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Project
+              </Link>
+            </Button>
           </div>
         </div>
 

@@ -575,22 +575,8 @@ export function ViewContentPage() {
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div className="relative flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            {projectName && (
-              <span className="text-muted-foreground">/ {projectName}</span>
-            )}
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
           <h1 className="text-3xl font-bold tracking-tight">Generated Content</h1>
           {content.location_keyword && (
             <p className="text-muted-foreground">
@@ -600,31 +586,42 @@ export function ViewContentPage() {
           )}
         </div>
 
-        {/* Navigation Arrows - Absolutely positioned to stay centered */}
-        {totalPages > 1 && (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3">
-            <button
-              onClick={navigateToPrev}
-              disabled={!prevPage}
-              className={`p-2 rounded-full transition-opacity ${prevPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
-              title={prevPage ? `Previous: ${prevPage.title}` : 'No previous page'}
-            >
-              <ChevronLeft className="h-6 w-6 text-foreground" />
-            </button>
-            <span className="text-foreground text-sm font-medium">
-              {currentIndex + 1} / {totalPages}
-            </span>
-            <button
-              onClick={navigateToNext}
-              disabled={!nextPage}
-              className={`p-2 rounded-full transition-opacity ${nextPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
-              title={nextPage ? `Next: ${nextPage.title}` : 'No next page'}
-            >
-              <ChevronRight className="h-6 w-6 text-foreground" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {/* Navigation Arrows */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={navigateToPrev}
+                disabled={!prevPage}
+                className={`p-2 rounded-full transition-opacity ${prevPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
+                title={prevPage ? `Previous: ${prevPage.title}` : 'No previous page'}
+              >
+                <ChevronLeft className="h-6 w-6 text-foreground" />
+              </button>
+              <span className="text-foreground text-sm font-medium">
+                {currentIndex + 1} / {totalPages}
+              </span>
+              <button
+                onClick={navigateToNext}
+                disabled={!nextPage}
+                className={`p-2 rounded-full transition-opacity ${nextPage ? 'hover:bg-foreground/10 cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
+                title={nextPage ? `Next: ${nextPage.title}` : 'No next page'}
+              >
+                <ChevronRight className="h-6 w-6 text-foreground" />
+              </button>
+            </div>
+          )}
 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Project
+          </Button>
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -953,11 +950,13 @@ export function ViewContentPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (content?.location_keyword?.phrase) {
-                      navigate(`/heat-map/${projectId}?keyword=${encodeURIComponent(content.location_keyword.phrase)}`)
-                    } else {
-                      navigate(`/heat-map/${projectId}`)
-                    }
+                    navigate(`/projects/${projectId}/heat-map/${locationKeywordId}`, {
+                      state: {
+                        phrase: content?.location_keyword?.phrase,
+                        location: content?.location_keyword?.location?.name,
+                        keyword: content?.location_keyword?.keyword?.keyword
+                      }
+                    })
                   }}
                   className="gap-1 text-xs"
                 >
