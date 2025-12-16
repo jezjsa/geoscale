@@ -202,10 +202,10 @@ export function DashboardPage() {
           </Link>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Locations</CardTitle>
+              <CardTitle className="text-sm font-medium">Combinations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.locations_count || 0}</div>
+              <div className="text-2xl font-bold">{stats?.combinations_count || 0}</div>
             </CardContent>
           </Card>
           <Card>

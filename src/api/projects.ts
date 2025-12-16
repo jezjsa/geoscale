@@ -108,7 +108,7 @@ export async function updateProject(projectId: string, updates: Partial<{
 
 export interface DashboardStats {
   projects_count: number
-  locations_count: number
+  combinations_count: number
   keywords_count: number
   pages_generated_count: number
 }
@@ -132,13 +132,13 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
 
   const projectIds = projects?.map(p => p.id) || []
 
-  // Get locations count across all user's projects
-  const { count: locationsCount, error: locationsError } = await supabase
-    .from('project_locations')
+  // Get combinations count across all user's projects (all location_keywords entries)
+  const { count: combinationsCount, error: combinationsError } = await supabase
+    .from('location_keywords')
     .select('*', { count: 'exact', head: true })
     .in('project_id', projectIds.length > 0 ? projectIds : [''])
 
-  if (locationsError) throw locationsError
+  if (combinationsError) throw combinationsError
 
   // Get keywords count across all user's projects
   const { count: keywordsCount, error: keywordsError } = await supabase
@@ -159,7 +159,7 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
 
   return {
     projects_count: projectsCount || 0,
-    locations_count: locationsCount || 0,
+    combinations_count: combinationsCount || 0,
     keywords_count: keywordsCount || 0,
     pages_generated_count: pagesCount || 0,
   }
