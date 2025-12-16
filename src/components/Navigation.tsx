@@ -48,6 +48,9 @@ export function Navigation() {
               <Link to="/" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Home
               </Link>
+              <Link to="/agency" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
+                For Agencies
+              </Link>
               <Link to="/plans" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Plans
               </Link>
