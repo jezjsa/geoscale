@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Globe, FileText } from 'lucide-react';
+import { ArrowUpRight, Globe, FileText, Search, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 export function PlanUsageCardCompact() {
-  const { plan, usage, limits, percentUsed, isLoading } = usePlanLimits();
+  const { plan, usage, limits, percentUsed, credits, isLoading } = usePlanLimits();
 
   if (isLoading) {
     return (
@@ -105,6 +105,68 @@ export function PlanUsageCardCompact() {
               isNearLimit(percentUsed.combinations) ? '[&>div]:bg-orange-600' : '[&>div]:bg-[var(--brand-dark)]'
             }`}
           />
+        </div>
+
+        {/* Rank Checks Today - only show for plans with rank checking */}
+        {credits.rankChecksDailyQuota > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm">Rank Checks Today</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {credits.rankChecksRemaining} remaining
+              </span>
+            </div>
+            <Progress 
+              value={credits.rankChecksDailyQuota > 0 ? (credits.rankChecksUsedToday / credits.rankChecksDailyQuota) * 100 : 0} 
+              className="h-1.5 [&>div]:bg-[var(--brand-dark)]"
+            />
+          </div>
+        )}
+
+        {/* Map Pack Credits */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm">Map Pack Credits</span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {credits.mapPackChecksRemaining} remaining
+            </span>
+          </div>
+          {credits.mapPackChecksPurchased > 0 && (
+            <Progress 
+              value={(credits.mapPackChecksUsed / credits.mapPackChecksPurchased) * 100} 
+              className="h-1.5 [&>div]:bg-[var(--brand-dark)]"
+            />
+          )}
+        </div>
+
+        {/* Purchase buttons */}
+        <div className="flex gap-2 pt-2">
+          <Button 
+            asChild 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 text-xs"
+          >
+            <Link to="/account#plan">
+              Buy More Sites
+            </Link>
+          </Button>
+          <Button 
+            asChild 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 text-xs"
+          >
+            <Link to="/account#plan">
+              Buy Map Pack Credits
+            </Link>
+          </Button>
         </div>
       </CardContent>
     </Card>

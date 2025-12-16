@@ -253,6 +253,52 @@ export const canCreateCombinations = async (
 };
 
 /**
+ * Get user credits (rank checks and map pack credits)
+ */
+export interface UserCredits {
+  rankChecksUsedToday: number;
+  rankChecksResetDate: string | null;
+  mapPackChecksUsed: number;
+  mapPackChecksPurchased: number;
+}
+
+export const getUserCredits = async (userId?: string): Promise<UserCredits | null> => {
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from('user_credits')
+    .select('rank_checks_used_today, rank_checks_reset_date, rank_map_checks_used, rank_map_checks_purchased')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    // No credits record yet - return defaults
+    if (error.code === 'PGRST116') {
+      return {
+        rankChecksUsedToday: 0,
+        rankChecksResetDate: null,
+        mapPackChecksUsed: 0,
+        mapPackChecksPurchased: 0,
+      };
+    }
+    console.error('Error fetching user credits:', error);
+    return null;
+  }
+
+  // Check if daily quota needs reset
+  const now = new Date();
+  const resetDate = data.rank_checks_reset_date ? new Date(data.rank_checks_reset_date) : null;
+  const needsReset = resetDate && now >= resetDate;
+
+  return {
+    rankChecksUsedToday: needsReset ? 0 : (data.rank_checks_used_today || 0),
+    rankChecksResetDate: data.rank_checks_reset_date,
+    mapPackChecksUsed: data.rank_map_checks_used || 0,
+    mapPackChecksPurchased: data.rank_map_checks_purchased || 0,
+  };
+};
+
+/**
  * Clear plans cache (use when plans are updated)
  */
 export const clearPlansCache = () => {

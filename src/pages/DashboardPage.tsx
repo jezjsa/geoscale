@@ -38,6 +38,23 @@ export function DashboardPage() {
     enabled: !!user?.id,
   })
 
+  // Fetch last 5 projects for quick links (for multi-project plans)
+  const { data: recentProjects } = useQuery({
+    queryKey: ['recentProjects', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, project_name, company_name')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.id,
+  })
+
   // Fetch user's project for individual users with testimonial and FAQ counts
   useEffect(() => {
     async function fetchUserProject() {
@@ -235,7 +252,7 @@ export function DashboardPage() {
                 ? (userProject ? 'Manage your WordPress project' : 'Set up your WordPress project') 
                 : 'Create and manage your WordPress projects'}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Button 
                 variant="outline"
                 onClick={handleManageProjects}
@@ -245,6 +262,24 @@ export function DashboardPage() {
                   ? (userProject ? 'Manage Project' : 'Create Project') 
                   : 'Manage Projects'}
               </Button>
+              
+              {/* Recent projects quick links - only for multi-project plans */}
+              {!isSingleProjectPlan && recentProjects && recentProjects.length > 0 && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground mb-2">Recent Projects</p>
+                  <div className="space-y-1">
+                    {recentProjects.map((project) => (
+                      <Link
+                        key={project.id}
+                        to={`/projects/${project.id}?view=combinations`}
+                        className="block text-sm text-[var(--brand-dark)] hover:underline truncate"
+                      >
+                        {project.company_name || project.project_name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           <PlanUsageCardCompact />

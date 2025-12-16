@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCurrentUserPlan, getUserUsageStats } from '@/lib/plan-service';
+import { getCurrentUserPlan, getUserUsageStats, getUserCredits } from '@/lib/plan-service';
 import { Plan } from '@/types';
 
 interface PlanLimits {
@@ -24,6 +24,14 @@ interface PlanLimits {
   percentUsed: {
     projects: number;
     combinations: number;
+  };
+  credits: {
+    rankChecksUsedToday: number;
+    rankChecksDailyQuota: number;
+    rankChecksRemaining: number;
+    mapPackChecksUsed: number;
+    mapPackChecksPurchased: number;
+    mapPackChecksRemaining: number;
   };
   isLoading: boolean;
 }
@@ -52,6 +60,14 @@ export function usePlanLimits(): PlanLimits {
       projects: 0,
       combinations: 0,
     },
+    credits: {
+      rankChecksUsedToday: 0,
+      rankChecksDailyQuota: 0,
+      rankChecksRemaining: 0,
+      mapPackChecksUsed: 0,
+      mapPackChecksPurchased: 0,
+      mapPackChecksRemaining: 0,
+    },
     isLoading: true,
   });
 
@@ -63,14 +79,25 @@ export function usePlanLimits(): PlanLimits {
       }
 
       try {
-        const [plan, usage] = await Promise.all([
+        const [plan, usage, credits] = await Promise.all([
           getCurrentUserPlan(user.id),
           getUserUsageStats(user.id),
+          getUserCredits(user.id),
         ]);
 
         if (plan && usage) {
           const remainingProjects = plan.websiteLimit - usage.projectCount;
           const remainingCombinations = plan.combinationPageLimit - usage.combinationCount;
+
+          // Calculate daily rank check quota: base + (per_site * number_of_projects)
+          const rankChecksDailyQuota = plan.rankCheckDailyBase + (plan.rankCheckPerSite * usage.projectCount);
+          const rankChecksUsedToday = credits?.rankChecksUsedToday || 0;
+          const rankChecksRemaining = Math.max(0, rankChecksDailyQuota - rankChecksUsedToday);
+
+          // Map pack credits
+          const mapPackChecksUsed = credits?.mapPackChecksUsed || 0;
+          const mapPackChecksPurchased = credits?.mapPackChecksPurchased || 0;
+          const mapPackChecksRemaining = Math.max(0, mapPackChecksPurchased - mapPackChecksUsed);
 
           setPlanLimits({
             plan,
@@ -89,6 +116,14 @@ export function usePlanLimits(): PlanLimits {
             percentUsed: {
               projects: Math.min(100, (usage.projectCount / plan.websiteLimit) * 100),
               combinations: Math.min(100, (usage.combinationCount / plan.combinationPageLimit) * 100),
+            },
+            credits: {
+              rankChecksUsedToday,
+              rankChecksDailyQuota,
+              rankChecksRemaining,
+              mapPackChecksUsed,
+              mapPackChecksPurchased,
+              mapPackChecksRemaining,
             },
             isLoading: false,
           });
