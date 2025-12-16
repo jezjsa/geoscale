@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { publishGeneratedPageToWordPress } from '@/api/content-generator'
 import { queueContentGeneration } from '@/api/content-queue'
+import { queueWordPressPush } from '@/api/wordpress-queue'
 import { QueueStatusIndicator } from './QueueStatusIndicator'
 import { checkRankings } from '@/api/rankings'
 import { togglePositionTracking, getTrackedCombinationsCount } from '@/api/combinations'
@@ -530,6 +531,45 @@ export function CombinationsTable({
     }
   }
 
+  // Mutation to queue all generated (unpushed) combinations for WordPress push
+  const pushAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) {
+        throw new Error('User not authenticated')
+      }
+
+      // Get all generated (not pushed) combinations
+      const generatedIds = combinations
+        .filter(c => c.status === 'generated')
+        .map(c => c.id)
+
+      if (generatedIds.length === 0) {
+        throw new Error('No generated pages to push')
+      }
+
+      console.log('📋 [UI] Queueing', generatedIds.length, 'pages for WordPress push')
+      
+      const response = await queueWordPressPush(generatedIds, projectId, user.id)
+      return response
+    },
+    onSuccess: (data) => {
+      toast.success(`${data.jobsCreated} pages queued for WordPress`, {
+        description: 'Pages will be published in the background. You can navigate away.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+    },
+    onError: (error: Error) => {
+      toast.error('Error queuing WordPress push', {
+        description: error.message,
+      })
+    },
+  })
+
+  // Count of generated (unpushed) combinations
+  const generatedUnpushedCount = useMemo(() => {
+    return combinations.filter(c => c.status === 'generated').length
+  }, [combinations])
+
   const checkRankingsMutation = useMutation({
     mutationFn: async () => {
       return checkRankings({ project_id: projectId })
@@ -668,6 +708,24 @@ export function CombinationsTable({
                 )}
                 Generate Next
               </Button> */}
+              {/* Push All to WordPress button - only show if there are generated unpushed pages */}
+              {generatedUnpushedCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pushAllMutation.mutate()}
+                  disabled={pushAllMutation.isPending}
+                  title={`Push ${generatedUnpushedCount} generated page${generatedUnpushedCount !== 1 ? 's' : ''} to WordPress`}
+                  className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)]/10"
+                >
+                  {pushAllMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <WordPressIcon className="h-4 w-4" />
+                  )}
+                  <span className="ml-1">{generatedUnpushedCount}</span>
+                </Button>
+              )}
               {/* Hide Check Rankings button for Starter plan */}
               {canUseRankTracking && (
                 <Button
