@@ -21,7 +21,7 @@ function BenefitCard({ title, description, imagePlaceholder, imagePosition = 'ri
         <div className={`flex flex-col ${imagePosition === 'left' ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12`}>
           {/* Text Content */}
           <div className="flex-1 text-center lg:text-left">
-            <h2 className="text-4xl md:text-5xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
               {title}
             </h2>
             <p className="text-xl md:text-2xl text-[#86868b] dark:text-gray-400 leading-relaxed max-w-xl">
