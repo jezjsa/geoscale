@@ -111,7 +111,7 @@ export function AgencyBenefitsPage() {
             Built for SEO Agencies
           </h1>
           <p className="text-xl md:text-2xl text-[#86868b] dark:text-gray-400 mb-10 max-w-2xl mx-auto">
-            Scale your local SEO services. Deliver results faster. Grow your agency.
+            Scale your local SEO services. Deliver results faster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -153,21 +153,22 @@ export function AgencyBenefitsPage() {
       <section className="bg-[var(--brand-dark)] py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">
-            Ready to scale your agency?
+            Ready to Get Started?
           </h2>
           <p className="text-xl text-white/70 mb-10">
-            Join agencies already using GeoScale to deliver exceptional local SEO results.
+            Choose a plan that fits your needs and start generating landing pages today.
           </p>
           <Button 
             asChild
             size="lg"
             className="bg-white hover:bg-gray-100 text-[var(--brand-dark)] rounded-full px-10 py-6 text-lg font-medium"
           >
-            <Link to="/register">
+            <Link to="/plans">
               Get Started Today
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
+          <p className="text-white/60 text-sm mt-4">14-Day Free Trial • No Credit Card Required</p>
         </div>
       </section>
 
