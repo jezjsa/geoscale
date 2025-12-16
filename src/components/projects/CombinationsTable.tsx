@@ -719,11 +719,11 @@ export function CombinationsTable({
                   className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)]/10"
                 >
                   {pushAllMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <WordPressIcon className="h-4 w-4" />
+                    <WordPressIcon className="mr-2 h-4 w-4" />
                   )}
-                  <span className="ml-1">{generatedUnpushedCount}</span>
+                  Push to WordPress ({generatedUnpushedCount})
                 </Button>
               )}
               {/* Hide Check Rankings button for Starter plan */}
