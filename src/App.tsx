@@ -16,6 +16,7 @@ import { HeatMapPage } from './pages/HeatMapPage'
 import { CombinationDetailPage } from './pages/CombinationDetailPage'
 import { WordPressSitemapPage } from './pages/WordPressSitemapPage'
 import { TestDataForSEOPage } from './pages/TestDataForSEO'
+import { AgencyBenefitsPage } from './pages/AgencyBenefitsPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/agency" element={<AgencyBenefitsPage />} />
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
