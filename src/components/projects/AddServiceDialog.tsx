@@ -209,20 +209,18 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Add Service</DialogTitle>
+            <DialogTitle>Add a Service</DialogTitle>
             <DialogDescription asChild>
               <div>
-                <p className="mb-2">Add a new service to your project:</p>
+                <p className="mb-2">Add a service to your project:</p>
                 <ul className="list-disc list-inside text-sm space-y-1">
-                  <li>Enter a service name and add it directly, or</li>
-                  <li>Find related keywords to choose from first</li>
+                  <li>Enter a service name below and add it directly, or</li>
+                  <li>Add a service name and find related keywords</li>
                 </ul>
               </div>
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-orange-500">
-            Don't include locations in your keyphrases – we'll combine them with your locations automatically afterwards.
-          </p>
+       
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="serviceName">Service Name</Label>
@@ -238,6 +236,9 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
                   }
                 }}
               />
+              <p className="text-xs text-[var(--brand-dark)]">
+                Don't include locations in your keyphrases – we'll combine them with your locations automatically afterwards.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="serviceDescription">Description (optional)</Label>
