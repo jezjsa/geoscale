@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus, Copy, CheckCircle2 } from 'lucide-react'
+import { Loader2, Plus, Copy, CheckCircle2, MapPin } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { createProject } from '@/api/projects'
 import { toast } from 'sonner'
@@ -36,7 +36,10 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
     serviceDescription: '',
     wpUrl: 'https://',
     blogUrl: 'https://',
+    town: '',
   })
+  const [isGeocodingTown, setIsGeocodingTown] = useState(false)
+  const [townCoords, setTownCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -57,7 +60,7 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
   }
 
   const createProjectMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData & { latitude?: number; longitude?: number }) => {
       return createProject({
         companyName: data.companyName,
         contactName: data.contactName,
@@ -68,6 +71,9 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
         wpUrl: data.wpUrl,
         blogUrl: data.blogUrl,
         userId: userId,
+        town: data.town || undefined,
+        latitude: data.latitude,
+        longitude: data.longitude,
       })
     },
     onSuccess: (result) => {
@@ -84,9 +90,35 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    createProjectMutation.mutate(formData)
+    
+    let latitude: number | undefined
+    let longitude: number | undefined
+    
+    // Geocode town if provided
+    if (formData.town.trim()) {
+      setIsGeocodingTown(true)
+      try {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(formData.town + ', UK')}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+        )
+        const data = await response.json()
+        
+        if (data.status === 'OK' && data.results.length > 0) {
+          const location = data.results[0].geometry.location
+          latitude = location.lat
+          longitude = location.lng
+          setTownCoords({ lat: location.lat, lng: location.lng })
+        }
+      } catch (error) {
+        console.error('Error geocoding town:', error)
+      } finally {
+        setIsGeocodingTown(false)
+      }
+    }
+    
+    createProjectMutation.mutate({ ...formData, latitude, longitude })
   }
 
   const handleClose = () => {
@@ -104,8 +136,10 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
         contactUrl: 'https://', 
         serviceDescription: '', 
         wpUrl: 'https://',
-        blogUrl: 'https://' 
+        blogUrl: 'https://',
+        town: '',
       })
+      setTownCoords(null)
     }, 200)
   }
 
@@ -191,6 +225,36 @@ export function CreateClientDialog({ userId }: CreateClientDialogProps) {
                   rows={3}
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="town" className="text-sm text-muted-foreground font-normal">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Town/City (for Heat Map)
+                  </div>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="town"
+                    value={formData.town}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const capitalized = value.charAt(0).toUpperCase() + value.slice(1)
+                      setFormData({ ...formData, town: capitalized })
+                    }}
+                    placeholder="e.g., Doncaster"
+                  />
+                  {isGeocodingTown && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {townCoords ? (
+                  <p className="text-xs text-muted-foreground">
+                    Coordinates: {townCoords.lat.toFixed(4)}, {townCoords.lng.toFixed(4)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Optional - sets the center point for ranking heat maps
+                  </p>
+                )}
               </div>
             </div>
 

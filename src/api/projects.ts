@@ -11,6 +11,9 @@ export interface CreateProjectData {
   wpUrl: string
   blogUrl: string
   userId: string
+  town?: string
+  latitude?: number
+  longitude?: number
 }
 
 export async function createProject(data: CreateProjectData) {
@@ -32,6 +35,9 @@ export async function createProject(data: CreateProjectData) {
         wp_url: data.wpUrl,
         blog_url: data.blogUrl,
         wp_api_key: wpApiKey,
+        town: data.town || null,
+        latitude: data.latitude || null,
+        longitude: data.longitude || null,
       })
       .select()
       .single()
