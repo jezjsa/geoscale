@@ -265,18 +265,18 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
             </Button>
             <Button
               variant="outline"
-              onClick={handleAddServiceOnly}
+              onClick={handleCreateService}
               disabled={!newServiceName.trim()}
             >
-              Add Service Only
+              Find Related Keywords
             </Button>
             <Button
-              onClick={handleCreateService}
+              onClick={handleAddServiceOnly}
               disabled={!newServiceName.trim()}
               style={{ backgroundColor: 'var(--brand-dark)' }}
               className="hover:opacity-90 text-white"
             >
-              Find Related Keywords
+              Add Service Only
             </Button>
           </DialogFooter>
         </DialogContent>
