@@ -212,8 +212,7 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
             <DialogTitle>Add a Service</DialogTitle>
             <DialogDescription asChild>
               <div>
-                <p className="mb-2">Add a service to your project:</p>
-                <ul className="list-disc list-inside text-sm space-y-1">
+                <ul className="mt-3 list-disc list-inside text-sm space-y-1">
                   <li>Enter a service name below and add it directly, or</li>
                   <li>Add a service name and find related keywords</li>
                 </ul>
@@ -258,8 +257,8 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
                 value={newServicePageUrl}
                 onChange={(e) => setNewServicePageUrl(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Link to your existing service page on WordPress. Used for internal linking in generated content.
+              <p className="text-xs text-[var(--brand-dark)]">
+                Link to an existing service page on the WordPress site. <br />Used for internal linking in generated content.
               </p>
             </div>
           </div>
@@ -274,6 +273,7 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
               variant="outline"
               onClick={handleCreateService}
               disabled={!newServiceName.trim()}
+              className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)]/10"
             >
               Find Related Keywords
             </Button>
