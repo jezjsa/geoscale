@@ -736,10 +736,11 @@ export function CombinationsTable({
                   title={rankCheckInfo.message || "Check Google rankings for pushed pages"}
                 >
                   {checkRankingsMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <GoogleIcon className="h-4 w-4" />
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                   )}
+                  Rank Check
                 </Button>
               )}
               <Button
