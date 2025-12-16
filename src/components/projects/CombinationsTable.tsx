@@ -835,7 +835,7 @@ export function CombinationsTable({
                     {combo.status === 'generated' || combo.status === 'pushed' ? (
                       <button
                         onClick={() => handleViewContent(combo.id)}
-                        className="text-left hover:text-[var(--brand-dark)] hover:underline cursor-pointer transition-colors"
+                        className="text-left underline hover:text-[var(--brand-dark)] cursor-pointer transition-colors"
                       >
                         {combo.phrase}
                       </button>
