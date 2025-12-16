@@ -49,7 +49,7 @@ export function Navigation() {
                 Home
               </Link>
               <Link to="/agency" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
-                For Agencies
+                Agency Benefits
               </Link>
               <Link to="/plans" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Plans
