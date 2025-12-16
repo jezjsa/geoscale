@@ -13,6 +13,7 @@ import { AccountPage } from './pages/AccountPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ViewContentPage } from './pages/ViewContentPage'
 import { HeatMapPage } from './pages/HeatMapPage'
+import { CombinationDetailPage } from './pages/CombinationDetailPage'
 import { WordPressSitemapPage } from './pages/WordPressSitemapPage'
 import { TestDataForSEOPage } from './pages/TestDataForSEO'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -41,6 +42,7 @@ function App() {
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/content/:locationKeywordId" element={<ProtectedRoute><ViewContentPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/heat-map/:combinationId" element={<ProtectedRoute><HeatMapPage /></ProtectedRoute>} />
+        <Route path="/projects/:projectId/ranking/:combinationId" element={<ProtectedRoute><CombinationDetailPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/sitemap" element={<ProtectedRoute><WordPressSitemapPage /></ProtectedRoute>} />
         <Route path="/test-dataforseo" element={<ProtectedRoute><TestDataForSEOPage /></ProtectedRoute>} />
       </Routes>

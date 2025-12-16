@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -973,7 +973,10 @@ export function CombinationsTable({
                       </TableCell>
                       <TableCell className={`text-center ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                         {combo.position !== null ? (
-                          <div className="flex items-center justify-center gap-1">
+                          <Link 
+                            to={`/projects/${projectId}/ranking/${combo.id}`}
+                            className="flex items-center justify-center gap-1 hover:underline"
+                          >
                             <span className="font-semibold text-[var(--brand-dark)]">#{combo.position}</span>
                             {combo.previous_position !== null && combo.previous_position !== combo.position && (
                               <span className={combo.position < combo.previous_position ? 'text-green-600 text-xs' : 'text-red-600 text-xs'}>
@@ -981,9 +984,14 @@ export function CombinationsTable({
                                 {Math.abs(combo.position - combo.previous_position)}
                               </span>
                             )}
-                          </div>
+                          </Link>
                         ) : combo.last_position_check ? (
-                          <span className="text-xs text-muted-foreground">100+</span>
+                          <Link 
+                            to={`/projects/${projectId}/ranking/${combo.id}`}
+                            className="text-xs text-muted-foreground hover:underline"
+                          >
+                            100+
+                          </Link>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}

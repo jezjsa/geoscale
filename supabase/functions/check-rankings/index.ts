@@ -331,8 +331,10 @@ serve(async (req) => {
       }
     }
 
-    // Update all combinations in database
+    // Update all combinations in database and record history
     if (updates.length > 0) {
+      const historyRecords: any[] = [];
+      
       for (const update of updates) {
         await supabase
           .from("location_keywords")
@@ -342,6 +344,27 @@ serve(async (req) => {
             last_position_check: update.last_position_check,
           })
           .eq("id", update.id);
+
+        // Add to history records
+        historyRecords.push({
+          location_keyword_id: update.id,
+          project_id: project_id,
+          position: update.position,
+          checked_at: update.last_position_check,
+        });
+      }
+
+      // Insert all history records
+      if (historyRecords.length > 0) {
+        const { error: historyError } = await supabase
+          .from("position_history")
+          .insert(historyRecords);
+
+        if (historyError) {
+          console.error("Failed to insert position history:", historyError);
+        } else {
+          console.log(`📈 Recorded ${historyRecords.length} position history entries`);
+        }
       }
     }
 
