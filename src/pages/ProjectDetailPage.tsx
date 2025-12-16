@@ -481,53 +481,13 @@ export function ProjectDetailPage() {
               <>
               <Card>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
                       <CardTitle>Location & Keyword Combinations</CardTitle>
                       <CardDescription>
                         Configure locations and keywords for page generation
                       </CardDescription>
                     </div>
-                    {combinations && combinations.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        {!generateMode ? (
-                          <Button
-                            size="sm"
-                            onClick={handleEnterGenerateMode}
-                            style={{ backgroundColor: '#1b9497' }}
-                            className="text-white hover:opacity-90"
-                          >
-                            <Wand2 className="mr-2 h-4 w-4" />
-                            Generate Content
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCancelGenerateMode}
-                            >
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleGenerationTriggered(Array.from(generateSelectedIds))}
-                              disabled={generateSelectedIds.size === 0 || queueGenerationMutation.isPending}
-                              style={{ backgroundColor: 'var(--brand-dark)' }}
-                              className="text-white hover:opacity-90"
-                            >
-                              {queueGenerationMutation.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Wand2 className="mr-2 h-4 w-4" />
-                              )}
-                              Start Generation {generateSelectedIds.size > 0 ? `(${generateSelectedIds.size})` : ''}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -660,61 +620,88 @@ export function ProjectDetailPage() {
                   </div>
                 ) : (
                   <div>
-                    <div className="mb-4 flex items-center justify-between">
-                      <h3 className="text-lg font-medium">All Combinations</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {/* Temporarily hidden - Google Places API has 31-mile radius limit */}
-                        {/* <Button
-                          size="sm"
-                          style={{ backgroundColor: 'var(--brand-dark)' }}
-                          className="hover:opacity-90 text-white"
-                          onClick={() => setShowAddCombinationDialog(true)}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Expand Search
-                        </Button> */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowAddServiceDialog(true)}
-                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
-                        >
-                          <Plus className="mr-0 h-4 w-4" />
-                          Services
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowResearchKeywordsDialog(true)}
-                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
-                        >
-                          <Plus className="mr-0 h-4 w-4" />
-                          Keywords
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowAddLocationsDialog(true)}
-                          style={{ borderColor: '#1b9497', color: '#1b9497' }}
-                          className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
-                        >
-                          <Plus className="mr-0 h-4 w-4" />
-                          Locations
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowUploadCsvDialog(true)}
-                          className="bg-white hover:bg-gray-100 dark:bg-transparent"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload CSV
-                        </Button>
-                      </div>
-                    </div>
-                    <CombinationsTable 
+                    <CombinationsTable
+                      generateButton={
+                        !generateMode ? (
+                          <Button
+                            size="sm"
+                            onClick={handleEnterGenerateMode}
+                            style={{ backgroundColor: '#1b9497' }}
+                            className="text-white hover:opacity-90"
+                          >
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Generate Content
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelGenerateMode}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleGenerationTriggered(Array.from(generateSelectedIds))}
+                              disabled={generateSelectedIds.size === 0 || queueGenerationMutation.isPending}
+                              style={{ backgroundColor: 'var(--brand-dark)' }}
+                              className="text-white hover:opacity-90"
+                            >
+                              {queueGenerationMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Wand2 className="mr-2 h-4 w-4" />
+                              )}
+                              Start Generation {generateSelectedIds.size > 0 ? `(${generateSelectedIds.size})` : ''}
+                            </Button>
+                          </>
+                        )
+                      }
+                      addButtons={
+                        <div className="flex flex-wrap gap-2 ml-auto">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowAddServiceDialog(true)}
+                            style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                            className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
+                          >
+                            <Plus className="mr-0 h-4 w-4" />
+                            Services
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowResearchKeywordsDialog(true)}
+                            style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                            className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
+                          >
+                            <Plus className="mr-0 h-4 w-4" />
+                            Keywords
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowAddLocationsDialog(true)}
+                            style={{ borderColor: '#1b9497', color: '#1b9497' }}
+                            className="bg-white hover:bg-gray-100 dark:bg-[#1b9497]/10 dark:text-[#1b9497] dark:hover:bg-[#1b9497]/20"
+                          >
+                            <Plus className="mr-0 h-4 w-4" />
+                            Locations
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowUploadCsvDialog(true)}
+                            className="bg-white hover:bg-gray-100 dark:bg-transparent"
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload CSV
+                          </Button>
+                        </div>
+                      } 
                       combinations={combinations} 
                       projectId={projectId}
                       blogUrl={project?.blog_url || project?.wp_url}

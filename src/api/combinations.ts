@@ -74,6 +74,8 @@ export async function getProjectCombinations(projectId: string) {
       last_position_check,
       track_position,
       parent_location_id,
+      search_volume,
+      difficulty,
       location:project_locations (
         id,
         name,
@@ -98,16 +100,42 @@ export async function getProjectCombinations(projectId: string) {
     keyword: Array.isArray(item.keyword) ? item.keyword[0] : item.keyword,
   })) || []
   
-  // Sort by location name (town) first, then by phrase alphabetically
+  // Sort so suburbs appear directly after their parent town
+  // 1. Main towns (no parent) sorted alphabetically by location
+  // 2. Suburbs sorted under their parent by location name
+  
+  // Create a map of parent IDs to their location names for sorting
+  const parentLocationMap = new Map<string, string>()
+  normalized.forEach((item: any) => {
+    if (!item.parent_location_id) {
+      parentLocationMap.set(item.id, item.location?.name || '')
+    }
+  })
+  
   return normalized.sort((a, b) => {
+    // Get the "group" location for sorting (parent's location if suburb, own location if main)
+    const aIsSuburb = !!a.parent_location_id
+    const bIsSuburb = !!b.parent_location_id
+    
+    // Get parent location name for suburbs, own location for main towns
+    const aParentLoc = aIsSuburb ? parentLocationMap.get(a.parent_location_id) || '' : a.location?.name || ''
+    const bParentLoc = bIsSuburb ? parentLocationMap.get(b.parent_location_id) || '' : b.location?.name || ''
+    
+    // First, group by parent location
+    if (aParentLoc < bParentLoc) return -1
+    if (aParentLoc > bParentLoc) return 1
+    
+    // Within the same parent group, main town comes first, then suburbs
+    if (!aIsSuburb && bIsSuburb) return -1
+    if (aIsSuburb && !bIsSuburb) return 1
+    
+    // Both are suburbs or both are main towns - sort by location name
     const locationA = a.location?.name || ''
     const locationB = b.location?.name || ''
-    
-    // First compare by location
     if (locationA < locationB) return -1
     if (locationA > locationB) return 1
     
-    // If locations are the same, compare by phrase
+    // Finally sort by phrase
     const phraseA = a.phrase || ''
     const phraseB = b.phrase || ''
     if (phraseA < phraseB) return -1

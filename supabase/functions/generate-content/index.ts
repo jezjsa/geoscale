@@ -94,6 +94,216 @@ function generateSlug(title: string, businessName?: string): string {
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
+/**
+ * Calculate Local Support Score for suburb pages and return failed checks
+ */
+function calculateLocalSupportScore(
+  content: string,
+  keyword: string,
+  location: string
+): { score: number; failedChecks: { name: string; message: string; currentValue?: number }[] } {
+  const failedChecks: { name: string; message: string; currentValue?: number }[] = [];
+  const plainText = content.replace(/<[^>]*>/g, ' ');
+  const lowerPlainText = plainText.toLowerCase();
+  const wordCount = plainText.split(/\s+/).filter(w => w.length > 0).length;
+  
+  // Extract keyword part (without location)
+  const keywordPart = keyword.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim();
+  const lowerKeyword = keywordPart.toLowerCase();
+  const lowerLocation = location.toLowerCase();
+
+  let totalScore = 0;
+
+  // 1. Content length (max 20 points) - 300-700 words ideal
+  if (wordCount >= 300 && wordCount <= 700) {
+    totalScore += 20;
+  } else if (wordCount < 300) {
+    totalScore += 10;
+    failedChecks.push({ name: 'Content Length', message: `${wordCount} words (could be slightly longer)`, currentValue: wordCount });
+  } else if (wordCount <= 800) {
+    totalScore += 10;
+    failedChecks.push({ name: 'Content Length', message: `${wordCount} words (slightly long for suburb page)`, currentValue: wordCount });
+  } else {
+    failedChecks.push({ name: 'Content Length', message: `${wordCount} words (too long - risk of competing with town page)`, currentValue: wordCount });
+  }
+
+  // 2. Keyword frequency (max 15 points) - 2-5 ideal
+  const keywordRegex = new RegExp(lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  const keywordCount = (lowerPlainText.match(keywordRegex) || []).length;
+  if (keywordCount >= 2 && keywordCount <= 5) {
+    totalScore += 15;
+  } else if (keywordCount < 2) {
+    totalScore += 5;
+    failedChecks.push({ name: 'Keyword Frequency', message: `Keyword appears ${keywordCount} times (could add 1-2 more)`, currentValue: keywordCount });
+  } else if (keywordCount <= 6) {
+    totalScore += 10;
+    failedChecks.push({ name: 'Keyword Frequency', message: `Keyword appears ${keywordCount} times (slightly high)`, currentValue: keywordCount });
+  } else {
+    failedChecks.push({ name: 'Keyword Frequency', message: `Keyword appears ${keywordCount} times (over-optimised)`, currentValue: keywordCount });
+  }
+
+  // 3. Location frequency (max 15 points) - 3-6 ideal
+  const locationRegex = new RegExp(lowerLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+  const locationCount = (lowerPlainText.match(locationRegex) || []).length;
+  if (locationCount >= 3 && locationCount <= 6) {
+    totalScore += 15;
+  } else if (locationCount < 3) {
+    totalScore += 8;
+    failedChecks.push({ name: 'Location Frequency', message: `Location appears ${locationCount} times (could add 1-2 more)`, currentValue: locationCount });
+  } else if (locationCount <= 8) {
+    totalScore += 8;
+    failedChecks.push({ name: 'Location Frequency', message: `Location appears ${locationCount} times (slightly high)`, currentValue: locationCount });
+  } else {
+    failedChecks.push({ name: 'Location Frequency', message: `Location appears ${locationCount} times (over-optimised)`, currentValue: locationCount });
+  }
+
+  // 4. Heading usage (max 15 points) - 0-1 keyword headings ideal
+  const headings = content.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || [];
+  const headingsWithKeyword = headings.filter(h => h.toLowerCase().includes(lowerKeyword)).length;
+  if (headingsWithKeyword <= 1) {
+    totalScore += 15;
+  } else {
+    totalScore += 5;
+    failedChecks.push({ name: 'Heading Usage', message: `${headingsWithKeyword} keyword headings (too many - footprint risk)`, currentValue: headingsWithKeyword });
+  }
+
+  // 5. Sales pressure detection (max 15 points)
+  const salesTerms = ['best', 'leading', 'top', 'award-winning', 'premier', 'number one', '#1', 'guaranteed', 'unbeatable', 'cheapest', 'lowest price'];
+  const foundSalesTerms = salesTerms.filter(term => lowerPlainText.includes(term));
+  const hasPricing = /\$|£|€|price|pricing|cost|quote|fee/i.test(plainText);
+  const hasTestimonial = /<blockquote|class="testimonial"|"testimonial/i.test(content);
+  
+  let salesPressure = 0;
+  if (foundSalesTerms.length > 0) salesPressure += foundSalesTerms.length * 2;
+  if (hasPricing) salesPressure += 3;
+  if (hasTestimonial) salesPressure += 3;
+  
+  const salesPoints = Math.max(0, 15 - salesPressure * 2);
+  totalScore += salesPoints;
+  if (salesPressure > 3) {
+    failedChecks.push({ name: 'Sales Pressure', message: 'High sales pressure (reduce for suburb page)' });
+  }
+
+  // Add points for title checks (simplified - just add base points)
+  totalScore += 20; // Keyword + Location in title
+
+  return { score: totalScore, failedChecks };
+}
+
+/**
+ * Auto-optimise suburb content based on failed Local Support Score checks
+ */
+async function optimiseSuburbContent(
+  content: string,
+  keyword: string,
+  location: string,
+  failedChecks: { name: string; message: string; currentValue?: number }[],
+  openrouterApiKey: string
+): Promise<string> {
+  if (failedChecks.length === 0) {
+    return content; // No optimisation needed
+  }
+
+  // Build specific instructions based on failed checks
+  const instructions: string[] = [];
+  
+  for (const check of failedChecks) {
+    switch (check.name) {
+      case 'Content Length':
+        if (check.message.includes('too long')) {
+          instructions.push(`REDUCE content length. Current: ~${check.currentValue} words. Target: 300-700 words. Remove redundant sentences, combine paragraphs, and trim verbose sections.`);
+        } else if (check.message.includes('slightly longer')) {
+          instructions.push(`SLIGHTLY EXPAND content. Current: ~${check.currentValue} words. Add 1-2 sentences of relevant local context. Target: 300-400 words.`);
+        }
+        break;
+        
+      case 'Keyword Frequency':
+        if (check.message.includes('over-optimised') || check.message.includes('slightly high')) {
+          instructions.push(`REDUCE keyword "${keyword}" mentions. Current: ${check.currentValue} times. Target: 2-5 times. Replace some instances with pronouns or related terms.`);
+        } else if (check.message.includes('could add')) {
+          instructions.push(`ADD 1-2 natural mentions of "${keyword}". Current: ${check.currentValue} times. Target: 2-4 times.`);
+        }
+        break;
+        
+      case 'Location Frequency':
+        if (check.message.includes('over-optimised') || check.message.includes('slightly high')) {
+          instructions.push(`REDUCE location "${location}" mentions. Current: ${check.currentValue} times. Target: 3-6 times. Replace some with "the area", "locally", "nearby".`);
+        } else if (check.message.includes('could add')) {
+          instructions.push(`ADD 1-2 natural mentions of "${location}". Current: ${check.currentValue} times. Target: 3-5 times.`);
+        }
+        break;
+        
+      case 'Heading Usage':
+        if (check.message.includes('too many')) {
+          instructions.push(`REDUCE keyword in headings. Current: ${check.currentValue} H2/H3 headings contain the keyword. Target: 0-1. Rewrite headings to be more generic.`);
+        }
+        break;
+        
+      case 'Sales Pressure':
+        instructions.push(`REMOVE aggressive sales language. Replace words like "best", "leading", "top", "award-winning" with softer alternatives. Remove pricing mentions.`);
+        break;
+    }
+  }
+
+  if (instructions.length === 0) {
+    return content;
+  }
+
+  const prompt = `You are an SEO content optimiser for LOCAL SUBURB SUPPORT PAGES. These pages should be LIGHTER and LESS optimised than main town pages.
+
+CURRENT CONTENT:
+${content}
+
+REQUIRED CHANGES (apply ALL):
+${instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
+
+RULES:
+- Make ONLY the changes listed above
+- Preserve the HTML structure (h1, h2, h3, p tags)
+- Keep the same general flow and sections
+- Do NOT add new sections or testimonials
+- Do NOT add pricing or aggressive CTAs
+- Maintain a helpful, supportive tone
+- Output ONLY the optimised HTML content, no explanations
+
+OUTPUT THE OPTIMISED HTML:`;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openrouterApiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': Deno.env.get('SUPABASE_URL') || '',
+        'X-Title': 'GeoScale Auto-Optimiser',
+      },
+      body: JSON.stringify({
+        model: 'x-ai/grok-4.1-fast',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Auto-optimise API error:', await response.text());
+      return content; // Return original on error
+    }
+
+    const result = await response.json();
+    const optimisedContent = result.choices?.[0]?.message?.content?.trim();
+
+    if (optimisedContent) {
+      console.log(`Auto-optimised suburb content: applied ${instructions.length} fix(es)`);
+      return optimisedContent;
+    }
+  } catch (error) {
+    console.error('Auto-optimise error:', error);
+  }
+
+  return content; // Return original on error
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -378,8 +588,125 @@ INTERNAL LINKING INSTRUCTIONS:
   Example: "Learn more about all our <a href="${servicePageUrl}">${serviceName} services</a>."`;
         }
 
-        const prompt = `Create a comprehensive, SEO-optimized landing page for a service business that will rank highly in Google search results.
+        // Determine content intent based on page type
+        const contentIntent = isSuburbPage ? "suburb-support" : (isMainTownWithSuburbs ? "primary-town" : "standard-service");
+        
+        // Get parent location name for suburb pages
+        const parentLocation = isSuburbPage && parentTownData 
+          ? (Array.isArray(parentTownData.location) ? parentTownData.location[0]?.name : parentTownData.location?.name)
+          : null;
 
+        // Build the prompt based on content intent
+        let prompt: string;
+
+        if (contentIntent === "suburb-support") {
+          // SUBURB PAGE PROMPT - Shorter, supportive, defers to parent
+          prompt = `Create a suburb-level service coverage page that reinforces local relevance while supporting the main town page.
+
+PAGE TYPE: Suburb/Local Coverage Page
+This is NOT a primary sales landing page. This is a local relevance amplifier.
+This page must support the main town page, not compete with it.
+
+Service: ${serviceName}
+Suburb Location: ${location}
+Parent Town: ${parentLocation || "Main town"}
+Target keyword phrase: ${serviceName} services available in ${location}
+
+Business name: ${businessName}
+Phone number: ${phoneNumber}
+Contact page URL: ${contactUrl}
+${internalLinkingBlock}
+
+${serviceDescription ? `Brief service context: ${serviceDescription}` : ""}
+${internalLinkingInstructions}
+
+**SUBURB PAGE CONSTRAINTS (MUST FOLLOW):**
+- Limit total content to 500-750 words maximum (hard cap)
+- Use FEWER sections than the main town page (maximum 3 H2 sections)
+- Avoid full testimonials or case-study style proof - no testimonials by default
+- Avoid detailed service breakdowns - summarise at high level only
+- Emphasise proximity, availability, and coverage
+- Clearly position the main town page as the primary service hub
+- The page should feel like a local relevance and coverage confirmation, not a primary sales landing page
+- DO NOT list advanced or specialist services (e.g., SaaS development, bespoke software) - refer to main town page for full capabilities
+
+**CONTENT INTENT (CRITICAL):**
+This page exists to:
+- Confirm service availability in ${location}
+- Reinforce proximity to ${parentLocation || "the main town"}
+- Support the main town page, NOT compete with it
+- Provide local reassurance to users searching from ${location}
+
+This page should NOT:
+- Be a full sales landing page
+- Repeat detailed service explanations from the town page
+- Over-optimise for the primary town keyword
+- Position itself as the main service page for the wider area
+- Look conversion-complete (no full testimonials, no detailed feature lists)
+
+**CONTENT STRUCTURE (Suburb Page - Minimal, max 3 H2 sections):**
+- **Short Introduction** (2-3 paragraphs): Confirm service coverage in ${location}, mention proximity to ${parentLocation || "main town"}
+- **Local Coverage Section**: Brief explanation of how you serve ${location} as part of your ${parentLocation || "main town"} coverage. Use heading like "Supporting ${location} as part of our ${parentLocation || "main town"} service area"
+- **Optional: Nearby Areas** (only if relevant): A brief mention like "Close to ${parentLocation || "main town"} town centre" or "Serving surrounding areas" - keeps it factual and light
+- **Soft CTA**: Direct users to contact or to the main ${parentLocation || "town"} page for full details
+
+**TITLE/H1 REQUIREMENTS:**
+- The title should imply service AVAILABILITY or COVERAGE, not primary ownership
+- Use: "${serviceName} services available in ${location}" or "${serviceName} support for businesses in ${location}"
+- DO NOT use: "Professional ${serviceName} in ${location}" or ownership-style headlines
+
+**TESTIMONIAL HANDLING:**
+${testimonialBlock ? `- You may briefly reference this testimonial, but DO NOT include it in full
+- Instead, paraphrase or use a short excerpt
+- Or reference generally: "Clients across ${parentLocation || "the area"} and surrounding areas trust us for quality ${serviceName}"
+- Original testimonial for reference: ${testimonialBlock}` : "- No testimonials provided - do not invent any"}
+
+**HEADINGS - AVOID GENERIC SALES HEADINGS:**
+- DO NOT use: "Why Choose [Business]" or "Why Choose Local [Service]"
+- DO use: "Local ${serviceName} support for ${location} businesses" or "Supporting ${location} as part of our ${parentLocation || "main town"} service area"
+- Headings should emphasise coverage, proximity, or support - NOT competitive positioning
+
+**SERVICE SCOPE:**
+- Summarise services at a HIGH LEVEL only
+- DO NOT list advanced or specialist offerings in detail
+- Refer readers to the main town or service page for full capability breakdowns
+- Keep service mentions brief and general
+
+**LANGUAGE REQUIREMENTS:**
+- Use supportive language: "serving", "covering", "supporting businesses in", "available in"
+- Verbally defer to the parent town: "Our main ${serviceName} service is based in ${parentLocation || "the main town"}, with full coverage across ${location}"
+- Reference the main town page naturally where appropriate
+- DO NOT repeat the suburb name excessively - use natural variation and pronouns once location relevance is established
+- Avoid footprint patterns - vary sentence structure and phrasing
+
+**CRITICAL RULES - DO NOT VIOLATE:**
+- DO NOT invent case studies, statistics, or specific client results
+- DO NOT include full testimonials - only brief references or paraphrases
+- DO NOT claim local office presence unless verified
+- DO NOT repeat town-level statistics or detailed service breakdowns
+- DO NOT use more than 3 H2 sections
+- Keep claims general and non-specific
+
+**FORMATTING:**
+- Use semantic HTML: h2, h3, p, ul, li, strong, em
+- Simpler, shorter structure than main town pages
+- No H1 tags (WordPress uses page title as H1)
+- Maximum 3 H2 sections total
+
+Format your response as JSON:
+{
+  "title": "${serviceName} services available in ${location}",
+  "meta_title": "${serviceName} in ${location} | ${businessName}",
+  "meta_description": "Meta description here (150 characters max)",
+  "content": "HTML content here"
+}`;
+        } else {
+          // PRIMARY TOWN or STANDARD SERVICE PROMPT - Full comprehensive page
+          prompt = `Create a comprehensive, SEO-optimized landing page for a service business that will rank highly in Google search results.
+
+${contentIntent === "primary-town" ? `PAGE TYPE: Primary Town Page (Main Location Hub)
+This is the main service page for ${location}. It should be comprehensive and conversion-focused.
+` : ""}
 Service: ${serviceName}
 Location: ${location}
 Target keyword phrase: ${serviceName} in ${location}
@@ -450,6 +777,7 @@ Format your response as JSON:
   "meta_description": "Meta description here (150 characters max)",
   "content": "HTML content here"
 }`;
+        }
 
         // Call OpenRouter API with Grok 4.1 Fast model
         const openaiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -501,6 +829,29 @@ Format your response as JSON:
         // Generate WordPress-style slug from title (excluding business name)
         const slug = generateSlug(generatedContent.title, businessName);
 
+        // Auto-optimise suburb pages based on Local Support Score
+        let finalContent = generatedContent.content;
+        if (isSuburbPage && lkData.phrase && lkData.location?.name) {
+          console.log(`Suburb page detected - checking Local Support Score...`);
+          const { score, failedChecks } = calculateLocalSupportScore(
+            generatedContent.content,
+            lkData.phrase,
+            lkData.location.name
+          );
+          console.log(`Local Support Score: ${score}/100, Failed checks: ${failedChecks.length}`);
+          
+          if (failedChecks.length > 0) {
+            console.log(`Auto-optimising suburb content for: ${failedChecks.map(c => c.name).join(', ')}`);
+            finalContent = await optimiseSuburbContent(
+              generatedContent.content,
+              lkData.phrase,
+              lkData.location.name,
+              failedChecks,
+              openrouterApiKey
+            );
+          }
+        }
+
         // Insert or update into generated_pages table
         const { data: generatedPage, error: insertError } = await supabase
           .from("generated_pages")
@@ -509,7 +860,7 @@ Format your response as JSON:
             location_keyword_id: locationKeywordId,
             title: generatedContent.title,
             slug: slug,
-            content: generatedContent.content,
+            content: finalContent,
             meta_title: generatedContent.meta_title,
             meta_description: generatedContent.meta_description,
             updated_at: new Date().toISOString(),

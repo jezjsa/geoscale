@@ -195,8 +195,193 @@ export function ViewContentPage() {
     return { score: totalScore, grade, checks }
   }
 
+  // Suburb-specific Local Support Score calculation
+  interface LocalSupportScore {
+    score: number
+    grade: 'excellent' | 'good' | 'needs-work' | 'poor'
+    checks: {
+      name: string
+      passed: boolean
+      message: string
+      points: number
+      tooltip?: string
+    }[]
+  }
+
+  const calculateLocalSupportScore = (
+    content: string,
+    title: string,
+    phrase: string | undefined,
+    location: string | undefined
+  ): LocalSupportScore => {
+    const checks: LocalSupportScore['checks'] = []
+    const plainText = content.replace(/<[^>]*>/g, ' ')
+    const lowerPlainText = plainText.toLowerCase()
+    const wordCount = plainText.split(/\s+/).filter(w => w.length > 0).length
+    
+    // Extract keyword part
+    const keywordPart = location && phrase 
+      ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() 
+      : phrase || ''
+
+    // 1. Content length - INVERTED: shorter is better for suburb pages (max 20 points)
+    // Ideal: 400-650 words, Green: 300-700, Amber: <300, Red: >800
+    let lengthPoints = 0
+    let lengthMessage = ''
+    if (wordCount >= 300 && wordCount <= 700) {
+      lengthPoints = 20
+      lengthMessage = `${wordCount} words (ideal for suburb support)`
+    } else if (wordCount < 300) {
+      lengthPoints = 10
+      lengthMessage = `${wordCount} words (could be slightly longer)`
+    } else if (wordCount <= 800) {
+      lengthPoints = 10
+      lengthMessage = `${wordCount} words (slightly long for suburb page)`
+    } else {
+      lengthPoints = 0
+      lengthMessage = `${wordCount} words (too long - risk of competing with town page)`
+    }
+    checks.push({
+      name: 'Content Length',
+      passed: wordCount >= 300 && wordCount <= 700,
+      message: lengthMessage,
+      points: lengthPoints,
+      tooltip: 'Suburb pages should be 300-700 words. Shorter content avoids competing with the main town page.'
+    })
+
+    // 2. Keyword in title (max 10 points)
+    const keywordInTitle = keywordPart && title.toLowerCase().includes(keywordPart.toLowerCase())
+    checks.push({
+      name: 'Keyword in Title',
+      passed: !!keywordInTitle,
+      message: keywordInTitle ? 'Keyword found in title' : 'Keyword missing from title',
+      points: keywordInTitle ? 10 : 0
+    })
+
+    // 3. Location in title (max 10 points)
+    const locationInTitle = location && title.toLowerCase().includes(location.toLowerCase())
+    checks.push({
+      name: 'Location in Title',
+      passed: !!locationInTitle,
+      message: locationInTitle ? 'Location found in title' : 'Location missing from title',
+      points: locationInTitle ? 10 : 0
+    })
+
+    // 4. Keyword frequency - CAPPED: 2-5 is ideal, penalty above 6 (max 15 points)
+    const keywordCount = keywordPart ? (lowerPlainText.match(new RegExp(keywordPart.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0
+    let keywordPoints = 0
+    let keywordMessage = ''
+    if (keywordCount >= 2 && keywordCount <= 5) {
+      keywordPoints = 15
+      keywordMessage = `Keyword appears ${keywordCount} times (safe)`
+    } else if (keywordCount < 2) {
+      keywordPoints = 5
+      keywordMessage = `Keyword appears ${keywordCount} times (could add 1-2 more)`
+    } else if (keywordCount <= 6) {
+      keywordPoints = 10
+      keywordMessage = `Keyword appears ${keywordCount} times (slightly high)`
+    } else {
+      keywordPoints = 0
+      keywordMessage = `Keyword appears ${keywordCount} times (over-optimised)`
+    }
+    checks.push({
+      name: 'Keyword Frequency',
+      passed: keywordCount >= 2 && keywordCount <= 6,
+      message: keywordMessage,
+      points: keywordPoints,
+      tooltip: 'Suburb pages should have 2-5 keyword mentions. More than 6 risks over-optimisation.'
+    })
+
+    // 5. Location frequency - TIGHTER: 3-6 is ideal (max 15 points)
+    const locationCount = location ? (lowerPlainText.match(new RegExp(location.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length : 0
+    let locationPoints = 0
+    let locationMessage = ''
+    if (locationCount >= 3 && locationCount <= 6) {
+      locationPoints = 15
+      locationMessage = `Location appears ${locationCount} times (safe)`
+    } else if (locationCount < 3) {
+      locationPoints = 8
+      locationMessage = `Location appears ${locationCount} times (could add 1-2 more)`
+    } else if (locationCount <= 8) {
+      locationPoints = 8
+      locationMessage = `Location appears ${locationCount} times (slightly high)`
+    } else {
+      locationPoints = 0
+      locationMessage = `Location appears ${locationCount} times (over-optimised)`
+    }
+    checks.push({
+      name: 'Location Frequency',
+      passed: locationCount >= 3 && locationCount <= 8,
+      message: locationMessage,
+      points: locationPoints,
+      tooltip: 'Suburb pages should have 3-6 location mentions. Once relevance is established, repetition is unnecessary.'
+    })
+
+    // 6. Heading usage - LIMIT: max 1 keyword heading is ideal (max 15 points)
+    const headings = content.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || []
+    const headingsWithKeyword = headings.filter(h => keywordPart && h.toLowerCase().includes(keywordPart.toLowerCase())).length
+    let headingPoints = 0
+    let headingMessage = ''
+    if (headingsWithKeyword === 0) {
+      headingPoints = 15
+      headingMessage = 'No keyword headings (reduces footprint)'
+    } else if (headingsWithKeyword === 1) {
+      headingPoints = 15
+      headingMessage = '1 keyword heading (safe)'
+    } else {
+      headingPoints = 5
+      headingMessage = `${headingsWithKeyword} keyword headings (too many - footprint risk)`
+    }
+    checks.push({
+      name: 'Heading Usage',
+      passed: headingsWithKeyword <= 1,
+      message: headingMessage,
+      points: headingPoints,
+      tooltip: 'Suburb pages should have 0-1 keyword headings. More creates a footprint pattern at scale.'
+    })
+
+    // 7. Sales pressure detection - NEGATIVE: penalise aggressive language (max 15 points)
+    const salesTerms = ['best', 'leading', 'top', 'award-winning', 'premier', 'number one', '#1', 'guaranteed', 'unbeatable', 'cheapest', 'lowest price']
+    const foundSalesTerms = salesTerms.filter(term => lowerPlainText.includes(term))
+    const hasPricing = /\$|£|€|price|pricing|cost|quote|fee/i.test(plainText)
+    const hasTestimonial = /<blockquote|class="testimonial"|"testimonial/i.test(content)
+    
+    let salesPressure = 0
+    if (foundSalesTerms.length > 0) salesPressure += foundSalesTerms.length * 2
+    if (hasPricing) salesPressure += 3
+    if (hasTestimonial) salesPressure += 3
+    
+    let salesPoints = Math.max(0, 15 - salesPressure * 2)
+    let salesMessage = ''
+    if (salesPressure === 0) {
+      salesMessage = 'No aggressive sales language (ideal)'
+    } else if (salesPressure <= 3) {
+      salesMessage = 'Low sales pressure detected'
+    } else {
+      salesMessage = 'High sales pressure (reduce for suburb page)'
+    }
+    checks.push({
+      name: 'Sales Pressure',
+      passed: salesPressure <= 3,
+      message: salesMessage,
+      points: salesPoints,
+      tooltip: 'Suburb pages should avoid aggressive sales language, pricing, and full testimonials.'
+    })
+
+    const totalScore = checks.reduce((sum, check) => sum + check.points, 0)
+    const grade: LocalSupportScore['grade'] = 
+      totalScore >= 80 ? 'excellent' : 
+      totalScore >= 60 ? 'good' : 
+      totalScore >= 40 ? 'needs-work' : 'poor'
+
+    return { score: totalScore, grade, checks }
+  }
+
   // State for enhancing content
   const [isEnhancing, setIsEnhancing] = useState(false)
+  
+  // State for optimising suburb content
+  const [isOptimising, setIsOptimising] = useState(false)
 
   // Fetch project details
   useEffect(() => {
@@ -272,6 +457,7 @@ export function ViewContentPage() {
           location_keyword:location_keywords!location_keyword_id(
             phrase,
             status,
+            parent_location_id,
             location:project_locations!location_id(name),
             keyword:keyword_variations!keyword_id(keyword)
           )
@@ -529,6 +715,99 @@ export function ViewContentPage() {
       })
     } finally {
       setIsEnhancing(false)
+    }
+  }
+
+  // Handle optimise suburb content - fixes failed Local Support Score checks
+  const handleOptimiseSuburb = async (failedChecks: { name: string; message: string; points: number }[]) => {
+    if (!content) return
+    
+    setIsOptimising(true)
+    toast.info('Optimising suburb content...')
+    
+    try {
+      const phrase = content.location_keyword?.phrase
+      const location = content.location_keyword?.location?.name
+      const keywordPart = location && phrase 
+        ? phrase.replace(new RegExp(`\\s*(in|for|near|around)\\s+${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '').trim() 
+        : phrase || ''
+
+      const { keywordCount, locationCount } = countOccurrences(content.content, phrase, location)
+      const plainText = content.content.replace(/<[^>]*>/g, ' ')
+      const wordCount = plainText.split(/\s+/).filter((w: string) => w.length > 0).length
+      
+      // Count keyword headings
+      const headings = content.content.match(/<h[2-3][^>]*>(.*?)<\/h[2-3]>/gi) || []
+      const headingsWithKeyword = headings.filter((h: string) => keywordPart && h.toLowerCase().includes(keywordPart.toLowerCase())).length
+
+      // Build failed checks with current values for the AI
+      const checksWithValues = failedChecks.map(check => {
+        const result: { name: string; message: string; currentValue?: number; targetValue?: number } = {
+          name: check.name,
+          message: check.message
+        }
+        
+        switch (check.name) {
+          case 'Content Length':
+            result.currentValue = wordCount
+            break
+          case 'Keyword Frequency':
+            result.currentValue = keywordCount
+            break
+          case 'Location Frequency':
+            result.currentValue = locationCount
+            break
+          case 'Heading Usage':
+            result.currentValue = headingsWithKeyword
+            break
+        }
+        
+        return result
+      })
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/optimise-suburb-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          content: content.content,
+          keyword: keywordPart,
+          location: location,
+          failedChecks: checksWithValues,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to optimise content')
+      }
+
+      const result = await response.json()
+      
+      if (result.optimisedContent) {
+        // Update the content in the database
+        const { error } = await supabase
+          .from('generated_pages')
+          .update({ 
+            content: result.optimisedContent, 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('location_keyword_id', locationKeywordId)
+
+        if (error) throw error
+
+        queryClient.invalidateQueries({ queryKey: ['generatedContent', locationKeywordId] })
+        toast.success(`Content optimised! ${result.message || ''}`)
+      }
+    } catch (error) {
+      console.error('Optimise error:', error)
+      toast.error('Failed to optimise content', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    } finally {
+      setIsOptimising(false)
     }
   }
 
@@ -972,114 +1251,234 @@ export function ViewContentPage() {
             </CardContent>
           </Card>
 
-          {/* SEO Score Card */}
+          {/* SEO Score Card - Different for suburb vs town pages */}
           {(() => {
-            const seoScore = calculateSEOScore(
-              content.content,
-              content.title,
-              content.location_keyword?.phrase,
-              content.location_keyword?.location?.name
-            )
-            // Calculate the stroke color based on score
-            const getScoreColor = (score: number) => {
-              if (score >= 70) return '#22c55e' // green - matches passed checks
-              if (score >= 50) return '#f97316' // orange
-              return '#ef4444' // red
-            }
+            const isSuburbPage = !!content.location_keyword?.parent_location_id
             
-            const scoreColor = getScoreColor(seoScore.score)
-            const circumference = 2 * Math.PI * 42 // radius = 42 (smaller to accommodate thicker stroke)
-            const strokeDashoffset = circumference - (seoScore.score / 100) * circumference
-            
-            return (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-center">SEO Score</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Circular Score Chart */}
-                  <div className="flex justify-center">
-                    <div className="relative w-32 h-32">
-                      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          fill="none"
-                          stroke="#e5e7eb"
-                          strokeWidth="12"
-                          className="dark:stroke-gray-700"
-                        />
-                        {/* Score arc */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          fill="none"
-                          stroke={scoreColor}
-                          strokeWidth="12"
-                          strokeLinecap="round"
-                          strokeDasharray={circumference}
-                          strokeDashoffset={strokeDashoffset}
-                          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-                        />
-                      </svg>
-                      {/* Score text in center */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-3xl font-bold">{seoScore.score}</span>
-                        <span className="text-xs text-muted-foreground">/ 100</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhance Button */}
-                  {seoScore.score < 70 && (
-                    <Button
-                      onClick={handleEnhanceKeywords}
-                      disabled={isEnhancing}
-                      size="sm"
-                      className="w-full gap-2"
-                      style={{ backgroundColor: 'var(--brand-dark)' }}
-                    >
-                      {isEnhancing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Enhancing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Enhance Keywords
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  
-                  {/* Checks List */}
-                  <div className="space-y-2">
-                    {seoScore.checks.map((check, index) => (
-                      <div 
-                        key={index} 
-                        className={`p-2 rounded-lg ${check.passed ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-900/30'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {check.passed ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <span className="text-xs font-medium block">{check.name}</span>
-                            <p className="text-xs text-muted-foreground truncate">{check.message}</p>
-                          </div>
+            if (isSuburbPage) {
+              // Local Support Score for suburb pages
+              const localScore = calculateLocalSupportScore(
+                content.content,
+                content.title,
+                content.location_keyword?.phrase,
+                content.location_keyword?.location?.name
+              )
+              
+              const getScoreColor = (score: number) => {
+                if (score >= 70) return '#22c55e'
+                if (score >= 50) return '#f97316'
+                return '#ef4444'
+              }
+              
+              const scoreColor = getScoreColor(localScore.score)
+              const circumference = 2 * Math.PI * 42
+              const strokeDashoffset = circumference - (localScore.score / 100) * circumference
+              
+              return (
+                <Card className="border-[var(--brand-light)]/30">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-center flex items-center justify-center gap-2">
+                      <Map className="h-4 w-4 text-[var(--brand-light)]" />
+                      Local Support Score
+                    </CardDescription>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Suburb pages are scored differently
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Circular Score Chart - softer color for suburb */}
+                    <div className="flex justify-center">
+                      <div className="relative w-32 h-32">
+                        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="12"
+                            className="dark:stroke-gray-700"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke={scoreColor}
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={strokeDashoffset}
+                            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-3xl font-bold">{localScore.score}</span>
+                          <span className="text-xs text-muted-foreground">/ 100</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )
+                    </div>
+                    
+                    {/* Optimise Button - only show if there are failed checks */}
+                    {(() => {
+                      const failedChecks = localScore.checks.filter(c => !c.passed)
+                      if (failedChecks.length > 0) {
+                        return (
+                          <Button
+                            onClick={() => handleOptimiseSuburb(failedChecks)}
+                            disabled={isOptimising}
+                            size="sm"
+                            className="w-full gap-2"
+                            style={{ backgroundColor: 'var(--brand-light)' }}
+                          >
+                            {isOptimising ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Optimising...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4" />
+                                Optimise ({failedChecks.length} issue{failedChecks.length > 1 ? 's' : ''})
+                              </>
+                            )}
+                          </Button>
+                        )
+                      }
+                      return null
+                    })()}
+                    
+                    {/* Checks List with tooltips */}
+                    <div className="space-y-2">
+                      {localScore.checks.map((check, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-2 rounded-lg ${check.passed ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-900/30'}`}
+                          title={check.tooltip}
+                        >
+                          <div className="flex items-center gap-2">
+                            {check.passed ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <span className="text-xs font-medium block">{check.name}</span>
+                              <p className="text-xs text-muted-foreground truncate">{check.message}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            } else {
+              // Standard SEO Score for town/main pages
+              const seoScore = calculateSEOScore(
+                content.content,
+                content.title,
+                content.location_keyword?.phrase,
+                content.location_keyword?.location?.name
+              )
+              
+              const getScoreColor = (score: number) => {
+                if (score >= 70) return '#22c55e'
+                if (score >= 50) return '#f97316'
+                return '#ef4444'
+              }
+              
+              const scoreColor = getScoreColor(seoScore.score)
+              const circumference = 2 * Math.PI * 42
+              const strokeDashoffset = circumference - (seoScore.score / 100) * circumference
+              
+              return (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-center">SEO Score</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Circular Score Chart */}
+                    <div className="flex justify-center">
+                      <div className="relative w-32 h-32">
+                        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="12"
+                            className="dark:stroke-gray-700"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke={scoreColor}
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={strokeDashoffset}
+                            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-3xl font-bold">{seoScore.score}</span>
+                          <span className="text-xs text-muted-foreground">/ 100</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enhance Button */}
+                    {seoScore.score < 70 && (
+                      <Button
+                        onClick={handleEnhanceKeywords}
+                        disabled={isEnhancing}
+                        size="sm"
+                        className="w-full gap-2"
+                        style={{ backgroundColor: 'var(--brand-dark)' }}
+                      >
+                        {isEnhancing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Enhancing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            Enhance Keywords
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {/* Checks List */}
+                    <div className="space-y-2">
+                      {seoScore.checks.map((check, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-2 rounded-lg ${check.passed ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-900/30'}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {check.passed ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <span className="text-xs font-medium block">{check.name}</span>
+                              <p className="text-xs text-muted-foreground truncate">{check.message}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            }
           })()}
 
           {/* Metadata */}

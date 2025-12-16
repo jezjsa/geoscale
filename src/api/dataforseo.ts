@@ -73,6 +73,57 @@ export async function getKeywordVariations(input: KeywordVariationsInput): Promi
   return data.keywords
 }
 
+interface KeywordMetricsResult {
+  success: boolean
+  message: string
+  updated_count: number
+  total_keywords?: number
+  keywords_processed?: number
+}
+
+/**
+ * Get keyword metrics (volume & difficulty) for existing keywords in a project
+ * This will:
+ * 1. Find all keywords missing volume or difficulty data
+ * 2. Fetch search volume from Google Ads API
+ * 3. Fetch keyword difficulty from DataForSEO Labs API
+ * 4. Update the keyword_variations table with the new data
+ */
+export async function getKeywordMetrics(projectId: string): Promise<KeywordMetricsResult> {
+  console.log('📊 Fetching keyword metrics for project:', projectId)
+
+  // Get the current session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error('No active session')
+  }
+
+  // Call the Edge Function
+  const { data, error } = await supabase.functions.invoke('get-keyword-metrics', {
+    body: {
+      project_id: projectId,
+    },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  })
+
+  if (error) {
+    throw error
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to get keyword metrics')
+  }
+
+  console.log(`✅ ${data.message}`)
+
+  return data
+}
+
 /**
  * IMPLEMENTATION NOTES FOR DATAFORSEO API:
  * 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigation } from '@/components/Navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getProject } from '@/api/projects'
 import { generateGrid, GRID_PRESETS, GridPreset, GridPoint } from '@/utils/grid-generator'
 import { checkHeatMapRankings, saveHeatMapScan, getLatestHeatMapScan, getHeatMapScanHistory, getRankMapCredits, RankMapCredits } from '@/api/heat-map'
-import { createLocationKeywordCombinations } from '@/api/combinations'
+import { addSpecificCombinations } from '@/api/combinations'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { GoogleMap, useJsApiLoader, Circle, OverlayView } from '@react-google-maps/api'
@@ -83,6 +84,7 @@ export function HeatMapPage() {
   const navigate = useNavigate()
   const location = useLocation() as { state: HeatMapPageState }
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -321,20 +323,22 @@ export function HeatMapPage() {
     setCombinationsCreated(null)
 
     try {
-      // Create combinations for each weak location
-      let totalCreated = 0
-      
-      for (const location of weakLocations) {
-        const result = await createLocationKeywordCombinations(projectId!, {
-          base_location: location.name,
-          base_keyword: project.base_keyword || '',
-          radius_miles: 5 // Small radius for specific towns
-        })
-        totalCreated += result.combinations_count
-      }
+      // Build combinations array for all weak locations
+      // These are specific towns we already know, so we add them directly
+      // Pass combinationId as parentLocationId so they become suburbs of the main town
+      const combinations = weakLocations.map(location => ({
+        location: location.name,
+        keyword: project.base_keyword || '',
+        parentLocationId: combinationId // Link to parent town (e.g., Doncaster)
+      }))
 
-      setCombinationsCreated(totalCreated)
-      toast.success(`${totalCreated} combinations created successfully!`)
+      const result = await addSpecificCombinations(projectId!, combinations)
+
+      // Invalidate combinations cache so the list updates without refresh
+      queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+
+      setCombinationsCreated(result.combinations_count)
+      toast.success(`${result.combinations_count} suburb combinations created successfully!`)
     } catch (error) {
       console.error('Failed to create combinations:', error)
       toast.error('Failed to create combinations')

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload, Map, TrendingUp } from 'lucide-react'
+import { Trash2, X, Wand2, Loader2, CheckCircle2, XCircle, RefreshCw, Eye, ExternalLink, HelpCircle, Plus, Upload, Map, TrendingUp, BarChart3, CornerLeftUp } from 'lucide-react'
 import { WordPressIcon } from '@/components/icons/WordPressIcon'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -30,6 +30,7 @@ import { queueWordPressPush, getProjectWordPressPushQueueStats } from '@/api/wor
 import { QueueStatusIndicator } from './QueueStatusIndicator'
 import { checkRankings } from '@/api/rankings'
 import { togglePositionTracking, getTrackedCombinationsCount } from '@/api/combinations'
+import { getKeywordMetrics } from '@/api/dataforseo'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import { Switch } from '@/components/ui/switch'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
@@ -44,6 +45,9 @@ interface Combination {
   previous_position: number | null
   last_position_check: string | null
   track_position: boolean
+  search_volume?: number | null
+  difficulty?: number | null
+  parent_location_id?: string | null
   location: {
     name: string
   }
@@ -64,6 +68,8 @@ interface CombinationsTableProps {
   onSelectedIdsChange?: (ids: Set<string>) => void
   onGenerationTriggered?: (ids: string[]) => void
   isGenerating?: boolean
+  addButtons?: React.ReactNode
+  generateButton?: React.ReactNode
 }
 
 export function CombinationsTable({ 
@@ -75,6 +81,8 @@ export function CombinationsTable({
   onSelectedIdsChange,
   onGenerationTriggered,
   isGenerating: externalIsGenerating,
+  addButtons,
+  generateButton,
 }: CombinationsTableProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -599,6 +607,30 @@ export function CombinationsTable({
     },
   })
 
+  // Mutation to fetch keyword metrics (volume & difficulty) from DataForSEO
+  const keywordMetricsMutation = useMutation({
+    mutationFn: async () => {
+      return getKeywordMetrics(projectId)
+    },
+    onSuccess: (data) => {
+      if (data.updated_count > 0) {
+        toast.success('Keyword data updated!', {
+          description: `Updated ${data.updated_count} keyword${data.updated_count !== 1 ? 's' : ''} with volume/difficulty data.`,
+        })
+        queryClient.invalidateQueries({ queryKey: ['projectCombinations', projectId] })
+      } else {
+        toast.info('No updates needed', {
+          description: data.message,
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast.error('Error fetching keyword data', {
+        description: error.message,
+      })
+    },
+  })
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'pending':
@@ -671,154 +703,158 @@ export function CombinationsTable({
         </div>
       )}
 
-      {/* Search and Filter Bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Input
-          placeholder="Search combinations..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xs"
-        />
-        
-        <Select value={selectedTown} onValueChange={setSelectedTown}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by town" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Towns</SelectItem>
-            {uniqueTowns.map(town => (
-              <SelectItem key={town} value={town}>
-                {town}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="ml-auto flex items-center gap-2">
-          {!deleteMode && !generateMode ? (
-            <>
-              {/* Generate Next button hidden - use individual row regenerate icons instead */}
-              {/* <Button
-                size="sm"
-                onClick={handleGenerateNext}
-                disabled={generateMutation.isPending || !filteredCombinations.some(c => c.status === 'pending')}
+      {/* Action Buttons and Search/Filter - All on one row */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        {/* Search and Filter - positioned at far right */}
+        <div className="flex items-center gap-3 ml-auto order-last">
+          <Input
+            placeholder="Search combinations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-xs"
+          />
+          
+          <Select value={selectedTown} onValueChange={setSelectedTown}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by town" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Towns</SelectItem>
+              {uniqueTowns.map(town => (
+                <SelectItem key={town} value={town}>
+                  {town}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Generate Content button - always show (handles its own state) */}
+        {generateButton}
+        {!deleteMode && !generateMode ? (
+          <>
+            {/* Push All to WordPress button - only show if there are generated unpushed pages */}
+            {generatedUnpushedCount > 0 && (
+              <Button
                 variant="outline"
-                className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)] hover:text-white"
+                size="sm"
+                onClick={() => pushAllMutation.mutate()}
+                disabled={pushAllMutation.isPending}
+                title={`Push ${generatedUnpushedCount} generated page${generatedUnpushedCount !== 1 ? 's' : ''} to WordPress`}
+                className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)]/10"
               >
-                {generateMutation.isPending ? (
+                {pushAllMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <WordPressIcon className="mr-2 h-4 w-4" />
                 )}
-                Generate Next
-              </Button> */}
-              {/* Push All to WordPress button - only show if there are generated unpushed pages */}
-              {generatedUnpushedCount > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => pushAllMutation.mutate()}
-                  disabled={pushAllMutation.isPending}
-                  title={`Push ${generatedUnpushedCount} generated page${generatedUnpushedCount !== 1 ? 's' : ''} to WordPress`}
-                  className="border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)]/10"
-                >
-                  {pushAllMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <WordPressIcon className="mr-2 h-4 w-4" />
-                  )}
-                  Push to WordPress ({generatedUnpushedCount})
-                </Button>
+                Push to WordPress ({generatedUnpushedCount})
+              </Button>
+            )}
+            {/* Get Keyword Data button - fetches volume/difficulty from DataForSEO */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => keywordMetricsMutation.mutate()}
+              disabled={keywordMetricsMutation.isPending}
+              title="Fetch search volume and difficulty data for keywords"
+            >
+              {keywordMetricsMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <BarChart3 className="mr-2 h-4 w-4" />
               )}
-              {/* Hide Check Rankings button for Starter plan */}
-              {canUseRankTracking && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => checkRankingsMutation.mutate()}
-                  disabled={checkRankingsMutation.isPending || !rankCheckInfo.canCheck}
-                  title={rankCheckInfo.message || "Check Google rankings for pushed pages"}
-                >
-                  {checkRankingsMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <GoogleIcon className="mr-2 h-4 w-4" />
-                  )}
-                  Rank Check
-                </Button>
-              )}
+              Get Keyword Data
+            </Button>
+            {/* Hide Check Rankings button for Starter plan */}
+            {canUseRankTracking && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setDeleteMode(true)}
-                title="Delete combinations"
+                onClick={() => checkRankingsMutation.mutate()}
+                disabled={checkRankingsMutation.isPending || !rankCheckInfo.canCheck}
+                title={rankCheckInfo.message || "Check Google rankings for pushed pages"}
               >
-                <Trash2 className="h-4 w-4" />
+                {checkRankingsMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleIcon className="mr-2 h-4 w-4" />
+                )}
+                Rank Check
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowHelp(true)}
-                title="Help & Instructions"
-              >
-                <HelpCircle className="h-4 w-4" />
-              </Button>
-            </>
-          ) : deleteMode ? (
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteMode(true)}
+              title="Delete combinations"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHelp(true)}
+              title="Help & Instructions"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            {/* Add buttons passed from parent - positioned far right */}
+            {addButtons}
+          </>
+        ) : deleteMode ? (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelDelete}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={selectedIds.size === 0 || deleteMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </Button>
+          </>
+        ) : (
+          // Only show generate mode buttons here if NOT using external control
+          // When using external control, buttons are in the card header
+          !onGenerateModeChange ? (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCancelDelete}
+                onClick={handleCancelGenerate}
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button
-                variant="destructive"
                 size="sm"
-                onClick={handleDelete}
-                disabled={selectedIds.size === 0 || deleteMutation.isPending}
+                onClick={handleGenerate}
+                disabled={selectedIds.size === 0 || isGenerating}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="text-white hover:opacity-90"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                {isGenerating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-2 h-4 w-4" />
+                )}
+                Start Generation {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
               </Button>
             </>
-          ) : (
-            // Only show generate mode buttons here if NOT using external control
-            // When using external control, buttons are in the card header
-            !onGenerateModeChange ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancelGenerate}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={selectedIds.size === 0 || isGenerating}
-                  style={{ backgroundColor: 'var(--brand-dark)' }}
-                  className="text-white hover:opacity-90"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="mr-2 h-4 w-4" />
-                  )}
-                  Start Generation {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                </Button>
-              </>
-            ) : null
-          )}
-        </div>
+          ) : null
+        )}
       </div>
 
-      {/* Results Count and Queue Status */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
+      {/* Status Messages - Below buttons, aligned left */}
+      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
         <span>
           Showing {filteredCombinations.length} of {combinations.length} combination{combinations.length !== 1 ? 's' : ''}
         </span>
@@ -843,7 +879,7 @@ export function CombinationsTable({
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/50">
               {(deleteMode || generateMode) && (
                 <TableHead className="w-12">
                   <input
@@ -866,6 +902,7 @@ export function CombinationsTable({
               <TableHead>Keyword</TableHead>
               <TableHead className="text-right">Volume</TableHead>
               <TableHead className="text-right">Difficulty</TableHead>
+              <TableHead>Assessment</TableHead>
               <TableHead>Status</TableHead>
               {canUseRankTracking && (
                 <>
@@ -880,7 +917,7 @@ export function CombinationsTable({
             {filteredCombinations.length === 0 ? (
               <TableRow>
                 <TableCell 
-                  colSpan={(deleteMode || generateMode) ? (canUseRankTracking ? 10 : 8) : (canUseRankTracking ? 9 : 7)} 
+                  colSpan={(deleteMode || generateMode) ? (canUseRankTracking ? 11 : 9) : (canUseRankTracking ? 10 : 8)} 
                   className="text-center py-8 text-muted-foreground"
                 >
                   No combinations found
@@ -911,27 +948,48 @@ export function CombinationsTable({
                       />
                     </TableCell>
                   )}
-                  <TableCell className={`font-bold ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
-                    {combo.status === 'generated' || combo.status === 'pushed' ? (
-                      <button
-                        onClick={() => handleViewContent(combo.id)}
-                        className="text-left underline hover:text-[var(--brand-dark)] cursor-pointer transition-colors"
-                      >
-                        {combo.phrase}
-                      </button>
-                    ) : (
-                      <span>{combo.phrase}</span>
-                    )}
+                  <TableCell className={`${combo.parent_location_id ? '' : 'font-bold'} ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
+                    <div className="flex items-center gap-1">
+                      {combo.parent_location_id && (
+                        <span title="Suburb - inherits metrics from parent">
+                          <CornerLeftUp className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        </span>
+                      )}
+                      {combo.status === 'generated' || combo.status === 'pushed' ? (
+                        <button
+                          onClick={() => handleViewContent(combo.id)}
+                          className="text-left underline hover:text-[var(--brand-dark)] cursor-pointer transition-colors"
+                        >
+                          {combo.phrase}
+                        </button>
+                      ) : (
+                        <span>{combo.phrase}</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>{combo.location?.name || '-'}</TableCell>
-                  <TableCell className={`text-sm text-muted-foreground ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
+                  <TableCell className={`text-sm text-muted-foreground lowercase ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
                     {combo.keyword?.keyword || '-'}
                   </TableCell>
                   <TableCell className={`text-right ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
-                    {combo.keyword?.search_volume ? combo.keyword.search_volume.toLocaleString() : '-'}
+                    {(combo.search_volume ?? combo.keyword?.search_volume) ? (combo.search_volume ?? combo.keyword?.search_volume)?.toLocaleString() : '-'}
                   </TableCell>
                   <TableCell className={`text-right ${deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}`}>
-                    {combo.keyword?.difficulty ? combo.keyword.difficulty.toFixed(1) : '-'}
+                    {(combo.difficulty ?? combo.keyword?.difficulty) ? Number(combo.difficulty ?? combo.keyword?.difficulty).toFixed(1) : '-'}
+                  </TableCell>
+                  <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>
+                    {(() => {
+                      const difficulty = combo.difficulty ?? combo.keyword?.difficulty;
+                      const isSuburb = !!combo.parent_location_id;
+                      if (difficulty === null || difficulty === undefined) return <span className="text-muted-foreground">-</span>;
+                      const d = Number(difficulty);
+                      const suffix = isSuburb ? <span className="text-muted-foreground text-[10px] ml-1">(via parent)</span> : null;
+                      if (d <= 10) return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500"></span><span className="text-green-700 text-xs">Easy to rank</span>{suffix}</span>;
+                      if (d <= 30) return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-lime-500"></span><span className="text-lime-700 text-xs">Achievable</span>{suffix}</span>;
+                      if (d <= 50) return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span><span className="text-yellow-700 text-xs">Moderate</span>{suffix}</span>;
+                      if (d <= 70) return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span><span className="text-orange-700 text-xs">Competitive</span>{suffix}</span>;
+                      return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span><span className="text-red-700 text-xs">Very hard</span>{suffix}</span>;
+                    })()}
                   </TableCell>
                   <TableCell className={deleteMode && combo.status === 'pushed' ? 'opacity-50' : ''}>
                     <Badge
@@ -953,6 +1011,10 @@ export function CombinationsTable({
                         backgroundColor: '#7c3aed',
                         color: 'white',
                         borderColor: '#7c3aed'
+                      } : combo.status === 'pending' ? {
+                        backgroundColor: '#e5e7eb',
+                        color: '#6b7280',
+                        borderColor: '#e5e7eb'
                       } : undefined}
                     >
                       {(combo.status === 'generating' || combo.status === 'queued') && (
@@ -1148,6 +1210,61 @@ export function CombinationsTable({
                   </TableCell>
                 </TableRow>
               ))
+            )}
+            {/* Toggle All Track Row */}
+            {canUseRankTracking && filteredCombinations.length > 0 && (
+              <TableRow className="bg-muted/30">
+                <TableCell colSpan={deleteMode || generateMode ? 8 : 7}></TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={async () => {
+                      const allTracked = filteredCombinations.every(c => c.track_position)
+                      const targetState = !allTracked
+                      
+                      // Check limit when enabling all
+                      if (targetState) {
+                        const untrackedCount = filteredCombinations.filter(c => !c.track_position).length
+                        const availableSlots = limits.rankTrackingLimit - trackedCount
+                        if (untrackedCount > availableSlots) {
+                          toast.error(`Can only enable ${availableSlots} more (limit: ${limits.rankTrackingLimit})`)
+                          return
+                        }
+                      }
+                      
+                      const idsToToggle = filteredCombinations
+                        .filter(c => c.track_position !== targetState)
+                        .map(c => c.id)
+                      
+                      if (idsToToggle.length === 0) return
+                      
+                      setTogglingTrackIds(prev => new Set([...prev, ...idsToToggle]))
+                      
+                      try {
+                        for (const id of idsToToggle) {
+                          await togglePositionTracking(id, targetState)
+                        }
+                        setTrackedCount(prev => targetState 
+                          ? prev + idsToToggle.length 
+                          : prev - idsToToggle.length
+                        )
+                        queryClient.invalidateQueries({ queryKey: ['combinations', projectId] })
+                        toast.success(targetState ? 'All tracking enabled' : 'All tracking disabled')
+                      } catch (error) {
+                        toast.error('Failed to update tracking')
+                      } finally {
+                        setTogglingTrackIds(new Set())
+                      }
+                    }}
+                  >
+                    {filteredCombinations.every(c => c.track_position) ? 'Disable All' : 'Enable All'}
+                  </Button>
+                </TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

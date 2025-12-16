@@ -1,0 +1,2 @@
+[functions.process-content-queue]
+verify_jwt = false
