@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
+import { Navigation } from '@/components/Navigation'
 
 interface BenefitCardProps {
   title: string
@@ -100,9 +101,10 @@ export function AgencyBenefitsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pt-16">
+      <Navigation />
       {/* Hero Section */}
-      <section className="bg-white pt-32 pb-20 px-6">
+      <section className="bg-white pt-20 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl md:text-7xl font-bold text-[#1d1d1f] tracking-tight mb-6">
             Built for SEO Agencies
@@ -114,7 +116,7 @@ export function AgencyBenefitsPage() {
             <Button 
               asChild
               size="lg"
-              className="bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full px-8 py-6 text-lg font-medium"
+              className="bg-[var(--brand-dark)] hover:bg-[var(--brand-light)] text-white rounded-full px-8 py-6 text-lg font-medium"
             >
               <Link to="/register">
                 Start Free Trial
@@ -147,18 +149,18 @@ export function AgencyBenefitsPage() {
       ))}
 
       {/* CTA Section */}
-      <section className="bg-[#1d1d1f] py-24 px-6">
+      <section className="bg-[var(--brand-dark)] py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">
             Ready to scale your agency?
           </h2>
-          <p className="text-xl text-[#86868b] mb-10">
+          <p className="text-xl text-white/70 mb-10">
             Join agencies already using GeoScale to deliver exceptional local SEO results.
           </p>
           <Button 
             asChild
             size="lg"
-            className="bg-white hover:bg-gray-100 text-[#1d1d1f] rounded-full px-10 py-6 text-lg font-medium"
+            className="bg-white hover:bg-gray-100 text-[var(--brand-dark)] rounded-full px-10 py-6 text-lg font-medium"
           >
             <Link to="/register">
               Get Started Today
