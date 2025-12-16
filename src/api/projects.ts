@@ -148,12 +148,12 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
 
   if (keywordsError) throw keywordsError
 
-  // Get pages generated count (location_keywords with status 'published')
+  // Get pages generated count (location_keywords with status 'generated' or 'pushed')
   const { count: pagesCount, error: pagesError } = await supabase
     .from('location_keywords')
     .select('*', { count: 'exact', head: true })
     .in('project_id', projectIds.length > 0 ? projectIds : [''])
-    .eq('status', 'published')
+    .in('status', ['generated', 'pushed'])
 
   if (pagesError) throw pagesError
 

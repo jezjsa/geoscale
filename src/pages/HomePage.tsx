@@ -23,10 +23,10 @@ export function HomePage() {
         </div>
         <p className="text-sm font-semibold uppercase tracking-wider text-[var(--brand-dark)] mb-4">SEO Agencies</p>
         <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-5xl mx-auto">
-          Generate, Manage and Track <br /> SEO Landing Pages at Scale for Multiple Client Websites
+          Generate, Manage and Track <br /> Geo-Landing Pages at Scale for Multiple Client WP Websites
         </h1>
-        <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-          Instantly create service + location pages, publish to WordPress in one click, and track organic rankings and Google Map Pack visibility across towns and suburbs.
+        <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-4xl mx-auto">
+          Instantly create service + location combination pages, publish to WordPress in one click, and track organic rankings and Google Map Pack visibility across towns and suburbs.
         </p>
         <Button 
           asChild 
