@@ -246,13 +246,13 @@ export function DashboardPage() {
         {/* Quick actions */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle>{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
-              <CardDescription>{isSingleProjectPlan 
-                ? (userProject ? 'Manage your WordPress project' : 'Set up your WordPress project') 
-                : 'Create and manage your WordPress projects'}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle>{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
+                <CardDescription>{isSingleProjectPlan 
+                  ? (userProject ? 'Manage your WordPress project' : 'Set up your WordPress project') 
+                  : 'Create and manage your WordPress projects'}</CardDescription>
+              </div>
               <Button 
                 variant="outline"
                 onClick={handleManageProjects}
@@ -262,7 +262,8 @@ export function DashboardPage() {
                   ? (userProject ? 'Manage Project' : 'Create Project') 
                   : 'Manage Projects'}
               </Button>
-              
+            </CardHeader>
+            <CardContent className="space-y-4">
               {/* Recent projects quick links - only for multi-project plans */}
               {!isSingleProjectPlan && recentProjects && recentProjects.length > 0 && (
                 <div className="pt-2 border-t">
