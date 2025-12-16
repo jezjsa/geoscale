@@ -81,7 +81,8 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md flex flex-col items-center">
+      <Card className="w-full">
         <CardHeader className="text-center">
           <img src="/icon.svg" alt="GeoScale" className="h-16 w-16 mx-auto mb-4" />
           <CardTitle className="text-2xl">Sign In</CardTitle>
@@ -185,6 +186,7 @@ export function LoginPage() {
         <Link to="/" className="text-sm text-muted-foreground hover:text-[var(--brand-dark)] hover:underline">
           ← Back to Home
         </Link>
+      </div>
       </div>
     </div>
   )
