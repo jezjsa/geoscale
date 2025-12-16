@@ -210,8 +210,14 @@ export function AddServiceDialog({ projectId, wpUrl, open, onOpenChange }: AddSe
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Add Service</DialogTitle>
-            <DialogDescription>
-              Enter a service name and we'll find related keywords for you to choose from.
+            <DialogDescription asChild>
+              <div>
+                <p className="mb-2">Add a new service to your project:</p>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  <li>Enter a service name and add it directly, or</li>
+                  <li>Find related keywords to choose from first</li>
+                </ul>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-orange-500">
