@@ -107,7 +107,7 @@ export function AgencyBenefitsPage() {
       {/* Hero Section */}
       <section className="bg-white dark:bg-background pt-20 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
             Built for SEO Agencies
           </h1>
           <p className="text-xl md:text-2xl text-[#86868b] dark:text-gray-400 mb-10 max-w-2xl mx-auto">
