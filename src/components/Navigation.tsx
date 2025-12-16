@@ -42,6 +42,18 @@ export function Navigation() {
             <span className="text-xl font-bold">GeoScale</span>
           </Link>
 
+          {/* Center navigation links - only show when not logged in */}
+          {!user && (
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-6">
+              <Link to="/" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
+                Home
+              </Link>
+              <Link to="/plans" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
+                Plans
+              </Link>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
             
