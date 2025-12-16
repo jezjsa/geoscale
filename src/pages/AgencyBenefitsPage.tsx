@@ -168,7 +168,7 @@ export function AgencyBenefitsPage() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <p className="text-white/60 text-sm mt-4">14-Day Free Trial • No Credit Card Required</p>
+          <p className="text-white/60 text-sm mt-4">14-Day Free Trial</p>
         </div>
       </section>
 
