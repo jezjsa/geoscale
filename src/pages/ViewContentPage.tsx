@@ -22,7 +22,7 @@ export function ViewContentPage() {
   if (!projectId || !locationKeywordId) {
     return <div>Project or content not found</div>
   }
-  const [projectName, setProjectName] = useState<string>('')
+  const [, setProjectName] = useState<string>('')
   const [projectUrl, setProjectUrl] = useState<string>('')
   const [hasWordPressConnection, setHasWordPressConnection] = useState<boolean>(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
