@@ -43,17 +43,20 @@ export function PlanUsageCardCompact() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{plan.displayName} Plan</CardTitle>
-          <Button 
-            asChild 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 px-2 text-xs text-white hover:opacity-80 bg-gray-500 dark:bg-transparent dark:border dark:border-gray-500 dark:text-gray-300"
-          >
-            <Link to="/account#plan">
-              Upgrade
-              <ArrowUpRight className="ml-1 h-3 w-3" />
-            </Link>
-          </Button>
+          {/* Hide Upgrade button for Agency Pro (top tier plan) */}
+          {plan.name !== 'agency_pro' && (
+            <Button 
+              asChild 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs text-white hover:opacity-80 bg-gray-500 dark:bg-transparent dark:border dark:border-gray-500 dark:text-gray-300"
+            >
+              <Link to="/account#plan">
+                Upgrade
+                <ArrowUpRight className="ml-1 h-3 w-3" />
+              </Link>
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

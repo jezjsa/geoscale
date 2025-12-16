@@ -94,10 +94,11 @@ export function usePlanLimits(): PlanLimits {
           const rankChecksUsedToday = credits?.rankChecksUsedToday || 0;
           const rankChecksRemaining = Math.max(0, rankChecksDailyQuota - rankChecksUsedToday);
 
-          // Map pack credits
+          // Map pack credits (plan allowance + purchased - used)
           const mapPackChecksUsed = credits?.mapPackChecksUsed || 0;
           const mapPackChecksPurchased = credits?.mapPackChecksPurchased || 0;
-          const mapPackChecksRemaining = Math.max(0, mapPackChecksPurchased - mapPackChecksUsed);
+          const mapPackChecksTotal = plan.rankMapChecksPerMonth + mapPackChecksPurchased;
+          const mapPackChecksRemaining = Math.max(0, mapPackChecksTotal - mapPackChecksUsed);
 
           setPlanLimits({
             plan,

@@ -11,6 +11,7 @@ export interface Plan {
   rankTrackingLimit: number; // Per-project rank tracking limit
   rankCheckDailyBase: number; // Base daily rank check quota
   rankCheckPerSite: number; // Additional daily checks per site
+  rankMapChecksPerMonth: number; // Monthly map pack credits included in plan
   basePriceGbp: number;
   perSitePriceGbp: number;
   isOneOff: boolean; // true for Starter (one-time payment)

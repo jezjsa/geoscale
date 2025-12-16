@@ -44,6 +44,7 @@ export const getAllPlans = async (): Promise<Plan[]> => {
       // Daily rank check quota fields
       rankCheckDailyBase: plan.rank_check_daily_base || 0,
       rankCheckPerSite: plan.rank_check_per_site || 0,
+      rankMapChecksPerMonth: plan.rank_map_checks_per_month || 0,
       basePriceGbp: parseFloat(plan.price_monthly || plan.base_price_gbp || 0),
       perSitePriceGbp: parseFloat(plan.price_per_site || plan.per_site_price_gbp || 0),
       isOneOff: plan.is_one_off || false,
