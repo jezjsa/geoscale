@@ -245,7 +245,7 @@ export function HomePage() {
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">What are Google Map Pack credits?</h3>
               <p className="text-muted-foreground">
-                Map Pack credits are used for our local ranking heat map feature, which shows where your business appears in Google's Map Pack across different locations. Each scan uses credits based on grid size: 5×5 grid = 1 credit, 7×7 = 2 credits, 10×10 = 4 credits, 15×15 = 9 credits. Pro gets 2 credits/month, Agency Base gets 10, and Agency Pro gets 50. Need more? Additional credits are available for £0.20 each.
+                Map Pack credits are used for our local ranking heat map feature, which shows where your business appears in Google's Map Pack across different locations. Unlike some tools that charge per data point, GeoScale credits are per scan – so 1 credit gives you a complete 5×5 grid (25 data points). Larger grids use more credits: 7×7 = 2 credits, 10×10 = 4 credits, 15×15 = 9 credits. Pro gets 2 credits/month, Agency Base gets 10, and Agency Pro gets 50. Need more? Additional credits are available for £0.20 each.
               </p>
             </div>
           </div>
