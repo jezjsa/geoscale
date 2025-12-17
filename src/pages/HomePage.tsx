@@ -23,10 +23,10 @@ export function HomePage() {
         </div>
         <p className="text-sm font-semibold uppercase tracking-wider text-[var(--brand-dark)] mb-4">SEO Agencies</p>
         <h1 className="text-3xl md:text-6xl font-bold mb-6 max-w-5xl mx-auto">
-          Generate, Manage and Track <br /> Geo-Landing Pages at Scale for Multiple Client WP Websites
+          Generate, Manage and Track <br /> Local SEO Landing Pages at Scale for Multiple WP Websites
         </h1>
         <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-4xl mx-auto">
-          Instantly create service + location combination pages, publish to WordPress in one click, and track organic rankings and Google Map Pack visibility across towns and suburbs.
+          Instantly create local seo pages, publish to WordPress in one click, and track organic rankings and Google Map Pack visibility across every town and suburb you target, for all your clients from one single dashboard.
         </p>
         <Button 
           asChild 
@@ -41,7 +41,7 @@ export function HomePage() {
             to="/plans" 
             className="text-[var(--brand-dark)] hover:underline font-medium"
           >
-            Each plan comes with keyword rank tracking
+            Rank Tracking & Map Pack Credits included
           </Link>
         </div>
       </section>
@@ -61,7 +61,7 @@ export function HomePage() {
       {/* How It Works Section */}
       <section className="container mx-auto px-4 py-20">
         <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-        <div className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-5 gap-6 max-w-7xl mx-auto">
           <div className="bg-muted/50 rounded-lg p-6 text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
               1
@@ -96,6 +96,15 @@ export function HomePage() {
             <h3 className="text-xl font-semibold mb-2">Track</h3>
             <p className="text-muted-foreground">
               Monitor Google rankings, changes and improvements over time.
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--brand-dark)] text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              5
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Refresh</h3>
+            <p className="text-muted-foreground">
+              Regenerate and republish content whenever you need to update it.
             </p>
           </div>
         </div>
