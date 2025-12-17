@@ -68,7 +68,7 @@ export function HomePage() {
             </div>
             <h3 className="text-xl font-semibold mb-2">Input</h3>
             <p className="text-muted-foreground">
-              Add your locations and keywords - combinations are automatically created.
+              Add your locations and keywords to create combinations.
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-6 text-center">
@@ -104,7 +104,7 @@ export function HomePage() {
             </div>
             <h3 className="text-xl font-semibold mb-2">Refresh</h3>
             <p className="text-muted-foreground">
-              Regenerate and republish content whenever you need to update it.
+              Regenerate and republish content whenever you need.
             </p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export function HomePage() {
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">How many client websites can I manage?</h3>
               <p className="text-muted-foreground">
-                Our Agency plan supports up to 10 client websites, while Agency Pro supports up to 25. Each website gets 400 geo-landing pages and 100 tracked keywords. Need more? Additional websites can be added for £20/site/month.
+                Our Agency Base plan supports up to 10 client websites, while Agency Pro supports up to 25. Each website gets 400 geo-landing pages. Need more? Additional websites can be added for £20/site/month.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
@@ -239,7 +239,7 @@ export function HomePage() {
             <div className="bg-muted/50 rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-2">How does keyword rank tracking work?</h3>
               <p className="text-muted-foreground">
-                GeoScale monitors Google search rankings for your clients' location pages. Each website gets up to 100 tracked keyword/location combinations with every-other-day updates, so you can report on performance without additional rank tracking tools.
+                GeoScale monitors Google search rankings for your clients' location pages. Pro plans include 50 daily rank checks, Agency Base includes 300, and Agency Pro includes 650. Rankings update every other day, so you can report on performance without additional rank tracking tools.
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-6">
