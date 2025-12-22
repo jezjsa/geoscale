@@ -74,8 +74,8 @@ export function Navigation() {
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                  <nav className="flex flex-col gap-4 mt-8">
+                <SheetContent side="right" className="w-full flex flex-col p-0">
+                  <nav className="flex flex-col gap-4 mt-8 px-6 flex-1">
                     <Link
                       to="/"
                       className="text-lg font-medium hover:text-[var(--brand-dark)] transition-colors py-2"
@@ -97,18 +97,18 @@ export function Navigation() {
                     >
                       Plans
                     </Link>
-                    <div className="pt-4 border-t">
-                      <Button
-                        asChild
-                        size="lg"
-                        style={{ backgroundColor: 'var(--brand-dark)' }}
-                        className="w-full hover:opacity-90 text-white"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Link to="/plans">Sign Up</Link>
-                      </Button>
-                    </div>
                   </nav>
+                  <div className="p-6 border-t mt-auto">
+                    <Button
+                      asChild
+                      size="lg"
+                      style={{ backgroundColor: 'var(--brand-dark)' }}
+                      className="w-full hover:opacity-90 text-white"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Link to="/plans">Sign Up</Link>
+                    </Button>
+                  </div>
                 </SheetContent>
               </Sheet>
             )}
