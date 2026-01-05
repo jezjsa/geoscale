@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { Settings, LogOut, User, Menu, Lightbulb, LayoutDashboard } from 'lucide-react'
+import { Settings, LogOut, User, Menu, Lightbulb, LayoutDashboard, FolderKanban } from 'lucide-react'
 
 export function Navigation() {
   const { user, signOut } = useAuth()
@@ -68,7 +68,8 @@ export function Navigation() {
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </Link>
-              <Link to="/projects" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
+              <Link to="/projects" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors flex items-center gap-1.5">
+                <FolderKanban className="h-4 w-4" />
                 Projects
               </Link>
             </div>
