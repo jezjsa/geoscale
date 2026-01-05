@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { Settings, LogOut, User, Menu, Lightbulb } from 'lucide-react'
+import { Settings, LogOut, User, Menu, Lightbulb, LayoutDashboard } from 'lucide-react'
 
 export function Navigation() {
   const { user, signOut } = useAuth()
@@ -49,8 +49,8 @@ export function Navigation() {
             <span className="text-xl font-bold">GeoScale</span>
           </Link>
 
-          {/* Desktop navigation links - only show when not logged in */}
-          {!user && (
+          {/* Desktop navigation links */}
+          {!user ? (
             <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-6">
               <Link to="/" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Home
@@ -60,6 +60,13 @@ export function Navigation() {
               </Link>
               <Link to="/plans" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Plans
+              </Link>
+            </div>
+          ) : (
+            <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-6">
+              <Link to="/dashboard" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors flex items-center gap-1.5">
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
               </Link>
             </div>
           )}
