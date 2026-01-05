@@ -102,7 +102,7 @@ export function ProjectsList({ userId }: ProjectsListProps) {
                     <TableCell className="font-medium">
                       <Link 
                         to={`/projects/${project.id}?view=combinations`}
-                        className="text-link hover:text-link-hover hover:underline transition-colors"
+                        className="text-link hover:text-link-hover underline transition-colors"
                       >
                         {project.company_name || project.project_name}
                       </Link>
