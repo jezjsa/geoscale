@@ -14,7 +14,7 @@ AI-powered location-based landing page generator for WordPress.
 - **ShadCN UI** - Component library
 - **Tailwind CSS** - Styling
 
-## Project Structure
+## Project Structure.
 
 ```
 src/
