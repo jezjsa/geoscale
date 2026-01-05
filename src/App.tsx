@@ -42,7 +42,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/features" element={<ProtectedRoute><FeaturesPage /></ProtectedRoute>} />
         <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/content/:locationKeywordId" element={<ProtectedRoute><ViewContentPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId/heat-map/:combinationId" element={<ProtectedRoute><HeatMapPage /></ProtectedRoute>} />

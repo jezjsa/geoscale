@@ -392,7 +392,7 @@ export function ProjectDetailPage() {
                 asChild
                 className="bg-transparent hover:bg-gray-100 text-black border-0 dark:bg-transparent dark:hover:bg-gray-700 dark:text-white dark:hover:text-white"
               >
-                <Link to="/settings">
+                <Link to="/projects">
                   <ArrowLeft className="mr-1 h-3 w-3" />
                   Back to Projects
                 </Link>

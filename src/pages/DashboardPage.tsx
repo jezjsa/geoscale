@@ -117,7 +117,7 @@ export function DashboardPage() {
     } else {
       // Agency users go to settings to manage multiple projects
       // Single-project users without a project go to settings to create one
-      navigate('/settings')
+      navigate('/projects')
     }
   }
 
@@ -181,7 +181,7 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent>
               <Button asChild className="bg-gray-200 hover:bg-gray-300 text-gray-900">
-                <Link to="/settings">Go to Settings</Link>
+                <Link to="/projects">Go to Projects</Link>
               </Button>
             </CardContent>
           </Card>
@@ -204,7 +204,7 @@ export function DashboardPage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Link to="/settings">
+          <Link to="/projects">
             <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{isSingleProjectPlan ? 'Project' : 'Projects'}</CardTitle>
@@ -356,7 +356,7 @@ export function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <Button asChild variant="outline">
-                  <Link to="/settings">Manage Settings</Link>
+                  <Link to="/projects">Manage Projects</Link>
                 </Button>
               </CardContent>
             </Card>
