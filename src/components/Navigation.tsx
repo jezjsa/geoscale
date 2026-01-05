@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,12 +10,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { Settings, LogOut, User, Lightbulb } from 'lucide-react'
+import { Settings, LogOut, User, Menu, Lightbulb } from 'lucide-react'
 
 export function Navigation() {
   const { user, signOut } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U'
@@ -42,9 +49,9 @@ export function Navigation() {
             <span className="text-xl font-bold">GeoScale</span>
           </Link>
 
-          {/* Center navigation links - only show when not logged in */}
+          {/* Desktop navigation links - only show when not logged in */}
           {!user && (
-            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-6">
+            <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-6">
               <Link to="/" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
                 Home
               </Link>
@@ -58,6 +65,54 @@ export function Navigation() {
           )}
 
           <div className="flex items-center gap-2">
+            {/* Mobile menu - only show when not logged in */}
+            {!user && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full flex flex-col p-0">
+                  <nav className="flex flex-col gap-4 mt-8 px-6 flex-1">
+                    <Link
+                      to="/"
+                      className="text-lg font-medium hover:text-[var(--brand-dark)] transition-colors py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Home
+                    </Link>
+                    <Link
+                      to="/agency"
+                      className="text-lg font-medium hover:text-[var(--brand-dark)] transition-colors py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Agency Benefits
+                    </Link>
+                    <Link
+                      to="/plans"
+                      className="text-lg font-medium hover:text-[var(--brand-dark)] transition-colors py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Plans
+                    </Link>
+                  </nav>
+                  <div className="p-6 border-t mt-auto">
+                    <Button
+                      asChild
+                      size="lg"
+                      style={{ backgroundColor: 'var(--brand-dark)' }}
+                      className="w-full hover:opacity-90 text-white"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Link to="/plans">Sign Up</Link>
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+
             <ThemeSwitcher />
             
             {user && (user.plan === 'agency' || user.plan === 'agency_pro' || user.plan === 'agency_plus') && (
@@ -67,7 +122,6 @@ export function Navigation() {
                 </Link>
               </Button>
             )}
-            
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -112,11 +166,11 @@ export function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                asChild 
+              <Button
+                asChild
                 size="sm"
                 style={{ backgroundColor: 'var(--brand-dark)' }}
-                className="hover:opacity-90 text-white md:text-base md:px-4 md:py-2"
+                className="hidden md:inline-flex hover:opacity-90 text-white md:text-base md:px-4 md:py-2"
               >
                 <Link to="/plans">Sign Up</Link>
               </Button>
