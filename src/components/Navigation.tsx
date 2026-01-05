@@ -68,6 +68,9 @@ export function Navigation() {
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </Link>
+              <Link to="/projects" className="text-sm font-medium hover:text-[var(--brand-dark)] transition-colors">
+                Projects
+              </Link>
             </div>
           )}
 
