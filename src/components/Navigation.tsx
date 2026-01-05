@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { Settings, LogOut, User } from 'lucide-react'
+import { Settings, LogOut, User, Lightbulb } from 'lucide-react'
 
 export function Navigation() {
   const { user, signOut } = useAuth()
@@ -59,6 +59,14 @@ export function Navigation() {
 
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
+            
+            {user && (user.plan === 'agency' || user.plan === 'agency_pro' || user.plan === 'agency_plus') && (
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/features" title="Feature Requests">
+                  <Lightbulb className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
             
             {user ? (
               <DropdownMenu>

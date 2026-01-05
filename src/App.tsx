@@ -17,6 +17,7 @@ import { CombinationDetailPage } from './pages/CombinationDetailPage'
 import { WordPressSitemapPage } from './pages/WordPressSitemapPage'
 import { TestDataForSEOPage } from './pages/TestDataForSEO'
 import { AgencyBenefitsPage } from './pages/AgencyBenefitsPage'
+import { FeaturesPage } from './pages/FeaturesPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/features" element={<ProtectedRoute><FeaturesPage /></ProtectedRoute>} />
         <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 // Database types for GeoScale
 
-export type PlanName = 'starter' | 'pro' | 'agency' | 'individual' | 'agency_plus'
+export type PlanName = 'starter' | 'pro' | 'agency' | 'agency_pro' | 'individual' | 'agency_plus'
 
 export interface Plan {
   id: string
@@ -30,6 +30,7 @@ export interface User {
   name: string | null
   plan: PlanName
   agency_id: string | null
+  is_super_admin: boolean
   created_at: string
   updated_at: string
 }
@@ -71,4 +72,33 @@ export interface Project {
   longitude: number | null
   created_at: string
   updated_at: string
+}
+
+export type FeatureRequestStatus = 'pending' | 'in_progress' | 'shipped' | 'declined'
+
+export interface FeatureRequest {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  status: FeatureRequestStatus
+  vote_count: number
+  is_admin_request: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface FeatureVote {
+  id: string
+  feature_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface FeatureRequestWithUser extends FeatureRequest {
+  user: {
+    name: string | null
+    is_super_admin: boolean
+  }
+  has_voted?: boolean
 }
