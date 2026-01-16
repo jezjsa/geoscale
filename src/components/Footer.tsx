@@ -12,7 +12,6 @@ export function Footer() {
           <div className="flex gap-6 text-sm text-muted-foreground md:flex-1 md:justify-center flex-wrap">
             <Link to="/agency" className="hover:text-foreground transition-colors">Agency Benefits</Link>
             <Link to="/plans" className="hover:text-foreground transition-colors">Plans</Link>
-            <Link to="/login" className="hover:text-foreground transition-colors">Sign In</Link>
             <a href="mailto:support@geoscale.app" className="hover:text-foreground transition-colors">Contact</a>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms & Conditions</Link>
