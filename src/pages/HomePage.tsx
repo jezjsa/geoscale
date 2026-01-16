@@ -114,8 +114,8 @@ export function HomePage() {
       <section className="container mx-auto px-4 pt-4 pb-16">
         <div className="max-w-10xl mx-auto">
           <div 
-            className="rounded-4xl border-8 overflow-hidden aspect-video flex items-center justify-center bg-muted"
-            style={{ borderColor: '#fff' }}
+            className="rounded-4xl border-8 overflow-hidden aspect-video flex items-center justify-center bg-muted shadow-2xl"
+            style={{ borderColor: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
           >
             <img src="/app.png" alt="GeoScale App" className="w-full h-full " />
           </div>
