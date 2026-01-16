@@ -35,14 +35,6 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
     }
   };
 
-  const handleSelectPlan = (planName: string) => {
-    if (onSelectPlan) {
-      onSelectPlan(planName);
-    } else {
-      navigate(`/sign-up?plan=${planName}`);
-    }
-  };
-
   const formatPrice = (plan: Plan) => {
     if (plan.basePriceGbp === 0) return 'Free';
     return `£${plan.basePriceGbp.toFixed(0)}`;
