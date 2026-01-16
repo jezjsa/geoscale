@@ -323,7 +323,14 @@ export function HomePage() {
           Choose a plan that fits your needs and start generating landing pages today.
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
-        
+          <Button 
+            asChild 
+            size="lg"
+            style={{ backgroundColor: 'var(--brand-dark)' }}
+            className="hover:opacity-90 text-white"
+          >
+            <Link to="/?highlight=waitlist">Join Waitlist</Link>
+          </Button>
           <Button 
             asChild 
             variant="outline"
