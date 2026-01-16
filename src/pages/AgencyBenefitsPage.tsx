@@ -119,8 +119,8 @@ export function AgencyBenefitsPage() {
               size="lg"
               className="bg-[var(--brand-dark)] hover:bg-[var(--brand-light)] text-white rounded-full px-8 py-6 text-lg font-medium"
             >
-              <Link to="/register">
-                Start Free Trial
+              <Link to="/?highlight=waitlist">
+                Join Waitlist
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -163,12 +163,11 @@ export function AgencyBenefitsPage() {
             size="lg"
             className="bg-white hover:bg-gray-100 text-[var(--brand-dark)] rounded-full px-10 py-6 text-lg font-medium"
           >
-            <Link to="/plans">
-              Get Started Today
+            <Link to="/?highlight=waitlist">
+              Join Waitlist
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <p className="text-white/60 text-sm mt-4">14-Day Free Trial</p>
         </div>
       </section>
 
