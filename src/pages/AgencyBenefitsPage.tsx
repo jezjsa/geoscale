@@ -58,8 +58,8 @@ export function AgencyBenefitsPage() {
       bgColor: 'white' as const,
     },
     {
-      title: "White-Label Ready",
-      description: "Manage multiple client websites from one powerful dashboard. No GeoScale branding visible to your clients.",
+      title: "Track Google Rankings",
+      description: "Monitor keyword positions across all your client sites. Track organic search rankings and Google Map Pack visibility to prove ROI and identify opportunities.",
       imagePosition: 'left' as const,
       bgColor: 'grey' as const,
     },
