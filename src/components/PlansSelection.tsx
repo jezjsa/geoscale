@@ -5,13 +5,12 @@ import { Plan } from '../types';
 import { getAllPlans } from '../lib/plan-service';
 
 interface PlansSelectionProps {
-  onSelectPlan?: (planName: string) => void;
   showHeader?: boolean;
 }
 
 type PlanCategory = 'agency' | 'single';
 
-export default function PlansSelection({ onSelectPlan, showHeader = true }: PlansSelectionProps) {
+export default function PlansSelection({ showHeader = true }: PlansSelectionProps) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
