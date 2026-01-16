@@ -192,20 +192,15 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
 
                 <div className="mt-auto">
                   <button
-                    onClick={() => handleSelectPlan(plan.name)}
+                    onClick={() => navigate('/?highlight=waitlist')}
                     className={`w-full px-6 py-3 rounded-xl font-bold transition-all ${
                       isPopular
                         ? 'bg-[var(--brand-dark)] text-white shadow-lg hover:shadow-xl hover:opacity-90'
                         : 'border-2 border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-muted'
                     }`}
                   >
-                    Get Started
+                    Join the Waitlist
                   </button>
-                  {plan.name !== 'starter' && (
-                    <p className="text-sm text-muted-foreground text-center mt-3">
-                      Start your 14-day free trial
-                    </p>
-                  )}
                 </div>
               </div>
             );
@@ -241,9 +236,6 @@ export default function PlansSelection({ onSelectPlan, showHeader = true }: Plan
           </div>
 
           <div className="mt-16 text-center">
-            <p className="text-muted-foreground mb-4">
-              Monthly plans include a 14-day free trial. Cancel anytime during the trial period.
-            </p>
             <p className="text-sm text-muted-foreground">
               Need a custom plan or have questions?{' '}
               <a href="mailto:support@geoscale.app" className="font-semibold text-[var(--brand-dark)] hover:underline">

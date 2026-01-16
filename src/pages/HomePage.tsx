@@ -1,15 +1,65 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import { TypewriterLocations } from '@/components/TypewriterLocations'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { useState, useEffect, useRef } from 'react'
+import { waitlistService } from '@/lib/waitlist-service'
+import { toast } from 'sonner'
 
 export function HomePage() {
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [shouldGlow, setShouldGlow] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  
   usePageMeta({
     title: 'GeoScale - Generate Location Landing Pages at Scale',
     description: 'Create SEO-optimized geo-targeted landing pages in minutes. AI-powered content generation with one-click WordPress publishing. Start your free trial today.'
   })
+
+  useEffect(() => {
+    if (searchParams.get('highlight') === 'waitlist') {
+      setShouldGlow(true)
+      
+      // Scroll to form
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+      
+      // Remove glow after animation
+      setTimeout(() => {
+        setShouldGlow(false)
+        setSearchParams({})
+      }, 3000)
+    }
+  }, [searchParams, setSearchParams])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!email || isSubmitting) return
+    
+    setIsSubmitting(true)
+    
+    try {
+      const response = await waitlistService.joinWaitlist(email)
+      
+      if (response.success) {
+        toast.success(response.message)
+        setEmail('')
+      } else {
+        toast.error(response.message)
+      }
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -28,21 +78,35 @@ export function HomePage() {
         <p className="text-base md:text-xl text-muted-foreground mb-8 max-w-4xl mx-auto">
           Instantly create local seo pages, publish to WordPress in one click, and track organic rankings and Google Map Pack visibility across every town and suburb you target, for all your clients from one single dashboard.
         </p>
-        <Button 
-          asChild 
-          size="lg"
-          style={{ backgroundColor: 'var(--brand-dark)' }}
-          className="hover:opacity-90 text-white"
-        >
-          <Link to="/plans">Start Your 14-Day Free Trial</Link>
-        </Button>
+        <form ref={formRef} onSubmit={handleSubmit} className="max-w-md mx-auto w-full">
+          <div className={`bg-white rounded-full p-1 shadow-lg transition-all duration-300 ${
+            shouldGlow ? 'animate-pulse-green' : ''
+          }`}>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="flex-1 rounded-full border-0 px-6 h-12 text-sm focus:outline-none focus:ring-0"
+              />
+              <Button
+                type="submit"
+                size="lg"
+                disabled={isSubmitting}
+                style={{ backgroundColor: 'var(--brand-dark)' }}
+                className="hover:opacity-90 text-white rounded-full px-8 h-12 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Joining...' : 'Join Waitlist'}
+              </Button>
+            </div>
+          </div>
+        </form>
         <div className="mt-4">
-          <Link 
-            to="/plans" 
-            className="text-[var(--brand-dark)] hover:underline font-medium"
-          >
-            Rank Tracking & Map Pack Credits included
-          </Link>
+          <p className="text-[var(--brand-dark)] font-medium">
+            Be the first to know when we launch
+          </p>
         </div>
       </section>
 
@@ -259,14 +323,7 @@ export function HomePage() {
           Choose a plan that fits your needs and start generating landing pages today.
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
-          <Button 
-            asChild 
-            size="lg"
-            style={{ backgroundColor: 'var(--brand-dark)' }}
-            className="hover:opacity-90 text-white"
-          >
-            <Link to="/plans">Start Your 14-Day Free Trial</Link>
-          </Button>
+        
           <Button 
             asChild 
             variant="outline"
