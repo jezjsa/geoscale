@@ -15,6 +15,35 @@ export interface WaitlistResponse {
   data?: WaitlistEntry
 }
 
+async function sendWelcomeEmail(email: string): Promise<void> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/send-waitlist-email`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      }
+    )
+
+    const result = await response.json()
+    
+    if (!response.ok) {
+      console.error('Failed to send welcome email:', result)
+    } else {
+      console.log('Welcome email sent successfully:', result)
+    }
+  } catch (err) {
+    console.error('Error sending welcome email:', err)
+  }
+}
+
 export const waitlistService = {
   async joinWaitlist(email: string, source: string = 'landing_page'): Promise<WaitlistResponse> {
     try {
@@ -38,6 +67,9 @@ export const waitlistService = {
           message: 'Something went wrong. Please try again.'
         }
       }
+
+      // Send welcome email (fire and forget - don't block the response)
+      sendWelcomeEmail(email)
 
       return {
         success: true,
